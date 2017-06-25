@@ -1,10 +1,12 @@
 __author__ = 'Mikhail'
 
-import scipy.linalg as la
-from WPDefs import *
 from math import *
-from mpmath import *
+
 import numpy as np
+import scipy.linalg as la
+from mpmath import *
+
+from rwp.WPDefs import *
 
 
 class PadePropagator:
