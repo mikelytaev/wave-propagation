@@ -1,3 +1,5 @@
+__author__ = 'Mikhail'
+
 from enum import Enum
 import numpy as np
 
@@ -26,3 +28,4 @@ class EMEnvironment:
     def terrain(self, x):
         return 0
 
+def gauss_source(k0, z_s, z):
