@@ -1,9 +1,11 @@
 from enum import Enum
+import numpy as np
+
 
 class Field:
     def __init__(self, r_grid, z_grid):
-        self.r_grid, sefl.z_grid = r_grid, z_grid
-        self.Field = zeros((r_grid.size, z_grid.size))*(1+1j)
+        self.r_grid, self.z_grid = r_grid, z_grid
+        self.field = np.zeros((r_grid.size, z_grid.size))*(1+1j)
 
 
 class EMEnvironment:
