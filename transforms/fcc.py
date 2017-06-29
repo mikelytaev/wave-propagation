@@ -12,10 +12,35 @@ from scipy.sparse.linalg import spsolve
 #  //IMA Journal of Numerical Analysis. – 2011. – Т. 31. – №. 4. – С. 1253-1280.
 
 
-def chebyshev_weigths(k: complex, n: int):
+def chebyshev_weights_asymptotics(k: complex, n: int, tol=1e-16):
+    sink = cm.sin(k)
+    cosk = cm.cos(k)
+    flag = 1
+
+    coef = np.array([1,
+                      k,
+                      -3 * k**2,
+                      (-15 * k**2 + 4 * n**2) * k,
+                      (105 * k**2 - 60 * n**2) * k**2,
+                      -(-945 * k**4 + 840 * k**2 * n**2 - 16 * n**4) * k,
+                      -(-12600 * k**4 * n**2 + 1008 * k**2 * n**4 + 10395 * k**6),
+                      (207900 * k**4 * n**2 - 35280 * k**2 * n**4 + 64 * n**6 - 135135 * k**6) * k])
+
+    coef /= (2.0*n)**(2.0*np.arange(1, len(coef)+1)-1)
+    coef[::2] = 2 * coef[::2]*sink
+    coef[1::2] = 2 * coef[1::2] * cosk
+
+    val = sum(coef[::-1])
+    # Last coefficient is used as estimator of the error
+    if abs(coef[-1]) > tol:
+        flag = 0
+    return val, flag
+
+
+def chebyshev_weights(k: complex, n: int):
     rho = np.zeros((n + 1, 1))
-    rho[0] = 2 / k * cm.sin(k)
-    rho[1] = -4 * cm.cos(k) / k + 4 * cm.sin(k) / k**2
+    rho[0] = 2.0 / k * cm.sin(k)
+    rho[1] = -4.0 * cm.cos(k) / k + 4.0 * cm.sin(k) / k**2
 
     # n0 coefficients are computed using the three term forward recurrence
     n0 = min(max(fm.ceil(abs(k)), 2), n)
@@ -61,7 +86,10 @@ def chebyshev_weigths(k: complex, n: int):
 
     # correct rho as a complex number the entries at even positions are pure imaginary
     rho[1::] = rho[1::2] * 1j
+    w = np.zeros((n+1, 1));
+    w[0] = gamma[1]
+    w[1:] = np.multiarray(np.arange(1, n+1).T / (1j*k), rho[0:n+1])
+    w[1::2] += gamma[0]*1j
+    w[2::2] += gamma[1]
 
-
-
-
+    return w, rho
