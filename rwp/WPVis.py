@@ -14,7 +14,7 @@ class FieldVisualiser:
     def plot2d(self, min, max):
         norm = Normalize(min, max)
         extent = [self.field.x_grid[0], self.field.x_grid[-1], self.field.z_grid[0], self.field.z_grid[-1]]
-        plt.imshow(self.trans_func(self.field.field.T).real, extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
+        plt.imshow(self.trans_func(self.field.field.T[::-1,:]).real, extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
         plt.colorbar()
         return plt
 

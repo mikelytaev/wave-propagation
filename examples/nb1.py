@@ -4,7 +4,8 @@ from rwp.WPVis import *
 
 if __name__ == '__main__':
     env = EMEnvironment()
-    pp = PadePropagator(env=env, wave_length=0.1, pade_order=(1, 1))
+    env.z_max = 300
+    pp = PadePropagator(env=env, wave_length=0.1, pade_order=(2, 3))
     src = gauss_source(pp.k0, 50, 2, 0)
     field = pp.propagate(2000, src)
     vis = FieldVisualiser(field, lambda v: 10*log10(eps+abs(v)))

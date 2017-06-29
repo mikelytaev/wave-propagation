@@ -10,19 +10,21 @@ from functools import partial
 from rwp.WPDefs import *
 from itertools import zip_longest
 import numpy.polynomial.polynomial as poly
+from sympy import symbol, Matrix
 
 
 class PadePropagator:
     n_x, n_z = 0, 0
 
-    def __init__(self, env: EMEnvironment, wave_length: float, pade_order=(1, 2)):
+    def __init__(self, env: EMEnvironment, wave_length=1.0, pade_order=(1, 2), dx_wl=100, dz_wl=1):
         self.k0 = (2 * pi) / wave_length
-        self.dz = wave_length
-        self.dx = 100 * wave_length
+        self.dz = dz_wl * wave_length
+        self.dx = dx_wl * wave_length
         self.env = env
         self.pade_order = pade_order
 
         mp.dps = 15
+
         def propagator_func(s):
             return mp.exp(1j*self.k0*self.dx*(mp.sqrt(1+s)-1))
 
@@ -30,6 +32,18 @@ class PadePropagator:
         p, q = pade(t, pade_order[0], pade_order[1])
         self.pade_coefs = list(zip_longest([-1/complex(v) for v in polyroots(p[::-1])],
                                            [-1/complex(v) for v in polyroots(q[::-1])], fillvalue=0.0j))
+
+        num_roots, den_roots = list(zip(*self.pade_coefs))
+        xi = symbol('xi')
+        matrix_a = Matrix(np.diag(-np.diag(num_roots), 0) + np.diag(den_roots[0:-1], 1))
+        matrix_a[-1, 0] = den_roots[-1]
+        matrix_a[0, 1] *= symbol
+        matrix_b = Matrix(np.diag(np.ones(len(num_roots)), 0) + np.diag(-np.ones(len(num_roots))-1, 1))
+        matrix_b[-1, 0] = -1
+        matrix_b[0, 1] *= symbol
+        matrix_b *= self.k0
+        matrix_ab = matrix_a**-1*matrix_b
+        matrix_p, matrix_j = matrix_ab.jordan_form()
 
     def Crank_Nikolson_propagate(self, a, b, het, rhs):
         d_2 = 1/pow(self.k0*self.dz, 2) * diags([np.ones(self.n_z-1), -2*np.ones(self.n_z), np.ones(self.n_z-1)], [-1, 0, 1])
