@@ -52,9 +52,11 @@ class TestFCC(unittest.TestCase):
         self.assertTrue(norm(w_true-w) < self.tol)
         self.assertTrue(norm(rho_true - rho) < self.tol)
 
-
-
-
+    def test_FFCFoutier(self):
+        ffc = FCCFourier(4, 3, 7, np.array([1, 10, 100]))
+        self.assertTrue(ffc.fw.shape == (3, 8))
+        self.assertTrue(abs(ffc.fw[0, 0] - (-0.008954924100922 - 0.004892097332696j)) < self.tol)
+        self.assertTrue(abs(ffc.fw[2, 7] - (-0.000550686115736 - 0.009845952674564j)) < self.tol)
 
 
 if __name__ == '__main__':
