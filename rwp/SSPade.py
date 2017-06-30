@@ -34,16 +34,16 @@ class PadePropagator:
                                            [-1/complex(v) for v in polyroots(q[::-1])], fillvalue=0.0j))
 
         num_roots, den_roots = list(zip(*self.pade_coefs))
-        xi = symbol('xi')
-        matrix_a = Matrix(np.diag(-np.diag(num_roots), 0) + np.diag(den_roots[0:-1], 1))
-        matrix_a[-1, 0] = den_roots[-1]
-        matrix_a[0, 1] *= symbol
-        matrix_b = Matrix(np.diag(np.ones(len(num_roots)), 0) + np.diag(-np.ones(len(num_roots))-1, 1))
-        matrix_b[-1, 0] = -1
-        matrix_b[0, 1] *= symbol
-        matrix_b *= self.k0
-        matrix_ab = matrix_a**-1*matrix_b
-        matrix_p, matrix_j = matrix_ab.jordan_form()
+        # xi = symbol('xi')
+        # matrix_a = Matrix(np.diag(-np.diag(num_roots), 0) + np.diag(den_roots[0:-1], 1))
+        # matrix_a[-1, 0] = den_roots[-1]
+        # matrix_a[0, 1] *= symbol
+        # matrix_b = Matrix(np.diag(np.ones(len(num_roots)), 0) + np.diag(-np.ones(len(num_roots))-1, 1))
+        # matrix_b[-1, 0] = -1
+        # matrix_b[0, 1] *= symbol
+        # matrix_b *= self.k0
+        # matrix_ab = matrix_a**-1*matrix_b
+        # matrix_p, matrix_j = matrix_ab.jordan_form()
 
     def Crank_Nikolson_propagate(self, a, b, het, rhs):
         d_2 = 1/pow(self.k0*self.dz, 2) * diags([np.ones(self.n_z-1), -2*np.ones(self.n_z), np.ones(self.n_z-1)], [-1, 0, 1])

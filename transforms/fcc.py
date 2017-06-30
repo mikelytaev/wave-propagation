@@ -17,7 +17,7 @@ def chebyshev_weights_asymptotics(k: complex, n: int, tol=1e-16):
     cosk = cm.cos(k)
     flag = 1
 
-    coef = np.array([1,
+    coef = np.array([1+0j,
                       k,
                       -3 * k**2,
                       (-15 * k**2 + 4 * n**2) * k,
@@ -26,7 +26,7 @@ def chebyshev_weights_asymptotics(k: complex, n: int, tol=1e-16):
                       -(-12600 * k**4 * n**2 + 1008 * k**2 * n**4 + 10395 * k**6),
                       (207900 * k**4 * n**2 - 35280 * k**2 * n**4 + 64 * n**6 - 135135 * k**6) * k])
 
-    coef /= (2.0*n)**(2.0*np.arange(1, len(coef)+1)-1)
+    coef /= ((2.0+0j)*n)**(2.0*np.arange(1, len(coef)+1)-1)
     coef[::2] = 2 * coef[::2]*sink
     coef[1::2] = 2 * coef[1::2] * cosk
 
@@ -38,7 +38,7 @@ def chebyshev_weights_asymptotics(k: complex, n: int, tol=1e-16):
 
 
 def chebyshev_weights(k: complex, n: int):
-    rho = np.zeros((n + 1, 1))
+    rho = np.zeros(n + 1)*0j
     rho[0] = 2.0 / k * cm.sin(k)
     rho[1] = -4.0 * cm.cos(k) / k + 4.0 * cm.sin(k) / k**2
 
@@ -46,7 +46,7 @@ def chebyshev_weights(k: complex, n: int):
     n0 = min(max(fm.ceil(abs(k)), 2), n)
     gamma = [-2 * cm.cos(k) / k, 2 * cm.sin(k) / k]
     for ji in range(3, n0+1):
-        rho[ji-1] = 2 * gamma(ji % 2 + 1) + 2 * (-1) ^ ji * (ji - 1) / k * rho[ji - 2] + rho[ji - 3]
+        rho[ji-1] = 2 * gamma[ji % 2] + 2 * (-1) ** ji * (ji - 1) / k * rho[ji - 2] + rho[ji - 3]
 
     if n0 < n:
         # the remainder terms, if required, are computed by solving a tridiagonal linear system
@@ -60,22 +60,22 @@ def chebyshev_weights(k: complex, n: int):
             ji = ji + 1
 
         # Assembly the tridiagonal matrix
-        d1 = 2 * np.arange(n0 + 1, nMax + 2).T / k
+        d1 = (2+0j) * np.arange(n0 + 1, nMax + 2).T / k
         if n0 % 2 == 0:
             d1[::2] = -d1[::2]
         else:
             d1[1::2] = -d1[1::2]
-        unos = np.ones((len(d1)-1, 1))
+        unos = np.ones(len(d1)-1)
         m = diags([-unos, d1, unos], [-1, 0, 1])
 
         # Right hand side
-        b = np.zeros((nMax - n0 + 1, 1))
+        b = np.zeros(nMax - n0 + 1)*1j
         if n0 % 2 == 1:
             b[1::2] = 2 * gamma[0]
             b[0::2] = 2 * gamma[1]
         else:
             b[1::2] = 2 * gamma[1]
-            b[0::2] = 2 * gamma[2]
+            b[0::2] = 2 * gamma[0]
         b[0] += rho[n0-1]
         b[-1] -= rho_nMax_plus1
 
@@ -85,10 +85,10 @@ def chebyshev_weights(k: complex, n: int):
         rho[n0:n] = aux[0:n-n0]
 
     # correct rho as a complex number the entries at even positions are pure imaginary
-    rho[1::] = rho[1::2] * 1j
-    w = np.zeros((n+1, 1));
+    rho[1::2] = rho[1::2] * 1j
+    w = np.zeros(n+1)*0j
     w[0] = gamma[1]
-    w[1:] = np.multiarray(np.arange(1, n+1).T / (1j*k), rho[0:n+1])
+    w[1:] = -np.arange(1, n+1) / (1j*k) * rho[0:n]
     w[1::2] += gamma[0]*1j
     w[2::2] += gamma[1]
 
