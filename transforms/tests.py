@@ -53,10 +53,17 @@ class TestFCC(unittest.TestCase):
         self.assertTrue(norm(rho_true - rho) < self.tol)
 
     def test_FFCFoutier(self):
-        ffc = FCCFourier(4, 3, 7, np.array([1, 10, 100]))
-        self.assertTrue(ffc.fw.shape == (3, 8))
-        self.assertTrue(abs(ffc.fw[0, 0] - (-0.008954924100922 - 0.004892097332696j)) < self.tol)
-        self.assertTrue(abs(ffc.fw[2, 7] - (-0.000550686115736 - 0.009845952674564j)) < self.tol)
+        fcc = FCCFourier(4, 3, 7, np.array([1, 10, 100]))
+        self.assertTrue(fcc.fw.shape == (3, 8))
+        self.assertTrue(abs(fcc.fw[0, 0] - (-0.008954924100922 - 0.004892097332696j)) < self.tol)
+        self.assertTrue(abs(fcc.fw[2, 7] - (-0.000550686115736 - 0.009845952674564j)) < self.tol)
+
+        fcc = FCCFourier(1, 4, 7, np.array([1, 10, 100]))
+        tf = fcc.forward(np.sin(cheb_grid(1, 4, 7)**2), 1, 4)
+        tf_true = np.array([0.074342089312286 - 0.241773913413446j,
+                            0.202737233915876 - 0.022917127345782j,
+                            0.007683316767495 - 0.007264724014208j])
+        self.assertTrue(norm(tf-tf_true) < self.tol)
 
 
 if __name__ == '__main__':
