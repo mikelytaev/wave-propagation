@@ -102,15 +102,14 @@ def cheb_grid(a, b, n):
 
 class FCCFourier:
 
-    def __init__(self, x_a, x_b, x_n, kn: np.array):
+    def __init__(self, domain_size, x_n, kn: np.array):
         self.x_n = x_n
-        self.x_grid = cheb_grid(x_a, x_b, x_n)
         self.kn = -kn
         self.fw = np.zeros((len(kn), x_n + 1))*0j
         for k_i in range(1, len(kn)+1):
             k = -kn[k_i-1].real
             m = x_n
-            knew = k * (x_b - x_a) / 2
+            knew = k * domain_size / 2
             if abs(knew) < 1:
                 if m % 2 == 0:
                     m_end = m + 1
@@ -123,14 +122,17 @@ class FCCFourier:
                 w = idct(w, type=1) / (len(w) - 1)
                 # Correction for the first & last term
                 w[[0, -1]] = 0.5 * w[[0, -1]]
-                self.fw[k_i - 1, :] = w * np.exp(1j * knew * xi) * (x_b - x_a) / 2
+                self.fw[k_i - 1, :] = w * np.exp(1j * knew * xi) * domain_size / 2
             else:
                 w, rho = chebyshev_weights(knew, m)
                 w = idct(w, type=1) / (len(w) - 1)
                 # Correction for the first & last term
                 w[[0, -1]] = 0.5 * w[[0, -1]]
-                self.fw[k_i - 1, :] = (x_b - x_a) / 2 * w
+                self.fw[k_i - 1, :] = domain_size / 2 * w
 
     def forward(self, f: np.array, x_a, x_b):
         return np.exp(1j*self.kn.real*(x_b+x_a)/2) * (
             (self.fw * np.exp(np.array([-self.kn.imag]).T.dot(np.array([cheb_grid(x_a, x_b, self.x_n)])))).dot(f))
+
+class FCCAdaptiveFourier:
+
