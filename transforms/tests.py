@@ -3,6 +3,8 @@ __author__ = 'Mikhail'
 import unittest
 from transforms.fcc import *
 from numpy.linalg import norm
+import sympy as sy
+import math as fm
 
 # test values from matlab implementation
 # http://www.unavarra.es/personal/victor dominguez/clenshawcurtisrule
@@ -52,7 +54,7 @@ class TestFCC(unittest.TestCase):
         self.assertTrue(norm(w_true-w) < self.tol)
         self.assertTrue(norm(rho_true - rho) < self.tol)
 
-    def test_FFCFoutier(self):
+    def test_FFCFourier(self):
         fcc = FCCFourier(-1, 7, np.array([1, 10, 100]))
         self.assertTrue(fcc.fw.shape == (3, 8))
         self.assertTrue(abs(fcc.fw[0, 0] - (-0.008954924100922 - 0.004892097332696j)) < self.tol)
@@ -64,6 +66,14 @@ class TestFCC(unittest.TestCase):
                             0.202737233915876 - 0.022917127345782j,
                             0.007683316767495 - 0.007264724014208j])
         self.assertTrue(norm(tf-tf_true) < self.tol)
+
+    def test_FCCAdaptiveFourier(self):
+        fcca = FCCAdaptiveFourier(2*fm.pi, np.array([1, 10, 100]), rtol=1e-12)
+        x = sy.symbols('x')
+        test_func = (x**2+x+10)*sy.sin(100*x)
+        exact = complex(sy.integrate(test_func * sy.exp(-1j*10*x), (x, 0, 2*fm.pi)))
+        int_val = fcca.forward(lambda t: complex(test_func.subs(x, t)), 0, 2*fm.pi)
+        self.assertTrue(norm(exact - int_val[1]) < abs(fcca.rtol * int_val[1]))
 
 
 if __name__ == '__main__':

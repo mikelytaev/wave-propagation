@@ -6,6 +6,7 @@ import math as fm
 from scipy.sparse import diags
 from scipy.sparse.linalg import spsolve
 from scipy.fftpack import idct
+from numpy.linalg import norm
 
 # python implementation of Filon–Clenshaw–Curtis rules
 # Dominguez V., Graham I. G., Smyshlyaev V. P.
@@ -134,5 +135,32 @@ class FCCFourier:
         return np.exp(1j*self.kn.real*(x_b+x_a)/2) * (
             (self.fw * np.exp(np.array([-self.kn.imag]).T.dot(np.array([cheb_grid(x_a, x_b, self.x_n)])))).dot(f))
 
+
 class FCCAdaptiveFourier:
 
+    def __init__(self, domain_size, kn: np.array, x_n=15, rtol=1e-3):
+        self.domain_size = domain_size
+        self.kn = kn
+        self.x_n = x_n
+        self.rtol = rtol
+        self.fcc_integrators_dict = {}
+        self.fcc_integrators_dict[1] = FCCFourier(self.domain_size, self.x_n, self.kn)
+
+    def forward(self, f, x_a, x_b):
+        vect_f = np.vectorize(f)
+        i_val = self.fcc_integrators_dict[1].forward(vect_f(cheb_grid(x_a, x_b, self.x_n)), x_a, x_b)
+        return self._rec_forward(vect_f, x_a, x_b, i_val)
+
+    def _rec_forward(self, vect_f, x_a, x_b, i_val):
+        if (x_b - x_a) < 1e-14:
+            return i_val
+        x_c = (x_a + x_b) / 2
+        index = round(self.domain_size / (x_c - x_a))
+        if not (index in self.fcc_integrators_dict):
+            self.fcc_integrators_dict[index] = FCCFourier(x_c - x_a, self.x_n, self.kn)
+        i1_val = self.fcc_integrators_dict[index].forward(vect_f(cheb_grid(x_a, x_c, self.x_n)), x_a, x_c)
+        i2_val = self.fcc_integrators_dict[index].forward(vect_f(cheb_grid(x_c, x_b, self.x_n)), x_c, x_b)
+        if norm(i_val - i1_val - i2_val) / norm(i_val) < self.rtol:
+            return i1_val + i2_val
+        else:
+            return self._rec_forward(vect_f, x_a, x_c, i1_val) + self._rec_forward(vect_f, x_c, x_b, i2_val)
