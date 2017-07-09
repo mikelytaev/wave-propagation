@@ -1,6 +1,5 @@
 __author__ = 'Mikhail'
 
-from cmath import *
 import numpy as np
 import scipy.linalg as la
 from mpmath import *
@@ -9,11 +8,11 @@ from scipy.sparse.linalg import spsolve
 from functools import partial
 from rwp.WPDefs import *
 from itertools import zip_longest
-import numpy.polynomial.polynomial as poly
 from sympy import symbols, Matrix
 import math as fm
 import cmath as cm
-from transforms.fcc import FCCFourier
+from transforms.fcc import FCCAdaptiveFourier
+import logging
 
 
 class PadePropagator:
@@ -47,13 +46,37 @@ class PadePropagator:
         :param upper_bound: upper_bound[0]*u_{n-1} + upper_bound[1]*u_{n} = upper_bound[2]
         :return:
         '''
-        d_2 = 1/cm.pow(self.k0*self.dz, 2) * diags([np.ones(self.n_z-1), -2*np.ones(self.n_z), np.ones(self.n_z-1)], [-1, 0, 1])
+        d_2 = 1/(self.k0*self.dz)**2 * diags([np.ones(self.n_z-1), -2*np.ones(self.n_z), np.ones(self.n_z-1)], [-1, 0, 1])
         left_matrix = eye(self.n_z) + b*(d_2 + diags([het], [0]))
         right_matrix = eye(self.n_z) + a*(d_2 + diags([het], [0]))
         rhs = right_matrix * initial
         left_matrix[0, 0], left_matrix[0, 1], rhs[0] = lower_bound
-        left_matrix[-1, 0], left_matrix[-1, 1], rhs[-1] = upper_bound
+        left_matrix[-1, -2], left_matrix[-1, -1], rhs[-1] = upper_bound
         return spsolve(left_matrix, rhs)
+
+    def _nlbc_calc(self):
+        fcca = FCCAdaptiveFourier(2 * fm.pi, -np.arange(0, self.n_x), rtol=1e-8)
+        num_roots, den_roots = list(zip(*self.pade_coefs))
+        xi = symbols('xi')
+        tau = 1.001
+        if max(self.pade_order) == 1:
+            matrix_t = lambda t: 1/d2a_n_eq_ba_n(self.k0 ** 2 * (1 - t) / (-num_roots[0] + den_roots[0] * t) * self.dz**2)
+            nlbc_coefs = tau**np.arange(0, self.n_x)/(2*fm.pi) * \
+                         fcca.forward(lambda t: matrix_t(tau*cm.exp(1j*t)), 0, 2 * fm.pi)
+            nlbc_coefs = nlbc_coefs[:, np.newaxis, np.newaxis]
+        else:
+            matrix_a = Matrix(np.diag(-np.diag(num_roots), 0) + np.diag(den_roots[0:-1], 1))
+            matrix_a[-1, 0] = den_roots[-1]
+            matrix_a[0, 1] *= xi
+            matrix_b = Matrix(np.diag(np.ones(len(num_roots)), 0) + np.diag(-np.ones(len(num_roots)) - 1, 1))
+            matrix_b[-1, 0] = -1
+            matrix_b[0, 1] *= xi
+            matrix_b *= self.k0
+            matrix_ab = matrix_a ** -1 * matrix_b
+            matrix_p, matrix_j = matrix_ab.jordan_form()
+            matrix_p_inv = matrix_p.inv()
+            # d2a_n_eq_ba_n(self.dz**2*)
+        return nlbc_coefs
 
     def propagate(self, max_range_m, start_field):
         self.n_x = fm.ceil(max_range_m / self.dx) + 1
@@ -62,36 +85,30 @@ class PadePropagator:
         z_grid, self.dz = np.linspace(0.0, self.env.z_max, self.n_z, retstep=True)
         field = Field(x_grid, z_grid)
         field.field[0, :] = list(map(start_field, z_grid))
+        nlbc_coefs = self._nlbc_calc()
 
-        num_roots, den_roots = list(zip(*self.pade_coefs))
-        xi = symbols('xi')
-        tau = 1.0001
-        if max(self.pade_order) == 1:
-            matrix_t = Matrix([self.k0**2*(1-xi)/(-num_roots[0] + den_roots[0]*xi)])
-            matrix_t0 = Matrix([d2a_n_eq_ba_n(matrix_t.subs(xi, t))])
-        else:
-            matrix_a = Matrix(np.diag(-np.diag(num_roots), 0) + np.diag(den_roots[0:-1], 1))
-            matrix_a[-1, 0] = den_roots[-1]
-            matrix_a[0, 1] *= xi
-            matrix_b = Matrix(np.diag(np.ones(len(num_roots)), 0) + np.diag(-np.ones(len(num_roots))-1, 1))
-            matrix_b[-1, 0] = -1
-            matrix_b[0, 1] *= xi
-            matrix_b *= self.k0
-            matrix_ab = matrix_a**-1*matrix_b
-            matrix_p, matrix_j = matrix_ab.jordan_form()
-            matrix_p_inv = matrix_p.inv()
-            #d2a_n_eq_ba_n(self.dz**2*)
-
+        phi_J = np.zeros((self.n_x, max(self.pade_order)))*0j
         for x_i, x in enumerate(x_grid[1:], start=1):
+            logging.debug('SSPade propagation x = ' + str(x))
             phi = field.field[x_i-1, :]
-            for (a, b) in self.pade_coefs:
-                phi = self._Crank_Nikolson_propagate(a, b, list(map(partial(self.env.M_profile, x), z_grid)), phi)
+            conv = self._calc_conv(nlbc_coefs, phi_J[0:x_i])
+            for pc_i, (a, b) in enumerate(self.pade_coefs):
+                phi = self._Crank_Nikolson_propagate(a, b, list(map(partial(self.env.M_profile, x), z_grid)), phi,
+                                                     upper_bound=(1, -nlbc_coefs[0], conv[pc_i] + nlbc_coefs[0, pc_i].dot(phi_J[x_i])))
+                phi_J[x_i, pc_i] = phi[-1]
             field.field[x_i, :] = phi
 
         return field
 
+    def _calc_conv(self, mat, vec):
+        res = np.zeros(vec.shape[1])*0j
+        for i in range(0, vec.shape[0]):
+            res += mat[vec.shape[0]-i].dot(vec[i])
+        return res
+
+
 
 def d2a_n_eq_ba_n(b):
-    c1 = (b+2-cm.sqrt(b**2-4*b))/2
+    c1 = (b+2-cm.sqrt(b**2+4*b))/2
     c2 = 1 / c1
     return [c1, c2][abs(c1) > abs(c2)]

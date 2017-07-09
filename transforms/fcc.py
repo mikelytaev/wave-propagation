@@ -7,6 +7,7 @@ from scipy.sparse import diags
 from scipy.sparse.linalg import spsolve
 from scipy.fftpack import idct
 from numpy.linalg import norm
+import logging
 
 # python implementation of Filon–Clenshaw–Curtis rules
 # Dominguez V., Graham I. G., Smyshlyaev V. P.
@@ -152,6 +153,7 @@ class FCCAdaptiveFourier:
         return self._rec_forward(vect_f, x_a, x_b, i_val)
 
     def _rec_forward(self, vect_f, x_a, x_b, i_val):
+        logging.debug('FCCAdaptiveFourier [' + str(x_a) + '; ' + str(x_b) + ']')
         if (x_b - x_a) < 1e-14:
             return i_val
         x_c = (x_a + x_b) / 2
