@@ -133,8 +133,10 @@ class FCCFourier:
                 self.fw[k_i - 1, :] = domain_size / 2 * w
 
     def forward(self, f: np.array, x_a, x_b):
-        return np.exp(1j*self.kn.real*(x_b+x_a)/2) * (
-            (self.fw * np.exp(np.array([-self.kn.imag]).T.dot(np.array([cheb_grid(x_a, x_b, self.x_n)])))).dot(f))
+        if f.ndim == 1:
+            f = f[:, np.newaxis]
+        return np.tile(np.exp(1j*self.kn.real*(x_b+x_a)/2)[:, np.newaxis], (1, f.shape[1])) * (
+            (self.fw * np.exp(-self.kn[:, np.newaxis].imag.dot(cheb_grid(x_a, x_b, self.x_n)[np.newaxis, :]))).dot(f))
 
 
 class FCCAdaptiveFourier:
@@ -148,11 +150,10 @@ class FCCAdaptiveFourier:
         self.fcc_integrators_dict[1] = FCCFourier(self.domain_size, self.x_n, self.kn)
 
     def forward(self, f, x_a, x_b):
-        vect_f = np.vectorize(f)
-        i_val = self.fcc_integrators_dict[1].forward(vect_f(cheb_grid(x_a, x_b, self.x_n)), x_a, x_b)
-        return self._rec_forward(vect_f, x_a, x_b, i_val)
+        i_val = self.fcc_integrators_dict[1].forward(np.array([f(a) for a in cheb_grid(x_a, x_b, self.x_n)]), x_a, x_b)
+        return self._rec_forward(f, x_a, x_b, i_val)
 
-    def _rec_forward(self, vect_f, x_a, x_b, i_val):
+    def _rec_forward(self, f, x_a, x_b, i_val):
         logging.debug('FCCAdaptiveFourier [' + str(x_a) + '; ' + str(x_b) + ']')
         if (x_b - x_a) < 1e-14:
             return i_val
@@ -160,9 +161,9 @@ class FCCAdaptiveFourier:
         index = round(self.domain_size / (x_c - x_a))
         if not (index in self.fcc_integrators_dict):
             self.fcc_integrators_dict[index] = FCCFourier(x_c - x_a, self.x_n, self.kn)
-        i1_val = self.fcc_integrators_dict[index].forward(vect_f(cheb_grid(x_a, x_c, self.x_n)), x_a, x_c)
-        i2_val = self.fcc_integrators_dict[index].forward(vect_f(cheb_grid(x_c, x_b, self.x_n)), x_c, x_b)
-        if norm(i_val - i1_val - i2_val) / norm(i_val) < self.rtol:
-            return i1_val + i2_val
+        left_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in cheb_grid(x_a, x_c, self.x_n)]), x_a, x_c)
+        right_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in cheb_grid(x_c, x_b, self.x_n)]), x_c, x_b)
+        if norm(i_val - left_val - right_val) / norm(i_val) < self.rtol:
+            return left_val + right_val
         else:
-            return self._rec_forward(vect_f, x_a, x_c, i1_val) + self._rec_forward(vect_f, x_c, x_b, i2_val)
+            return self._rec_forward(f, x_a, x_c, left_val) + self._rec_forward(f, x_c, x_b, right_val)

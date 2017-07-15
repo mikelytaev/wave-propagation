@@ -1,5 +1,3 @@
-__author__ = 'Mikhail'
-
 import numpy as np
 import scipy.linalg as la
 from mpmath import *
@@ -8,11 +6,12 @@ from scipy.sparse.linalg import spsolve
 from functools import partial
 from rwp.WPDefs import *
 from itertools import zip_longest
-from sympy import symbols, Matrix
 import math as fm
 import cmath as cm
 from transforms.fcc import FCCAdaptiveFourier
 import logging
+
+__author__ = 'Mikhail'
 
 
 class PadePropagator:
@@ -55,27 +54,33 @@ class PadePropagator:
         return spsolve(left_matrix, rhs)
 
     def _nlbc_calc(self):
-        fcca = FCCAdaptiveFourier(2 * fm.pi, -np.arange(0, self.n_x), rtol=1e-8)
+        fcca = FCCAdaptiveFourier(2 * fm.pi, -np.arange(0, self.n_x), rtol=1e-6)
         num_roots, den_roots = list(zip(*self.pade_coefs))
-        xi = symbols('xi')
         tau = 1.001
         if max(self.pade_order) == 1:
-            matrix_t = lambda t: 1/d2a_n_eq_ba_n(self.k0 ** 2 * (1 - t) / (-num_roots[0] + den_roots[0] * t) * self.dz**2)
-            nlbc_coefs = tau**np.arange(0, self.n_x)/(2*fm.pi) * \
-                         fcca.forward(lambda t: matrix_t(tau*cm.exp(1j*t)), 0, 2 * fm.pi)
-            nlbc_coefs = nlbc_coefs[:, np.newaxis, np.newaxis]
+            def nlbc_transformed(t):
+                return 1/d2a_n_eq_ba_n(self.k0 ** 2 * (1 - t) / (-num_roots[0] + den_roots[0] * t) * self.dz**2)
+            nlbc_coefs = tau**np.arange(0, self.n_x)[:, np.newaxis] / (2*fm.pi) * \
+                         fcca.forward(lambda t: nlbc_transformed(tau*cm.exp(1j*t)), 0, 2 * fm.pi)
+            nlbc_coefs = nlbc_coefs[:, :, np.newaxis]
         else:
-            matrix_a = Matrix(np.diag(-np.diag(num_roots), 0) + np.diag(den_roots[0:-1], 1))
-            matrix_a[-1, 0] = den_roots[-1]
-            matrix_a[0, 1] *= xi
-            matrix_b = Matrix(np.diag(np.ones(len(num_roots)), 0) + np.diag(-np.ones(len(num_roots)) - 1, 1))
-            matrix_b[-1, 0] = -1
-            matrix_b[0, 1] *= xi
-            matrix_b *= self.k0
-            matrix_ab = matrix_a ** -1 * matrix_b
-            matrix_p, matrix_j = matrix_ab.jordan_form()
-            matrix_p_inv = matrix_p.inv()
-            # d2a_n_eq_ba_n(self.dz**2*)
+            m_size = len(self.pade_coefs)
+
+            def nlbc_transformed(t):
+                matrix_a = np.diag(den_roots, 0) - np.diag(num_roots[1:], -1)
+                matrix_a[0, -1] = -num_roots[0]
+                matrix_a[0, 0] *= t
+                matrix_b = np.diag(-np.ones(m_size), 0) + np.diag(np.ones(m_size - 1), -1) + 0j
+                matrix_b[0, -1] = 1
+                matrix_b[0, 0] *= t
+                matrix_b *= self.k0 ** 2
+                w, vr = la.eig(matrix_b, matrix_a, right=True)
+                r = np.diag([1.0 / d2a_n_eq_ba_n(a * self.dz**2) for a in w])
+                res = vr.dot(r).dot(la.inv(vr))
+                return res.reshape(m_size**2)
+            nlbc_coefs = (tau**np.repeat(np.arange(0, self.n_x)[:, np.newaxis], m_size**2, axis=1) / (2*fm.pi) * \
+                         fcca.forward(lambda t: nlbc_transformed(tau*cm.exp(1j*t)), 0, 2 * fm.pi)).reshape((self.n_x, m_size, m_size))
+
         return nlbc_coefs
 
     def propagate(self, max_range_m, start_field):
@@ -94,7 +99,7 @@ class PadePropagator:
             conv = self._calc_conv(nlbc_coefs, phi_J[0:x_i])
             for pc_i, (a, b) in enumerate(self.pade_coefs):
                 phi = self._Crank_Nikolson_propagate(a, b, list(map(partial(self.env.M_profile, x), z_grid)), phi,
-                                                     upper_bound=(1, -nlbc_coefs[0], conv[pc_i] + nlbc_coefs[0, pc_i].dot(phi_J[x_i])))
+                                                     upper_bound=(1, -nlbc_coefs[0, pc_i, pc_i], conv[pc_i] + nlbc_coefs[0, pc_i].dot(phi_J[x_i])))
                 phi_J[x_i, pc_i] = phi[-1]
             field.field[x_i, :] = phi
 
@@ -105,7 +110,6 @@ class PadePropagator:
         for i in range(0, vec.shape[0]):
             res += mat[vec.shape[0]-i].dot(vec[i])
         return res
-
 
 
 def d2a_n_eq_ba_n(b):

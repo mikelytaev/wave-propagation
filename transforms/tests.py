@@ -65,15 +65,15 @@ class TestFCC(unittest.TestCase):
         tf_true = np.array([0.074342089312286 - 0.241773913413446j,
                             0.202737233915876 - 0.022917127345782j,
                             0.007683316767495 - 0.007264724014208j])
-        self.assertTrue(norm(tf-tf_true) < self.tol)
+        self.assertTrue(norm(tf-tf_true[:, np.newaxis]) < self.tol)
 
     def test_FCCAdaptiveFourier(self):
         fcca = FCCAdaptiveFourier(2*fm.pi, np.array([1, 10, 100]), rtol=1e-12)
         x = sy.symbols('x')
         test_func = (x**2+x+10)*sy.sin(100*x)
         exact = complex(sy.integrate(test_func * sy.exp(-1j*10*x), (x, 0, 2*fm.pi)))
-        int_val = fcca.forward(lambda t: complex(test_func.subs(x, t)), 0, 2*fm.pi)
-        self.assertTrue(norm(exact - int_val[1]) < abs(fcca.rtol * int_val[1]))
+        int_val = fcca.forward(lambda t: np.array([complex(test_func.subs(x, t)), 2*complex(test_func.subs(x, t))]), 0, 2*fm.pi)
+        self.assertTrue(norm(exact - int_val[1, 1]/2) < abs(fcca.rtol * exact))
 
 
 if __name__ == '__main__':
