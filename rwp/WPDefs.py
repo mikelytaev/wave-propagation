@@ -1,9 +1,8 @@
-__author__ = 'Mikhail'
-
-from enum import Enum
 import numpy as np
 from cmath import *
 
+
+__author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 class Field:
     def __init__(self, x_grid, z_grid):
@@ -11,15 +10,34 @@ class Field:
         self.field = np.zeros((x_grid.size, z_grid.size))*(1+1j)
 
 
+class ImpedanceBC:
+    """
+    Impedance boundary (alpha1*u(z)+alpha2*u'(z))_{z=0}=0
+    """
+    def __init__(self, alpha1, alpha2):
+        self.alpha1 = alpha1
+        self.alpha2 = alpha2
+
+
+class TransparentConstBS:
+    """
+    Constant refractive index in outer domain
+    """
+    def __init__(self, ref_index):
+        self.ref_index = ref_index
+
+
+class TransparentLinearBS:
+    """
+    Linear refractive index in outer domain
+    """
+    def __init__(self, mu):
+        self.mu = mu
+
+
 class EMEnvironment:
-    class BoundaryType(Enum):
-        IMPEDANCE = 0  # impedance boundary (alpha1*u(z)+alpha2*u'(z))_{z=0}=0
-        CONST = 1  # constant refractive index in outer domain
-        LIN = 2  # linear refractive index in outer domain
-    lower_boundary_type = BoundaryType.IMPEDANCE
-    upper_boundary_type = BoundaryType.CONST
-    alpha1 = 1  # lower boundary
-    alpha2 = 0
+    lower_boundary = ImpedanceBC(1, 0)
+    upper_boundary = TransparentConstBS(0.0)
 
     z_max = 100.0
 
