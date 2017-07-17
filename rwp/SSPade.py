@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.linalg as la
-from mpmath import *
+import mpmath
 from scipy.sparse import diags, eye
 from scipy.sparse.linalg import spsolve
 from functools import partial
@@ -24,15 +24,15 @@ class PadePropagator:
         self.env = env
         self.pade_order = pade_order
 
-        mp.dps = 15
+        mpmath.mp.dps = 15
 
         def propagator_func(s):
-            return mp.exp(1j*self.k0*self.dx*(mp.sqrt(1+s)-1))
+            return mpmath.mp.exp(1j*self.k0*self.dx*(mpmath.mp.sqrt(1+s)-1))
 
-        t = taylor(propagator_func, 0, pade_order[0]+pade_order[1])
-        p, q = pade(t, pade_order[0], pade_order[1])
-        self.pade_coefs = list(zip_longest([-1/complex(v) for v in polyroots(p[::-1])],
-                                           [-1/complex(v) for v in polyroots(q[::-1])], fillvalue=0.0j))
+        t = mpmath.taylor(propagator_func, 0, pade_order[0]+pade_order[1])
+        p, q = mpmath.pade(t, pade_order[0], pade_order[1])
+        self.pade_coefs = list(zip_longest([-1/complex(v) for v in mpmath.polyroots(p[::-1])],
+                                           [-1/complex(v) for v in mpmath.polyroots(q[::-1])], fillvalue=0.0j))
 
     def _Crank_Nikolson_propagate(self, a, b, het, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
         '''
@@ -53,13 +53,13 @@ class PadePropagator:
         left_matrix[-1, -2], left_matrix[-1, -1], rhs[-1] = upper_bound
         return spsolve(left_matrix, rhs)
 
-    def _nlbc_calc(self, diff_eq_solution):
+    def _nlbc_calc(self, beta, diff_eq_solution):
         fcca = FCCAdaptiveFourier(2 * fm.pi, -np.arange(0, self.n_x), rtol=1e-6)
         num_roots, den_roots = list(zip(*self.pade_coefs))
         tau = 1.001
         if max(self.pade_order) == 1:
             def nlbc_transformed(t):
-                return diff_eq_solution(self.k0 ** 2 * (1 - t) / (-num_roots[0] + den_roots[0] * t) * self.dz**2)
+                return diff_eq_solution(self.k0 ** 2 * (1 + beta) * (1 - t) / (-num_roots[0] + den_roots[0] * t) * self.dz**2)
             nlbc_coefs = tau**np.arange(0, self.n_x)[:, np.newaxis] / (2*fm.pi) * \
                          fcca.forward(lambda t: nlbc_transformed(tau*cm.exp(1j*t)), 0, 2 * fm.pi)
             nlbc_coefs = nlbc_coefs[:, :, np.newaxis]
@@ -73,7 +73,7 @@ class PadePropagator:
                 matrix_b = np.diag(-np.ones(m_size), 0) + np.diag(np.ones(m_size - 1), -1) + 0j
                 matrix_b[0, -1] = 1
                 matrix_b[0, 0] *= t
-                matrix_b *= self.k0 ** 2
+                matrix_b *= self.k0 ** 2 * (1 + beta)
                 w, vr = la.eig(matrix_b, matrix_a, right=True)
                 r = np.diag([diff_eq_solution(a * self.dz**2) for a in w])
                 res = vr.dot(r).dot(la.inv(vr))
@@ -92,23 +92,24 @@ class PadePropagator:
         field.field[0, :] = list(map(start_field, z_grid))
 
         if isinstance(self.env.upper_boundary, TransparentConstBS):
-            nlbc_coefs = self._nlbc_calc(lambda v: 1.0 / d2a_n_eq_ba_n(v))
+            nlbc_coefs = self._nlbc_calc(self.env.n2_profile(0, z_grid[-1]) - 1, lambda v: 1.0 / d2a_n_eq_ba_n(v))
         elif isinstance(self.env.upper_boundary, TransparentLinearBS):
-            nlbc_coefs = self._nlbc_calc(partial(bessel_ratio, c=-self.k0**2*self.env.upper_boundary.mu, j=self.n_z))
+            nlbc_coefs = self._nlbc_calc(self.env.n2_profile(0, z_grid[-1]) - 1,
+                                         lambda v: bessel_ratio(c=-self.k0**2*(self.env.upper_boundary.mu_n2 - 1)*self.dz**3, d=v, j=self.n_z))
 
         phi_J = np.zeros((self.n_x, max(self.pade_order)))*0j
         for x_i, x in enumerate(x_grid[1:], start=1):
             logging.debug('SSPade propagation x = ' + str(x))
             phi = field.field[x_i-1, :]
+            het = np.array([self.env.n2_profile(x, z) - 1 for z in z_grid])
             if isinstance(self.env.upper_boundary, (TransparentConstBS, TransparentLinearBS)):
                 conv = self._calc_conv(nlbc_coefs, phi_J[0:x_i])
             for pc_i, (a, b) in enumerate(self.pade_coefs):
                 if isinstance(self.env.upper_boundary, (TransparentConstBS, TransparentLinearBS)):
                     upper_bound = (1, -nlbc_coefs[0, pc_i, pc_i], conv[pc_i] + nlbc_coefs[0, pc_i].dot(phi_J[x_i]))
-                elif isinstance(self.env.upper_boundary, [ImpedanceBC]):
+                elif isinstance(self.env.upper_boundary, ImpedanceBC):
                     upper_bound = 0, 1, 0
-                phi = self._Crank_Nikolson_propagate(a, b, list(map(partial(self.env.M_profile, x), z_grid)), phi,
-                                                     upper_bound=upper_bound)
+                phi = self._Crank_Nikolson_propagate(a, b, het, phi, upper_bound=upper_bound)
                 phi_J[x_i, pc_i] = phi[-1]
             field.field[x_i, :] = phi
 
@@ -128,9 +129,7 @@ def d2a_n_eq_ba_n(b):
 
 
 def bessel_ratio(c, d, j):
-    def a(n):
-        (-1)**(n+1) * 2.0 * (j + (2.0 + d) / c + n - 1) * (c / 2.0)
-    return lentz(a)
+    return lentz(lambda n: (-1)**(n+1) * 2.0 * (j + (2.0 + d) / c + n - 1) * (c / 2.0))
 
 
 def lentz(cont_frac_seq, tol=1e-16):

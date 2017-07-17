@@ -23,29 +23,30 @@ class TransparentConstBS:
     """
     Constant refractive index in outer domain
     """
-    def __init__(self, ref_index):
-        self.ref_index = ref_index
 
 
 class TransparentLinearBS:
     """
     Linear refractive index in outer domain
     """
-    def __init__(self, mu):
-        self.mu = mu
+    def __init__(self, mu_N):
+        self.mu_n2 = 1 + 2 * mu_N * 1e-6
 
 
 class EMEnvironment:
     lower_boundary = ImpedanceBC(1, 0)
-    upper_boundary = TransparentConstBS(0.0)
-
+    upper_boundary = TransparentConstBS()
     z_max = 100.0
 
-    def M_profile(self, x, z):
-        return 0
+    def __init__(self):
+        self.N_profile = lambda x, z: 0
+        self.terrain = lambda x: x * 0
 
-    def terrain(self, x):
-        return 0
+    def n2_profile(self, x, z):
+        return 1 + 2 * self.N_profile(x, z) * 1e-6
+
+    def n_profile(self, x, z):
+        1 + self.N_profile * 1e-6
 
 
 def gauss_source(k0, z_s, beam_width, eval_angle):
