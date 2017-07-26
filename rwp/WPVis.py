@@ -20,5 +20,5 @@ class FieldVisualiser:
 
     def plot_hor(self, z0):
         z0_i = abs(self.field.z_grid - z0).argmin()
-        plt.plot(self.field.x_grid, self.trans_func(self.field.field[:,z0_i]))
+        plt.plot(self.field.x_grid, self.trans_func(self.field.field[:, z0_i]))
         return plt

@@ -30,7 +30,7 @@ class TransparentLinearBS:
     Linear refractive index in outer domain
     """
     def __init__(self, mu_N):
-        self.mu_n2 = 1 + 2 * mu_N * 1e-6
+        self.mu_n2 = mu_N
 
 
 class EMEnvironment:
@@ -43,13 +43,18 @@ class EMEnvironment:
         self.terrain = lambda x: x * 0
 
     def n2_profile(self, x, z):
-        return 1 + 2 * self.N_profile(x, z) * 1e-6
-
-    def n_profile(self, x, z):
-        1 + self.N_profile * 1e-6
+        return self.N_profile(x, z)
 
 
 def gauss_source(k0, z_s, beam_width, eval_angle):
     beam_width = beam_width * pi / 180
     eval_angle = eval_angle * pi / 180
-    return lambda z: k0*beam_width/(2*sqrt(pi)*log10(2))*exp(-1j*k0*eval_angle)*exp(-pow(beam_width*k0*(z-z_s), 2)/(8*log10(2)))
+    return lambda z: k0*beam_width/(2*sqrt(pi)*log10(2))*exp(-1j*k0*eval_angle*z)*exp(-pow(beam_width*k0*(z-z_s), 2)/(8*log10(2)))
+
+
+def Earth_surface(wave_length, conductivity, permittivity, polarz='H'):
+    k0 = 2 * pi / wave_length
+    if polarz == 'H':
+        return ImpedanceBC(1, 1j * k0 * (permittivity + 1j * 60 * conductivity * wave_length) ** (1/2))
+    else:
+        return ImpedanceBC(1, 1j * k0 * (permittivity + 1j * 60 * conductivity * wave_length) ** (-1 / 2))

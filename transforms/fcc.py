@@ -163,7 +163,7 @@ class FCCAdaptiveFourier:
             self.fcc_integrators_dict[index] = FCCFourier(x_c - x_a, self.x_n, self.kn)
         left_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in cheb_grid(x_a, x_c, self.x_n)]), x_a, x_c)
         right_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in cheb_grid(x_c, x_b, self.x_n)]), x_c, x_b)
-        if norm(i_val - left_val - right_val) / norm(i_val) < self.rtol:
+        if norm(i_val - left_val - right_val) < self.rtol * norm(i_val):
             return left_val + right_val
         else:
             return self._rec_forward(f, x_a, x_c, left_val) + self._rec_forward(f, x_c, x_b, right_val)
