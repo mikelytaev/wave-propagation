@@ -159,7 +159,7 @@ class FCCAdaptiveFourier:
             return i_val
         x_c = (x_a + x_b) / 2
         index = round(self.domain_size / (x_c - x_a))
-        if not (index in self.fcc_integrators_dict):
+        if index not in self.fcc_integrators_dict:
             self.fcc_integrators_dict[index] = FCCFourier(x_c - x_a, self.x_n, self.kn)
         left_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in cheb_grid(x_a, x_c, self.x_n)]), x_a, x_c)
         right_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in cheb_grid(x_c, x_b, self.x_n)]), x_c, x_b)
