@@ -1,19 +1,19 @@
-__author__ = 'Mikhail'
-
 from rwp.WPDefs import *
 import matplotlib.pyplot as plt
 from matplotlib.colors import LightSource, Normalize
 
+__author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 class FieldVisualiser:
 
-    def __init__(self, field: Field, trans_func=lambda v: cm.abs(v)):
+    def __init__(self, field: Field, trans_func=lambda v: abs(v), label=''):
         trans_func = np.vectorize(trans_func)
         self.field = trans_func(field.field).real
         self.x_grid, self.z_grid = field.x_grid, field.z_grid
         self.precision = field.precision
         self.max = np.max(self.field)
         self.min = max(trans_func(self.precision) + self.max, np.min(self.field))
+        self.label = label
 
     def plot2d(self, min, max):
         norm = Normalize(min, max)
@@ -22,8 +22,11 @@ class FieldVisualiser:
         plt.colorbar()
         return plt
 
-    def plot_hor(self, z0):
+    def plot_hor(self, z0, *others):
+        plt.plot(self.x_grid, self.field[:, abs(self.z_grid - z0).argmin()], label=self.label)
+        for a in others:
+            plt.plot(a.x_grid, a.field[:, abs(a.z_grid - z0).argmin()], label=a.label)
+        plt.legend()
         z0_i = abs(self.z_grid - z0).argmin()
-        plt.plot(self.x_grid, self.field[:, z0_i])
-        plt.axes([self.x_grid[0], self.x_grid[-1], max(min(self.field[:, z0_i]), self.min), max(self.field[:, z0_i])])
+        #plt.axes([self.x_grid[0], self.x_grid[-1], max(min(self.field[:, z0_i]), self.min), max(self.field[:, z0_i])])
         return plt

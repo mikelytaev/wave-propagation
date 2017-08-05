@@ -73,19 +73,19 @@ class TransparentLinearBS(TransparentBS):
     Linear refractive index in outer domain
     """
     def __init__(self, mu_N):
-        self.mu_n2 = mu_N
+        self.mu_n2m1 = 2 * mu_N * 1e-6
 
     def __eq__(self, other):
-        return self.mu_n2 == other.mu_n2
+        return self.mu_n2m1 == other.mu_n2m1
 
     def __hash__(self):
-        return hash(self.mu_n2)
+        return hash(self.mu_n2m1)
 
 
 class EarthAtmosphereBC(TransparentLinearBS):
 
     def __init__(self):
-        TransparentLinearBS.__init__(self, 2 / EARTH_RADIUS)
+        TransparentLinearBS.__init__(self, 1 / EARTH_RADIUS * 1e6)
 
 
 class Terrain:
@@ -109,10 +109,13 @@ class EMEnvironment:
         self.N_profile = None
         self.terrain = None
 
-    def n2_profile(self, x: float, z: np.ndarray):
+    def n2m1_profile(self, x:float, z: np.ndarray):
         if self.N_profile is None:
             return z * 0
-        return self.N_profile(x, z)
+        return 2 * self.N_profile(x, z) * 1e-6
+
+    def n2_profile(self, x: float, z: np.ndarray):
+        return self.n2m1_profile(x, z) + 1.0
 
     def impediment(self, x: float, z_grid: np.ndarray):
         if self.terrain is not None:
@@ -120,7 +123,7 @@ class EMEnvironment:
         return []
 
 
-class gauss_source:
+class GaussSource:
 
     def __init__(self, k0, height, beam_width, eval_angle, polarz):
         self.height = height

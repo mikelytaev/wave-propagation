@@ -18,7 +18,7 @@ __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 class PadePropagator:
 
-    def __init__(self, env: EMEnvironment, wavelength=1.0, pade_order=(1, 2), dx_wl=100, dz_wl=1, tol=1e-6):
+    def __init__(self, env: EMEnvironment, wavelength=1.0, pade_order=(1, 2), dx_wl=100, dz_wl=1, tol=1e-11):
         self.env = env
         self.k0 = (2 * cm.pi) / wavelength
         self.n_z = fm.ceil((self.env.z_max - self.env.z_min) / (dz_wl * wavelength)) + 1
@@ -93,19 +93,19 @@ class PadePropagator:
                 fcca.forward(lambda t: nlbc_transformed(tau * cm.exp(1j*t)), 0, 2*fm.pi)).reshape((n_x, m_size, m_size))
 
     def calc_lower_nlbc(self, max_range_m):
-        beta = self.env.n2_profile(0, self.env.z_min)
+        beta = self.env.n2m1_profile(0, self.env.z_min)
         if isinstance(self.env.lower_boundary, TransparentConstBS):
             return self._calc_nlbc(max_range_m, beta, diff_eq_solution=lambda v: 1 / d2a_n_eq_ba_n(v))
         elif isinstance(self.env.lower_boundary, TransparentLinearBS):
-            c = self.k0 ** 2 * self.env.lower_boundary.mu_n2 * self.dz ** 3
+            c = self.k0 ** 2 * self.env.lower_boundary.mu_n2m1 * self.dz ** 3
             return self._calc_nlbc(max_range_m, beta, lambda v: 1 / bessel_ratio(c=c, d=v, j=0, tol=self.tol))
 
     def calc_upper_nlbc(self, max_range_m):
-        beta = self.env.n2_profile(0, self.env.z_max)
+        beta = self.env.n2m1_profile(0, self.env.z_max)
         if isinstance(self.env.upper_boundary, TransparentConstBS):
             return self._calc_nlbc(max_range_m, beta, diff_eq_solution=lambda v: 1 / d2a_n_eq_ba_n(v))
         elif isinstance(self.env.upper_boundary, TransparentLinearBS):
-            c = -self.k0 ** 2 * self.env.upper_boundary.mu_n2 * self.dz ** 3
+            c = -self.k0 ** 2 * self.env.upper_boundary.mu_n2m1 * self.dz ** 3
             return self._calc_nlbc(max_range_m, beta, lambda v: bessel_ratio(c=c, d=v, j=0, tol=self.tol))
 
     def propagate(self, max_range_m, start_field, *, lower_nlbc=np.array([]), upper_nlbc=np.array([]), n_dx_out=1, n_dz_out=1):
@@ -123,7 +123,7 @@ class PadePropagator:
 
         for x_i, x in enumerate(x_computational_grid[1:], start=1):
             phi[self.env.impediment(x, self.z_computational_grid)] = 0
-            het = self.env.n2_profile(x, self.z_computational_grid)
+            het = self.env.n2m1_profile(x, self.z_computational_grid)
             if isinstance(self.env.lower_boundary, TransparentBS):
                 lower_convolution = np.einsum('ijk,ik->j', lower_nlbc[1:x_i], phi_0[x_i-1:0:-1])
             if isinstance(self.env.upper_boundary, TransparentBS):
@@ -168,14 +168,14 @@ class NLBCManager:
         n_x = fm.ceil(max_range_m / propagator.dx) + 1
         lower_nlbc, upper_nlbc = None, None
         if isinstance(propagator.env.lower_boundary, TransparentBS):
-            beta = propagator.env.n2_profile(0, propagator.env.z_min)
+            beta = propagator.env.n2m1_profile(0, propagator.env.z_min)
             q = 'lower', propagator.k0, propagator.dx, propagator.dz, propagator.pade_order, beta, propagator.env.lower_boundary
             if q not in self.nlbs_dict or self.nlbs_dict[q].shape[0] < n_x:
                 self.nlbs_dict[q] = propagator.calc_lower_nlbc(max_range_m)
             lower_nlbc = self.nlbs_dict[q]
 
         if isinstance(propagator.env.upper_boundary, TransparentBS):
-            beta = propagator.env.n2_profile(0, propagator.env.z_max)
+            beta = propagator.env.n2m1_profile(0, propagator.env.z_max)
             q = 'upper', propagator.k0, propagator.dx, propagator.dz, propagator.pade_order, beta, propagator.env.upper_boundary
             if q not in self.nlbs_dict or self.nlbs_dict[q].shape[0] < n_x:
                 self.nlbs_dict[q] = propagator.calc_upper_nlbc(max_range_m)

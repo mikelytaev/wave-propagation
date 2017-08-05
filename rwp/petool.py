@@ -1,6 +1,7 @@
 from rwp.WPDefs import *
 import math as fm
 import matlab.engine
+import logging
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
@@ -21,7 +22,7 @@ class PETOOLPropagator:
         self.dz = dz_wl * wavelength
         self.z_computational_grid = np.linspace(0, self.env.z_max, fm.ceil(self.env.z_max / self.dz) + 1)
 
-    def propagate(self, max_range_m, start_field: gauss_source, *, n_dx_out=1, n_dz_out=1, backward=False):
+    def propagate(self, max_range_m, start_field: GaussSource, *, n_dx_out=1, n_dz_out=1, backward=False):
         n_x = fm.ceil(max_range_m / self.dx) + 1
         x_computational_grid = np.arange(0, n_x) * self.dx
         if self.env.terrain is not None and isinstance(self.env.terrain, Terrain):
@@ -35,7 +36,7 @@ class PETOOLPropagator:
 
         polarz_n = 1 if start_field.polarz.upper == 'H' else 2
         backward_n = 2 if backward and terrain_type == 2 else 1
-        het = matlab.double([a for a in self.env.n2_profile(0, self.z_computational_grid)], is_complex=True)
+        het = matlab.double([a * 1e6 / 4 for a in self.env.n2m1_profile(0, self.z_computational_grid)], is_complex=True)
         if isinstance(self.env.lower_boundary, EarthSurfaceBC):
             ground_type = 2
             epsilon = self.env.lower_boundary.permittivity
@@ -44,8 +45,10 @@ class PETOOLPropagator:
             ground_type = 1
             epsilon = 0
             sigma = 0
-            
+
+        logging.debug('Starting Matlab engine...')
         eng = matlab.engine.start_matlab()
+        logging.debug('PETOOL propagating...')
         path_loss, prop_fact, free_space_loss, range_vec, z_user, z, stopflag = \
             eng.SSPE_function(float(3 * 1e8 / self.wavelength * 1e-6), # freq, MHz
                           float(start_field.beam_width),  # thetabw, degrees
