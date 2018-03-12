@@ -1,5 +1,7 @@
 import unittest
+
 from rwp.SSPade import *
+from rwp.environment import TransparentLinearBS, EMEnvironment
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
