@@ -1,4 +1,4 @@
-# Radio wave propagation library for python 3
+# Radio wave propagation framework for python 3
 
 The following methods are implemented:
 
