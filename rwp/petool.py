@@ -21,30 +21,34 @@ class PETOOLPropagator:
         self.env = env
         self.k0 = (2 * cm.pi) / wavelength
         self.wavelength = wavelength
+        self.freq_hz = LIGHT_SPEED / self.wavelength
         self.dx = dx_wl * wavelength
         self.dz = dz_wl * wavelength
         self.z_computational_grid = np.linspace(0, self.env.z_max, fm.ceil(self.env.z_max / self.dz) + 1)
 
     def propagate(self, src: Source, n_x, *, n_dx_out=1, n_dz_out=1, two_way=False):
-        edge_range = matlab.double([a * 1e-3 for a in self.env.terrain.edge_range], is_complex=True)
-        edge_height = matlab.double(list(self.env.terrain.edge_height), is_complex=True)
+        x_computational_grid = np.arange(0, n_x) * self.dx
         terrain_type = 1
         interp_type = 1
         if isinstance(self.env.terrain, KnifeEdges):
             terrain_type = 2
             interp_type = 1
-        elif isinstance(self.env.terrain, LinearTerrain):
+            edge_range = matlab.double([a * 1e-3 for a in self.env.terrain.edge_range], is_complex=True)
+            edge_height = matlab.double(list(self.env.terrain.edge_height), is_complex=True)
+        else:
             terrain_type = 2
             interp_type = 2
+            edge_range = matlab.double([a * 1e-3 for a in x_computational_grid], is_complex=True)
+            edge_height = matlab.double([self.env.terrain(a) for a in x_computational_grid], is_complex=True)
 
         polarz_n = 1 if src.polarz.upper == 'H' else 2
         backward_n = 2 if two_way and terrain_type == 2 else 1
-        het = matlab.double([a * 1e6 / 4 for a in self.env.n2m1_profile(0, self.z_computational_grid)], is_complex=True)
-        if isinstance(self.env.lower_boundary, EarthSurfaceBC):
+        het = matlab.double([a * 1e6 / 4 for a in self.env.n2m1_profile(0, self.z_computational_grid, self.freq_hz)],
+                            is_complex=True)
+        if isinstance(self.env.lower_boundary, EarthSurfaceBS):
             ground_type = 2
-            self.env.lower_boundary(self.wavelength, src.polarz)
-            epsilon = self.env.lower_boundary.permittivity
-            sigma = self.env.lower_boundary.conductivity
+            epsilon = self.env.lower_boundary.permittivity(self.freq_hz)
+            sigma = self.env.lower_boundary.conductivity(self.freq_hz)
         else:
             ground_type = 1
             epsilon = 0
@@ -71,19 +75,21 @@ class PETOOLPropagator:
                           interp_type,  # interp_type, 1=none(knife-edges), 2=linear, 3=cubic spline
                           backward_n,  # backward, 1=one-way, 2=two-way
                           ground_type,  # ground_type, 1=PEC, 2=impedance ground surface
-                          float(epsilon),
-                              float(sigma),
+                          float(epsilon.real),
+                              float(sigma.real),
                               float(self.dx),
                               float(self.dz),
                               nargout=7)
         eng.quit()
 
         x_computational_grid = np.array(range_vec._data)
-        field = Field(x_computational_grid[1::n_dx_out], self.z_computational_grid[::n_dz_out])
+        z_petool_grid = np.array(z_user._data)
+        field = Field(x_computational_grid[1::n_dx_out], z_petool_grid[::n_dz_out], self.freq_hz)
         field.field[:, :] = np.array(prop_fact._data).reshape(prop_fact.size[::-1]).T[::n_dz_out, 1::n_dx_out].T
-        field.field -= np.tile(10 * np.log10(x_computational_grid[1::n_dx_out]), (self.z_computational_grid.shape[0], 1)).T
+        field.field -= np.tile(10 * np.log10(x_computational_grid[1::n_dx_out]), (z_petool_grid[::n_dz_out].shape[0], 1)).T
         field.field -= 10*fm.log10(self.wavelength)
         field.field /= 2
+        field.field = np.nan_to_num(field.field)
 
         return field
 

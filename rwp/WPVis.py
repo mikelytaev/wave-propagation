@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LightSource, Normalize
 from itertools import cycle
 import matplotlib
+from scipy.interpolate import *
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
@@ -22,7 +23,7 @@ class FieldVisualiser:
         {'color': 'black'}
     )
 
-    def __init__(self, field: Field, trans_func=lambda v: abs(v), label='', x_mult=1.0, bw=False):
+    def __init__(self, field: Field, trans_func=lambda v: v, label='', x_mult=1.0, bw=False):
         trans_func = np.vectorize(trans_func)
         self.field = trans_func(field.field).real
         self.x_grid, self.z_grid = field.x_grid, field.z_grid
@@ -30,7 +31,7 @@ class FieldVisualiser:
         self.max = np.max(self.field)
         self.min = max(trans_func(self.precision) + self.max, np.min(self.field))
         self.label = label
-        self.x_grid *= x_mult
+        self.x_grid = self.x_grid * x_mult
         self.x_mult = x_mult
         if bw:
             self.lines_iter = cycle(self.bw_lines)
@@ -60,3 +61,43 @@ class FieldVisualiser:
             ax.plot(a.field[abs(a.x_grid - x0).argmin(), :], a.z_grid, label=a.label)
         ax.legend()
         return ax
+
+    def plot_ver_measurements(self, x0, height, z_min, z_max, measurements, fit=0):
+        x0 *= self.x_mult
+        g = interp1d(x=measurements[0, :], y=measurements[1, :], fill_value='extrapolate')
+        z_ind = np.nonzero(np.logical_and(self.z_grid >= z_min + height, self.z_grid <= z_max + height))
+        plt.plot(self.z_grid[z_ind] - height, self.field[abs(self.x_grid - x0).argmin(), z_ind][0] * (1 - fit) +
+                 g(self.z_grid[z_ind] - height) * fit, label=self.label)
+        plt.plot(measurements[0, :], measurements[1, :], 'ro', label='measurements')
+        plt.legend()
+        plt.xlim([z_min, z_max])
+        plt.grid(True)
+        return plt
+
+
+class FieldVisualiser3D:
+
+    def __init__(self, field: Field3d, trans_func=lambda v: abs(v), label='', x_mult=1.0, bw=False):
+        self.trans_func = np.vectorize(trans_func)
+        self.field = field.field
+        self.x_grid, self.y_grid, self.z_grid = field.x_grid, field.y_grid, field.z_grid
+
+    def _plot2d(self, f, min_val, max_val, x_min, x_max, y_min, y_max):
+        norm = Normalize(min_val, max_val)
+        extent = [x_min, x_max, y_min, y_max]
+        plt.figure(figsize=(6, 3.2))
+        plt.imshow(self.trans_func(f).real, extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
+        plt.colorbar(fraction=0.046, pad=0.04)
+        return plt
+
+    def plot_xy(self, *, z0, min_val, max_val):
+        return self._plot2d(self.field[:, :, abs(self.z_grid - z0).argmin()].T, min_val, max_val,
+                            self.x_grid[0], self.x_grid[-1], self.y_grid[0], self.y_grid[-1])
+
+    def plot_yz(self, *, x0, min_val, max_val):
+        return self._plot2d(self.field[abs(self.x_grid - x0).argmin(), :, :].T[::-1, :], min_val, max_val,
+                            self.y_grid[0], self.y_grid[-1], self.z_grid[0], self.z_grid[-1])
+
+    def plot_xz(self, *, y0, min_val, max_val):
+        return self._plot2d(self.field[:, abs(self.y_grid - y0).argmin(), :].T[::-1, :], min_val, max_val,
+                            self.x_grid[0], self.x_grid[-1], self.z_grid[0], self.z_grid[-1])
