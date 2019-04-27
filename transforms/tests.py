@@ -9,6 +9,7 @@ import math as fm
 # test values from matlab implementation
 # http://www.unavarra.es/personal/victor dominguez/clenshawcurtisrule
 
+
 class TestFCC(unittest.TestCase):
     tol = 1e-14
 

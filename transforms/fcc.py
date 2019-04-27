@@ -1,4 +1,4 @@
-__author__ = 'Mikhail'
+__author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 import numpy as np
 import cmath as cm
@@ -9,11 +9,12 @@ from scipy.fftpack import idct
 from numpy.linalg import norm
 import logging
 
-# python implementation of Filon–Clenshaw–Curtis rules
-# Dominguez V., Graham I. G., Smyshlyaev V. P.
-# Stability and error estimates for Filon–Clenshaw–Curtis rules for highly oscillatory integrals
-#  //IMA Journal of Numerical Analysis. – 2011. – Т. 31. – №. 4. – С. 1253-1280.
-
+""" Adaptive Filon–Clenshaw–Curtis (FCC) quadrature
+for details of FCC see
+Dominguez V., Graham I. G., Smyshlyaev V. P.
+Stability and error estimates for Filon–Clenshaw–Curtis rules for highly oscillatory integrals //
+IMA Journal of Numerical Analysis. – 2011. – Т. 31. – №. 4. – С. 1253-1280.
+"""
 
 def chebyshev_weights_asymptotics(k: complex, n: int, tol=1e-16):
     sink = cm.sin(k)
@@ -140,18 +141,37 @@ class FCCFourier:
 
 
 class FCCAdaptiveFourier:
+    """Adaptive Fourier transform by Filon–Clenshaw–Curtis quadrature
+    """
 
     def __init__(self, domain_size, kn: np.array, x_n=15, rtol=1e-3):
+        """
+        :param domain_size: length of the integration domain (x_b - x_a)
+        :param kn: array of spectral domain points
+        :param x_n: number of Chebyshev points at one step adaptive integration step
+        :param rtol: relative tolerance
+        """
         self.domain_size = domain_size
         self.kn = kn
         self.x_n = x_n
         self.rtol = rtol
-        self.fcc_integrators_dict = {}
-        self.fcc_integrators_dict[1] = FCCFourier(self.domain_size, self.x_n, self.kn)
+        self.fcc_integrators_dict = {1: FCCFourier(self.domain_size, self.x_n, self.kn)}
 
     def forward(self, f, x_a, x_b):
+        assert abs((x_b - x_a) / self.domain_size - 1) < self.rtol, 'wrong integration domain size'
         i_val = self.fcc_integrators_dict[1].forward(np.array([f(a) for a in cheb_grid(x_a, x_b, self.x_n)]), x_a, x_b)
         return self._rec_forward(f, x_a, x_b, i_val)
+
+    def transform(self, f, x_a, x_b):
+        """
+        compute the Fourier transformation of function f:
+        \frac{1}{\sqrt{2\pi}}\int\limits_{x_{a}}^{x_{b}}f(x)e^{-ik_{x}x}dx
+        :param f: np.array vector valued function
+        :param x_a: left integration bound, (x_b - x_a) = domain_size
+        :param x_b: right integration bound, (x_b - x_a) = domain_size
+        :return:
+        """
+        return 1/cm.sqrt(2*cm.pi) * self.forward(f, x_a, x_b)
 
     def _rec_forward(self, f, x_a, x_b, i_val):
         logging.debug('FCCAdaptiveFourier [' + str(x_a) + '; ' + str(x_b) + ']')
