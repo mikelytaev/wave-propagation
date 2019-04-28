@@ -1,7 +1,7 @@
 __author__ = 'Mikhail'
 
 import unittest
-from transforms.fcc import *
+from transforms.fcc_fourier import *
 from numpy.linalg import norm
 import sympy as sy
 import math as fm

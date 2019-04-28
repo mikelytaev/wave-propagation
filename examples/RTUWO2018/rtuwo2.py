@@ -5,7 +5,10 @@ from rwp.crank_nicolson import *
 logging.basicConfig(level=logging.DEBUG)
 
 profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 50], fill_value="extrapolate")
-env = EarthAtmosphereEnvironment(boundary_condition=VeryDryGroundBC(), height=2000, M_profile=lambda x, z: profile1d(z))
+env = Troposphere()
+env.ground_material = VeryDryGround()
+env.z_max = 2000
+env.M_profile = lambda x, z: profile1d(z)
 
 h = 110
 w = 10000
@@ -13,10 +16,11 @@ x1 = 30000
 
 env.terrain = Terrain(lambda x: h/2*(1 + fm.sin(fm.pi * (x - x1) / (2*w))) if -w <= (x-x1) <= 3*w else 0)
 
-ant = GaussSource(freq_hz=3000e6, height=30, beam_width=5, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=5, eval_angle=0, polarz='H')
 max_range = 100000
-pade12_task = SSPadePropagationTask(src=ant, env=env, two_way=False, max_range_m=max_range, pade_order=(7, 8),
-                                    dx_wl=100, n_dx_out=4, dz_wl=1, n_dz_out=1)
+pade12_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, two_way=False, max_range_m=max_range,
+                                                    pade_order=(7, 8), z_order=2,
+                                                    dx_wl=100, n_dx_out=4, dz_wl=1, n_dz_out=1)
 pade12_field = pade12_task.calculate()
 
 claerbout_task = CrankNicolsonPropagationTask(src=ant, env=env, type='claerbout', max_range_m=max_range,

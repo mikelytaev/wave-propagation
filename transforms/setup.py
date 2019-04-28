@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/mikelytaev/wave-propagation/tree/master/transforms",
-    packages=['fcc'],
+    packages=['fcc_fourier'],
     classifiers=[
         "Topic :: Scientific/Engineering :: Mathematics",
     ],

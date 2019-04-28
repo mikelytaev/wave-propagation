@@ -7,23 +7,24 @@ from copy import deepcopy
 from scipy.sparse import diags
 from scipy.sparse.linalg import spsolve
 
-from rwp.WPDefs import Field
+from rwp.field import Field
 from rwp.environment import *
-from rwp.WPDefs import Source
+from rwp.antennas import Source
 
 
 class CrankNicolsonPropagator:
 
-    def __init__(self, env: EMEnvironment, type='greene', wavelength=1.0, dx_wl=100, dz_wl=1, tol=1e-11):
+    def __init__(self, env: Troposphere, src: Source, type='greene', dx_wl=100, dz_wl=1, tol=1e-11):
         self.env = env
-        self.freq_hz = 3e8 / wavelength
-        self.k0 = (2 * cm.pi) / wavelength
-        self.wavelength = wavelength
-        self.window_height = self.env.z_max - self.env.z_min
-        self.n_z = fm.ceil((self.env.z_max + self.window_height - self.env.z_min) / (dz_wl * wavelength)) + 1
-        self.z_computational_grid, self.dz = np.linspace(self.env.z_min, self.env.z_max + self.window_height,
+        self.wavelength = src.wavelength
+        self.freq_hz = 3e8 / self.wavelength
+        self.k0 = (2 * cm.pi) / self.wavelength
+        self.src = src
+        self.window_height = self.env.z_max
+        self.n_z = fm.ceil((self.env.z_max + self.window_height) / (dz_wl * self.wavelength)) + 1
+        self.z_computational_grid, self.dz = np.linspace(0, self.env.z_max + self.window_height,
                                                          self.n_z, retstep=True)
-        self.dx = dx_wl * wavelength
+        self.dx = dx_wl * self.wavelength
         self.tol = tol
         if type.lower() == 'greene':
             self.chi1, self.chi2, self.chi3, self.chi4 = 0.99987, 0.79624, 1.0, 0.30102
@@ -70,10 +71,11 @@ class CrankNicolsonPropagator:
                 (2*(self.chi2 - self.chi4)-self.chi3+self.chi4*self._S(m)**2)*self.k0**2*dx*self.dz/self.chi4)
 
     def _eta(self, m):
-        if isinstance(self.env.lower_boundary, TransparentBS):
-            return cm.sqrt(self.env.lower_boundary.n2m1(self.freq_hz))
+        eps = self.env.ground_material.complex_permittivity(self.freq_hz)
+        if self.src.polarz == 'H':
+            return cm.sqrt(eps - 1)
         else:
-            return 100000
+            return cm.sqrt(eps - 1) / eps
 
     def _xi(self, m):
         return 1j * self.k0 * self._eta(m) * self.dz
@@ -156,14 +158,14 @@ class CrankNicolsonPropagationTask:
     Guo Q., Zhou C., Long Y. Greene Approximation Wide-Angle Parabolic Equation for Radio Propagation
     //IEEE Transactions on Antennas and Propagation. – 2017. – Vol. 65. – N. 11. – pp. 6048-6056.
     """
-    def __init__(self, *, src: Source, env: EMEnvironment, type='greene', max_range_m=100000, dx_wl=100, dz_wl=1,
+    def __init__(self, *, src: Source, env: Troposphere, type='greene', max_range_m=100000, dx_wl=100, dz_wl=1,
                  n_dx_out=1, n_dz_out=1, tol=1e-11):
         self.src = deepcopy(src)
         self.env = env
         self.max_range_m = max_range_m
         self.n_dx_out = n_dx_out
         self.n_dz_out = n_dz_out
-        self.propagator = CrankNicolsonPropagator(env=self.env, wavelength=src.wavelength, dx_wl=dx_wl, dz_wl=dz_wl,
+        self.propagator = CrankNicolsonPropagator(env=self.env, src=src, dx_wl=dx_wl, dz_wl=dz_wl,
                                                   type=type, tol=tol)
 
     def calculate(self):

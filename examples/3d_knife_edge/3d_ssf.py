@@ -1,5 +1,5 @@
 from rwp.ssf import *
-from rwp.WPDefs import GaussSource3D
+from rwp.antennas import GaussSource3D
 from rwp.WPVis import FieldVisualiser3D
 
 logging.basicConfig(level=logging.DEBUG)

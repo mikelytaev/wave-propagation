@@ -42,80 +42,52 @@ class Polarization(Enum):
     VERTICAL = 2
 
 
-class BoundaryCondition:
-    pass
-
-
-class TransparentBS(BoundaryCondition):
-
-    def n2m1(self, freq_hz: int):
-        return None
-
-
-class TransparentConstBS(TransparentBS):
-    """
-    Constant refractive index in outer domain
-    """
-
-    def __eq__(self, other):
-        return self.n2m1(1e8) == other.n2m1(1e8) and \
-               self.n2m1(1e9) == other.n2m1(1e9) and \
-               self.n2m1(1e10) == other.n2m1(1e10)
-
-    def __hash__(self):
-        return hash(55726572865)
-
-
-class TransparentLinearBS(TransparentBS):
-    """
-    Linear refractive index in outer domain
-    """
-    def __init__(self, mu_N):
-        self.mu_n2m1 = 2 * mu_N * 1e-6
-
-    def __eq__(self, other):
-        return self.mu_n2m1 == other.mu_n2m1
-
-    def __hash__(self):
-        return hash(self.mu_n2m1)
-
-
-class EarthSurfaceBS(TransparentConstBS):
-
-    def n2m1(self, freq_hz: int):
-        return self.eta(freq_hz) - 1
-
-    def eta(self, freq_hz: int):
-        omega = 2 * cm.pi * freq_hz
-        return self.permittivity(freq_hz) - 1j * self.conductivity(freq_hz) / (omega * VACUUM_PERMITTIVITY)
+class Material:
 
     def permittivity(self, freq_hz: int):
-        """
-        :return: relative permittivity, epsilon
-        """
         pass
 
-    def conductivity(self, freq_hz: int):
-        """
-        :return: conductivity, sigma (S/m)
-        """
+    def conductivity_sm_m(self, freq_hz: int):
         pass
 
+    def complex_permittivity(self, freq_hz):
+        eps = self.permittivity(freq_hz)
+        sigma = self.conductivity_sm_m(freq_hz)
+        return eps + 1j * 60 * sigma * 3e8 / freq_hz
 
-class CustomEpsSigmaBC(EarthSurfaceBS):
 
-    def __init__(self, eps_r, sigma):
-        self.eps_r = eps_r
+class CustomMaterial(Material):
+
+    def __init__(self, eps, sigma):
+        self.eps = eps
         self.sigma = sigma
 
     def permittivity(self, freq_hz: int):
-        return self.eps_r
+        return self.eps
 
-    def conductivity(self, freq_hz: int):
+    def conductivity_sm_m(self, freq_hz: int):
         return self.sigma
 
 
-class SaltWaterBC(EarthSurfaceBS):
+class PerfectlyElectricConducting(Material):
+
+    def permittivity(self, freq_hz: int):
+        return complex("Inf")
+
+    def conductivity_sm_m(self, freq_hz: int):
+        return complex("Inf")
+
+
+class Air(Material):
+
+    def permittivity(self, freq_hz: int):
+        return 1
+
+    def conductivity_sm_m(self, freq_hz: int):
+        return 0
+
+
+class SaltWater(Material):
 
     def permittivity(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
@@ -127,7 +99,7 @@ class SaltWaterBC(EarthSurfaceBS):
 
         return epsilon
 
-    def conductivity(self, freq_hz: int):
+    def conductivity_sm_m(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
         sigma = 5.0
         mi = 1 - 1
@@ -140,7 +112,7 @@ class SaltWaterBC(EarthSurfaceBS):
         return sigma
 
 
-class FreshWaterBC(EarthSurfaceBS):
+class FreshWater(Material):
 
     def permittivity(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
@@ -152,7 +124,7 @@ class FreshWaterBC(EarthSurfaceBS):
             epsilon = epsilon / (1.0 + MAGIC_B[mi] * freqMHz + MAGIC_D[mi] * freqMHz ** 2 + MAGIC_F[mi] * freqMHz ** 3)
         return epsilon
 
-    def conductivity(self, freq_hz: int):
+    def conductivity_sm_m(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
         mi = 3 - 1
         mi1 = mi + 1
@@ -169,7 +141,7 @@ class FreshWaterBC(EarthSurfaceBS):
         return sigma
 
 
-class WetGroundBC(EarthSurfaceBS):
+class WetGround(Material):
 
     def permittivity(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
@@ -184,7 +156,7 @@ class WetGroundBC(EarthSurfaceBS):
 
         return epsilon
 
-    def conductivity(self, freq_hz: int):
+    def conductivity_sm_m(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
         if freqMHz > 15454.4:
             mi1 = 8 - 1
@@ -199,7 +171,7 @@ class WetGroundBC(EarthSurfaceBS):
         return sigma
 
 
-class MediumDryGroundBC(EarthSurfaceBS):
+class MediumDryGround(Material):
 
     def permittivity(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
@@ -212,7 +184,7 @@ class MediumDryGroundBC(EarthSurfaceBS):
 
         return epsilon
 
-    def conductivity(self, freq_hz: int):
+    def conductivity_sm_m(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
         mi1 = 12 - 1
         if freqMHz > 4946.751:
@@ -223,13 +195,13 @@ class MediumDryGroundBC(EarthSurfaceBS):
         return sigma
 
 
-class VeryDryGroundBC(EarthSurfaceBS):
+class VeryDryGround(Material):
 
     def permittivity(self, freq_hz: int):
         epsilon = 3.0
         return epsilon
 
-    def conductivity(self, freq_hz: int):
+    def conductivity_sm_m(self, freq_hz: int):
         freqMHz = freq_hz * 1e-6
         if freqMHz < 590.8924:
             sigma = 1.0e-4
@@ -250,221 +222,90 @@ class VeryDryGroundBC(EarthSurfaceBS):
         return sigma
 
 
-class ImpedanceBC(BoundaryCondition):
-    """
-    Impedance boundary (alpha1*u(z)+alpha2*u'(z))_{z=0}=0
-    """
-    def __init__(self, alpha1, alpha2):
-        self.alpha1 = alpha1
-        self.alpha2 = alpha2
-
-    def __eq__(self, other):
-        return (self.alpha1 == other.alpha1) and (self.alpha2 == other.alpha2)
-
-    def __hash__(self):
-        return hash(self.alpha1 + 2 * self.alpha2)
-
-    def __call__(self, wavelength, polarz):
-        return self.alpha1, self.alpha2
-
-
-class DirichletBC(ImpedanceBC):
-
-    def __init__(self):
-        ImpedanceBC.__init__(self, 1, 0)
-
-
-class NeumannBC(ImpedanceBC):
-
-    def __init__(self):
-        ImpedanceBC.__init__(self, 0, 1)
-
-
-class PECSurfaceBC(ImpedanceBC):
-    def __init__(self):
-        pass
-
-    def __call__(self, wavelength: int, polarz: Polarization):
-        if polarz == Polarization.HORIZONTAL:
-            return 1, 0
-        else:
-            return 0, 1
-
-
-# class EarthSurfaceBC(ImpedanceBC):
-#
-#     def __init__(self, permittivity, conductivity):
-#         self.permittivity = permittivity
-#         self.conductivity = conductivity
-#
-#     def __call__(self, wavelength, polarz):
-#         k0 = 2 * cm.pi / wavelength
-#         if polarz.upper() == 'H':
-#             self.alpha1 = 1
-#             self.alpha2 = 1j * k0 * (self.permittivity + 1j * 60 * self.conductivity * wavelength) ** (1 / 2)
-#         else:
-#              self.alpha1 = 1
-#              self.alpha2 = 1j * k0 * (self.permittivity + 1j * 60 * self.conductivity * wavelength) ** (-1 / 2)
-#
-#         return self.alpha1, self.alpha2
-#
-#
-# class SeaSurfaceBC(EarthSurfaceBC):
-#
-#     def __init__(self):
-#         pass
-#
-#     def __call__(self, wavelength, polarz):
-#         freqMHz = 2 * cm.pi * 3e8 / wavelength * 1e-6
-#         epsilon = 70.0
-#         sigma = 5.0  # S / m
-#         mi = 1
-#         mi1 = mi + 1
-#
-#         if freqMHz > 2253.5895:
-#             epsilon = 1.0 / (a[mi] + b[mi] * freqMHz + c[mi] * freqMHz ** 2 + d[mi] * freqMHz ** 3 + e[mi] * freqMHz ** 4)
-#
-#         if freqMHz > 1106.207:
-#             sigma = a[mi1] + c[mi1] * freqMHz + e[mi1] * freqMHz ** 2
-#             sigma = sigma / (1.0 + b[mi1] * freqMHz + d[mi1] * freqMHz ** 2 + f[mi1] * freqMHz ** 3)
-#
-#         self.permittivity = epsilon
-#         self.conductivity = sigma
-#
-#         return EarthSurfaceBC.__call__(self, wavelength, polarz)
-
-
-class EarthAtmosphereBC(TransparentLinearBS):
-
-    def __init__(self, Earth_radius=EARTH_RADIUS):
-        TransparentLinearBS.__init__(self, 1 / Earth_radius * 1e6)
-
-
 class Terrain:
 
-    def __init__(self, func=lambda x: 0.0):
-        self.terrain_func = func
+    def __init__(self, func=None):
+        if func is None:
+            self.is_homogeneous = True
+            self._terrain_func = lambda x: 0.0
+        else:
+            self.is_homogeneous = False
+            self._terrain_func = func
 
     def __call__(self, x):
-        return self.terrain_func(x)
+        return self._terrain_func(x)
 
 
 class LinearTerrain(Terrain):
 
     def __init__(self, edge_range, edge_height):
         edge_range, edge_height = zip(*sorted(zip(edge_range, edge_height), key=itemgetter(0)))
-        self.terrain_func = interp1d(edge_range, edge_height, kind='cubic', fill_value="extrapolate")
+        self._terrain_func = interp1d(edge_range, edge_height, kind='cubic', fill_value="extrapolate")
 
 
 class InterpTerrain(Terrain):
 
     def __init__(self, edge_range, edge_height, kind='linear'):
         edge_range, edge_height = zip(*sorted(zip(edge_range, edge_height), key=itemgetter(0)))
-        self.terrain_func = interp1d(edge_range, edge_height, kind=kind, fill_value="extrapolate")
+        terrain_func = interp1d(edge_range, edge_height, kind=kind, fill_value="extrapolate")
+        super().__init__(func=terrain_func)
 
 
-class KnifeEdges(Terrain):
+class KnifeEdge:
 
-    def __init__(self, edge_range, edge_height):
-        self.edge_range = edge_range
-        self.edge_height = edge_height
-
-    def __call__(self, x):
-            return 0
+    def __init__(self, range, height):
+        self.range = range
+        self.height = height
 
 
-class Shape:
-    pass
+class Impediment:
 
-
-class Point(Shape):
-
-    def __init__(self, x, z):
-        self.x = x
-        self.z = z
-
-    def intersect(self, x, z: np.ndarray):
-        return np.array([])
-
-
-class Box(Shape):
-
-    def __init__(self, p1: Point, p2: Point):
-        self.p1 = p1
-        self.p2 = p2
-
-    def left(self):
-        return min(self.p1.x, self.p2.x)
-
-    def right(self):
-        return min(self.p1.x, self.p2.x)
-
-    def top(self):
-        return max(self.p1.y, self.p2.y)
-
-    def bottom(self):
-        return min(self.p1.y, self.p2.y)
-
-    def intersect(self, x, z: np.ndarray):
-        if self.left() <= x <= self.right():
-            return np.logical_and(z >= self.bottom(), z <= self.top())
-
-
-class Edge:
-
-    def __init__(self, x, z1, z2):
-        self.x = x
-        self.z1 = z1
-        self.z2 = z2
-
-
-class Vegetation:
-
-    def __init__(self, *, x1, x2, height, permittivity, conductivity):
+    def __init__(self, *, x1, x2, height, material: Material):
         self.x1 = x1
         self.x2 = x2
         self.height = height
-        self.permittivity = permittivity
-        self.conductivity = conductivity
-
-    def eta(self, freq_hz):
-        omega = 2 * cm.pi * freq_hz
-        return self.permittivity + 1j * self.conductivity / (omega * VACUUM_PERMITTIVITY)
+        self.material = material
 
 
-class EMEnvironment:
+class Troposphere:
 
-    def __init__(self):
-        self.N_profile = None
+    def __init__(self, flat=False):
+        self.z_max = 300
+        self.M_profile = None
         self.terrain = Terrain()
         self.vegetation = []
-        self.lower_boundary = TransparentConstBS()
-        self.upper_boundary = TransparentConstBS()
-        self.z_min = 0.0
-        self.z_max = 100.0
-        self.edges = []
+        self.knife_edges = []
+        if flat:
+            self.Earth_radius = float("Inf")
+        else:
+            self.Earth_radius = EARTH_RADIUS
+        self.ground_material = PerfectlyElectricConducting()
 
     def vegetation_profile(self, x: float, z: np.ndarray, freq_hz):
-        z = np.array(z)
-        res = np.zeros(z.shape)*0j
-        for v in self.vegetation:
-            if v.x1 <= x <= v.x2:
-                res[np.nonzero(np.logical_and(self.terrain(x) <= z, z <= self.terrain(x) + v.height))] = v.eta(freq_hz) - 1
-                break
-        return res
+        if hasattr(z, "__len__"):
+            res = np.zeros(z.shape)*0j
+            for v in self.vegetation:
+                if v.x1 <= x <= v.x2:
+                    res[np.nonzero(np.logical_and(self.terrain(x) <= z, z <= self.terrain(x) + v.height))] = v.material.complex_permittivity(freq_hz) - 1
+                    break
+            return res
+        else:
+            for v in self.vegetation:
+                if v.x1 <= x <= v.x2:
+                    if self.terrain(x) <= z <= self.terrain(x) + v.height:
+                        return v.material.complex_permittivity(freq_hz) - 1
+                    break
+            return 0
 
     def n2m1_profile(self, x: float, z: np.ndarray, freq_hz):
-        if self.N_profile is None:
-            return z * 0 + self.vegetation_profile(x, z, freq_hz)
-        return 2 * self.N_profile(x, z) * 1e-6 + self.vegetation_profile(x, z, freq_hz)
+        if self.M_profile is None:
+            return 2 * z / self.Earth_radius + self.vegetation_profile(x, z, freq_hz)
+        return 2 * self.M_profile(x, z) * 1e-6 + self.vegetation_profile(x, z, freq_hz)
 
-    def n2_profile(self, x: float, z: np.ndarray):
-        return self.n2m1_profile(x, z) + 1.0
-
-    #def impediment(self, x: float, z_grid: np.ndarray):
-        # if self.terrain is not None:
-        #     return np.nonzero(z_grid < self.terrain(x))
-        # return []
+    def is_homogeneous(self):
+        return (self.Earth_radius is None or self.Earth_radius == float("Inf")) \
+               and len(self.vegetation) == 0 and \
+               self.M_profile is None
 
 
 class knife_edge3d:
@@ -486,24 +327,15 @@ class EMEnvironment3d:
         self.y_max = y_max
         self.z_min = z_min
         self.z_max = z_max
-        self.z_left_boundary = PECSurfaceBC()
+        #self.z_left_boundary = PECSurfaceBC()
         self.knife_edges = []
 
 
-class EarthAtmosphereEnvironment(EMEnvironment):
+class StreetCanyon3D:
 
-    def __init__(self, *, boundary_condition: BoundaryCondition, height=300, Earth_radius=EARTH_RADIUS, M_profile=None):
-        EMEnvironment.__init__(self)
-        self.z_min = 0.0
-        self.z_max = height
-        self.lower_boundary = boundary_condition
-        self.Earth_radius = Earth_radius
-        self.M_profile = M_profile
-        if self.M_profile is not None:
-            self.Earth_radius = 1E6 / (self.M_profile(0, self.z_max + 1) - self.M_profile(0, self.z_max))
-        self.upper_boundary = EarthAtmosphereBC(self.Earth_radius)
-
-    def n2m1_profile(self, x: float, z: np.ndarray, freq_hz):
-        if self.M_profile is None:
-            return 2 * z / self.Earth_radius + self.vegetation_profile(x, z, freq_hz)
-        return 2 * self.M_profile(x, z) * 1e-6 + self.vegetation_profile(x, z, freq_hz)
+    def __init__(self, *, domain_width, domain_height, street_width, building_height, x_max):
+        self.domain_width = domain_width
+        self.domain_height = domain_height
+        self.street_width = street_width
+        self.building_height = building_height
+        self.x_max = x_max

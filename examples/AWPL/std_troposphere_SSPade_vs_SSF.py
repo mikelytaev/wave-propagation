@@ -5,14 +5,17 @@ from rwp.petool import PETOOLPropagationTask
 
 
 logging.basicConfig(level=logging.DEBUG)
-environment = EarthAtmosphereEnvironment(boundary_condition=WetGroundBC(), height=300)
-antenna = GaussSource(wavelength=0.1, height=30, beam_width=2, eval_angle=0, polarz='H')
+environment = Troposphere()
+environment.z_max = 300
+environment.ground_material = WetGround()
+antenna = GaussAntenna(wavelength=0.1, height=30, beam_width=2, eval_angle=0, polarz='H')
 max_range = 120000
-pade12_task = SSPadePropagationTask(src=antenna, env=environment, two_way=False, max_range_m=max_range, pade_order=(7, 8),
-                                    dx_wl=400, n_dx_out=1, dz_wl=1, n_dz_out=1)
+pade12_task = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, two_way=False, max_range_m=max_range,
+                                                    pade_order=(7, 8), z_order=2,
+                                                    dx_wl=400, n_dx_out=1, dz_wl=1, n_dz_out=1)
 pade12_field = pade12_task.calculate()
 
-petool_task = PETOOLPropagationTask(src=antenna, env=environment, two_way=False, max_range_m=max_range, dx_wl=400, n_dx_out=1,
+petool_task = PETOOLPropagationTask(antenna=antenna, env=environment, two_way=False, max_range_m=max_range, dx_wl=400, n_dx_out=1,
                                     dz_wl=3)
 petool_field = petool_task.calculate()
 

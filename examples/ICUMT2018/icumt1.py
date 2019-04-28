@@ -2,22 +2,24 @@ from rwp.SSPade import *
 from rwp.WPVis import *
 
 logging.basicConfig(level=logging.DEBUG)
-env = EarthAtmosphereEnvironment(boundary_condition=PECSurfaceBC(), height=200)
+env = Troposphere()
+env.ground_material = PerfectlyElectricConducting()
+env.z_max = 200
 
 h = 50
 w = 1000
 x1 = 3000
 
 env.terrain = Terrain(lambda x: h/2*(1 + fm.sin(fm.pi * (x - x1) / (2*w))) if -w <= (x-x1) <= 3*w else 0)
-ant60 = GaussSource(freq_hz=60000e6, height=10, beam_width=5, eval_angle=0, polarz='H')
-ant70 = GaussSource(freq_hz=70000e6, height=10, beam_width=5, eval_angle=0, polarz='H')
+ant60 = GaussAntenna(freq_hz=60000e6, height=10, beam_width=5, eval_angle=0, polarz='H')
+ant70 = GaussAntenna(freq_hz=70000e6, height=10, beam_width=5, eval_angle=0, polarz='H')
 max_range = 10000
-pade12_task60 = SSPadePropagationTask(src=ant60, env=env, two_way=False, max_range_m=max_range, pade_order=(7, 8),
-                                    dx_wl=100, n_dx_out=10, dz_wl=1, n_dz_out=20)
+pade12_task60 = TroposphericRadioWaveSSPadePropagator(antenna=ant60, env=env, two_way=False, max_range_m=max_range, pade_order=(7, 8),
+                                                      dx_wl=100, n_dx_out=10, dz_wl=1, n_dz_out=20)
 pade12_field60 = pade12_task60.calculate()
 
-pade12_task70 = SSPadePropagationTask(src=ant70, env=env, two_way=False, max_range_m=max_range, pade_order=(7, 8),
-                                    dx_wl=100, n_dx_out=10, dz_wl=1, n_dz_out=20)
+pade12_task70 = TroposphericRadioWaveSSPadePropagator(antenna=ant70, env=env, two_way=False, max_range_m=max_range, pade_order=(7, 8),
+                                                      dx_wl=100, n_dx_out=10, dz_wl=1, n_dz_out=20)
 pade12_field70 = pade12_task70.calculate()
 
 matplotlib.rcParams.update({'font.size': 10})

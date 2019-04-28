@@ -1,7 +1,9 @@
 import logging
 from rwp.environment import *
-from rwp.WPDefs import *
+from rwp.antennas import *
 import math as fm
+
+from rwp.field import Field3d
 
 
 class SSF3DPropagatorComputationParameters:

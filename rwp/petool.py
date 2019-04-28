@@ -3,8 +3,9 @@ import math as fm
 
 import matlab.engine
 
-from rwp.WPDefs import *
+from rwp.antennas import *
 from rwp.environment import *
+from rwp.field import Field
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
@@ -17,7 +18,7 @@ class PETOOLPropagator:
      Computer Physics Communications, 182(12), 2638-2654.
     """
 
-    def __init__(self, env: EMEnvironment, wavelength=1.0, dx_wl=1000, dz_wl=1):
+    def __init__(self, env: Troposphere, wavelength=1.0, dx_wl=1000, dz_wl=1):
         self.env = env
         self.k0 = (2 * cm.pi) / wavelength
         self.wavelength = wavelength
@@ -30,29 +31,29 @@ class PETOOLPropagator:
         x_computational_grid = np.arange(0, n_x) * self.dx
         terrain_type = 1
         interp_type = 1
-        if isinstance(self.env.terrain, KnifeEdges):
+        if len(self.env.knife_edges) > 0:
             terrain_type = 2
             interp_type = 1
-            edge_range = matlab.double([a * 1e-3 for a in self.env.terrain.edge_range], is_complex=True)
-            edge_height = matlab.double(list(self.env.terrain.edge_height), is_complex=True)
+            edge_range = matlab.double([ke.range * 1e-3 for ke in self.env.knife_edges], is_complex=True)
+            edge_height = matlab.double([ke.height for ke in self.env.knife_edges], is_complex=True)
         else:
-            terrain_type = 2
+            terrain_type = 1 if self.env.terrain.is_homogeneous else 2
             interp_type = 2
             edge_range = matlab.double([a * 1e-3 for a in x_computational_grid], is_complex=True)
-            edge_height = matlab.double([self.env.terrain(a) for a in x_computational_grid], is_complex=True)
+            edge_height = matlab.double([self.env.terrain(a)+0.0 for a in x_computational_grid], is_complex=True)
 
-        polarz_n = 1 if src.polarz.upper == 'H' else 2
+        polarz_n = 1 if src.polarz.upper() == 'H' else 2
         backward_n = 2 if two_way and terrain_type == 2 else 1
         het = matlab.double([a * 1e6 / 4 for a in self.env.n2m1_profile(0, self.z_computational_grid, self.freq_hz)],
                             is_complex=True)
-        if isinstance(self.env.lower_boundary, EarthSurfaceBS):
-            ground_type = 2
-            epsilon = self.env.lower_boundary.permittivity(self.freq_hz)
-            sigma = self.env.lower_boundary.conductivity(self.freq_hz)
-        else:
+        if isinstance(self.env.ground_material, PerfectlyElectricConducting):
             ground_type = 1
             epsilon = 0
             sigma = 0
+        else:
+            ground_type = 2
+            epsilon = self.env.ground_material.permittivity(self.freq_hz)
+            sigma = self.env.ground_material.conductivity_sm_m(self.freq_hz)
 
         logging.debug('Starting Matlab engine...')
         eng = matlab.engine.start_matlab()
@@ -85,6 +86,7 @@ class PETOOLPropagator:
         x_computational_grid = np.array(range_vec._data)
         z_petool_grid = np.array(z_user._data)
         field = Field(x_computational_grid[1::n_dx_out], z_petool_grid[::n_dz_out], self.freq_hz)
+        #field.field[:, :] = np.array(path_loss._data).reshape(path_loss.size[::-1]).T[::n_dz_out, 1::n_dx_out].T
         field.field[:, :] = np.array(prop_fact._data).reshape(prop_fact.size[::-1]).T[::n_dz_out, 1::n_dx_out].T
         field.field -= np.tile(10 * np.log10(x_computational_grid[1::n_dx_out]), (z_petool_grid[::n_dz_out].shape[0], 1)).T
         field.field -= 10*fm.log10(self.wavelength)
@@ -96,15 +98,15 @@ class PETOOLPropagator:
 
 class PETOOLPropagationTask:
 
-    def __init__(self, *, src: Source, env: EMEnvironment, two_way=False, max_range_m=100000, dx_wl=100, dz_wl=1,
+    def __init__(self, *, antenna: Source, env: Troposphere, two_way=False, max_range_m=100000, dx_wl=100, dz_wl=1,
                  n_dx_out=1, n_dz_out=1):
-        self.src = src
+        self.src = antenna
         self.env = env
         self.two_way = two_way
         self.max_range_m = max_range_m
         self.n_dx_out = n_dx_out
         self.n_dz_out = n_dz_out
-        self.propagator = PETOOLPropagator(env=self.env, wavelength=src.wavelength, dx_wl=dx_wl, dz_wl=dz_wl)
+        self.propagator = PETOOLPropagator(env=self.env, wavelength=self.src.wavelength, dx_wl=dx_wl, dz_wl=dz_wl)
 
     def calculate(self):
         n_x = fm.ceil(self.max_range_m / self.propagator.dx) + 1

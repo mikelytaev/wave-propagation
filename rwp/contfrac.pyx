@@ -16,3 +16,27 @@ cpdef complex bessel_ratio(complex c, complex d, int j, double tol):
 
 cdef complex cont_frac_seq(complex c, complex d, int j, int n):
     return (-1)**(n+1) * 2.0 * (j + (2.0 + d) / c + n - 1) * (c / 2.0)
+
+cpdef complex bessel_ratio_4th_order(complex a_m1, complex a_1, complex b, complex c, complex d, int m, double tol):
+    tol /= 1e6
+    cdef complex h_n = -f_m(c, d, a_m1, b, m)
+    cdef complex D_n = 0.0
+    cdef complex C_n = h_n
+    cdef complex delta = 0
+    cdef int i = 1
+    cdef complex b_n = 0
+    cdef complex a_n = 0
+    while abs(delta - 1) > tol:
+        b_n = -f_m(c, d, a_m1, b, m+i)
+        a_n = -f_m(a_1, b, a_m1, b, m+i-1)
+        D_n = b_n + a_n * D_n
+        C_n = b_n + a_n / C_n
+        D_n = 1 / D_n
+        delta = D_n * C_n
+        h_n = h_n * delta
+        i = i + 1
+
+    return h_n
+
+cdef complex f_m(complex a, complex b, complex c, complex d, int m):
+    return (a + b * m) / (c + d * m)
