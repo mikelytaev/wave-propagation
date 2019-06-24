@@ -1,11 +1,10 @@
 import logging
 import math as fm
 
-import numpy
 from scipy import sparse as sparse, linalg as la
 
 from rwp.field import Field3d
-from rwp._utils import pade_propagator_coefs
+from propagators._utils import pade_propagator_coefs
 from rwp.environment import EMEnvironment3d, LIGHT_SPEED
 from rwp.propagators import Crank_Nikolson_propagator2, Crank_Nikolson_propagator2_4th_order
 
