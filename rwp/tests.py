@@ -20,9 +20,9 @@ class TestSSPade(unittest.TestCase):
         env.N_profile = lambda x, z: z / 6371000 * 1e6
         env.upper_boundary = TransparentLinearBS(1 / 6371000 * 1e6)
         pp = HelmholtzPadeSolver(env=env, wavelength=0.03, pade_order=(1, 1), tol=1e-11)
-        pp.dx_m = 10
+        pp.dx = 10
         pp.n_x = 12001
-        pp.dz_m = 1
+        pp.dz = 1
         pp.n_z = 301
         pp.calc_nlbc()
 

@@ -1,6 +1,4 @@
-import cmath
 from itertools import zip_longest
-from typing import List, Any
 
 import mpmath
 import cmath as cm
@@ -91,26 +89,13 @@ def discrete_exp(k, dx, pade_coefs, dz, kz, order=2):
     return cm.exp(1j*k*dx) * mult
 
 
-def optimal_params(max_angle, threshold, dx=None, dz=None, pade_order=None, z_order=4):
+def optimal_params(max_angle, threshold, dxs=None, dzs=None, pade_orders=None, z_order=4):
     k0 = 2*cm.pi
     res = (None, None, None)
     cur_min = 1e100
-
-    if pade_order:
-        pade_orders = [pade_order]
-    else:
-        pade_orders = [(1, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)]
-
-    if dx:
-        dxs = [dx]
-    else:
-        dxs = np.concatenate((np.linspace(0.1, 1, 10), np.linspace(2, 10, 9), np.linspace(20, 100, 9), np.linspace(200, 1000, 9), np.linspace(2000, 10000, 9)))
-
-    if dz:
-        dzs = [dz]
-    else:
-        dzs = np.concatenate((np.array([0.01, 0.05]), np.linspace(0.1, 2, 20)))
-
+    pade_orders = pade_orders or [(1, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)]
+    dxs = dxs or np.concatenate((np.linspace(0.1, 1, 10), np.linspace(2, 10, 9), np.linspace(20, 100, 9), np.linspace(200, 1000, 9), np.linspace(2000, 10000, 9)))
+    dzs = dzs or np.concatenate((np.array([0.01, 0.05]), np.linspace(0.1, 2, 20)))
     for pade_order in pade_orders:
         for dx in dxs:
             if z_order <= 4:
@@ -159,35 +144,3 @@ def brewster_angle(eps1, eps2):
     :return: brewster angle between incident wave and normal to surface in degrees in degrees
     """
     return 90 - cm.asin(1 / cm.sqrt(eps2 / eps1 + 1)) * 180 / cm.pi
-
-
-def sqr_eq(a, b, c):
-    c1 = (-b + cm.sqrt(b**2 - 4 * a * c)) / (2 * a)
-    c2 = (-b - cm.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
-    return [c1, c2][abs(c1) > abs(c2)]
-
-
-def lentz(cont_frac_seq, tol=1e-20):
-    """
-    Lentz W. J. Generating Bessel functions in Mie scattering calculations using continued fractions
-    //Applied Optics. – 1976. – 15. – №. 3. – P. 668-671.
-    :param cont_frac_seq: continued fraction sequence
-    :param tol: absolute tolerance
-    """
-    num = cont_frac_seq(2) + 1.0 / cont_frac_seq(1)
-    den = cont_frac_seq(2)
-    y = cont_frac_seq(1) * num / den
-    i = 3
-    while abs(num / den - 1) > tol:
-        num = cont_frac_seq(i) + 1.0 / num
-        den = cont_frac_seq(i) + 1.0 / den
-        y = y * num / den
-        i += 1
-
-    return y
-
-
-def d2a_n_eq_ba_n(b):
-    c1 = (b+2-cm.sqrt(b**2+4*b))/2
-    c2 = 1.0 / c1
-    return [c1, c2][abs(c1) > abs(c2)]

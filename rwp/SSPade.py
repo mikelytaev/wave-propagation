@@ -87,7 +87,17 @@ class TroposphericRadioWaveSSPadePropagator:
                                               pade_order=opt_pade, spe=spe, dx_wl=opt_dx, dz_wl=opt_dz,
                                               terrain_method=self.terrain_method, tol=tol)
 
-
+    def _optimal_angle(self):
+        if len(self.env.knife_edges) > 0:
+            return 85
+        else:
+            res = 3
+            step = 10
+            for x in np.arange(step, self.max_range_m, step):
+                angle = cm.atan((self.env.terrain(x) - self.env.terrain(x - step)) / step) * 180 / cm.pi
+                res = max(res, abs(angle))
+            res = max(self.src.max_angle(), fm.ceil(res))
+            return res
 
     def _prepare_bc(self):
         upper_bc = NLBCManager(self.nlbc_manager_path).get_upper_nlbc(self.propagator, self.n_x)
@@ -113,7 +123,7 @@ class TroposphericRadioWaveSSPadePropagator:
         initials_fw = [np.empty(0)] * self.n_x
         initials_fw[0] = np.array([self.src.aperture(a) for a in self.propagator.z_computational_grid])
         reflected_bw = initials_fw
-        x_computational_grid = np.arange(0, self.n_x) * self.propagator.dx_m
+        x_computational_grid = np.arange(0, self.n_x) * self.propagator.dx
         field = Field(x_computational_grid[::self.n_dx_out], self.propagator.z_computational_grid[::self.n_dz_out],
                       freq_hz=self.propagator.freq_hz,
                       precision=self.propagator.tol)
@@ -152,7 +162,7 @@ class NLBCManager:
     def get_lower_nlbc(self, propagator: HelmholtzPadeSolver, n_x):
         beta = propagator.env.ground_material.complex_permittivity(propagator.freq_hz) - 1
         gamma = 0
-        q = 'lower', propagator.k0, propagator.dx_m, propagator.dz_m, propagator.pade_order, propagator.z_order, propagator.spe, beta, gamma
+        q = 'lower', propagator.k0, propagator.dx, propagator.dz, propagator.pade_order, propagator.z_order, propagator.spe, beta, gamma
         if q not in self.nlbc_dict or self.nlbc_dict[q].coefs.shape[0] < n_x:
             self.nlbc_dict[q] = propagator.calc_lower_nlbc(beta)
         lower_nlbc = self.nlbc_dict[q]
@@ -165,7 +175,7 @@ class NLBCManager:
     def get_upper_nlbc(self, propagator: HelmholtzPadeSolver, n_x):
         gamma = propagator.env.n2m1_profile(0, propagator.env.z_max+1, propagator.freq_hz) - propagator.env.n2m1_profile(0, propagator.env.z_max, propagator.freq_hz)
         beta = propagator.env.n2m1_profile(0, propagator.env.z_max, propagator.freq_hz) - gamma * propagator.env.z_max
-        q = 'upper', propagator.k0, propagator.dx_m, propagator.dz_m, propagator.pade_order, propagator.z_order, propagator.spe, beta, gamma
+        q = 'upper', propagator.k0, propagator.dx, propagator.dz, propagator.pade_order, propagator.z_order, propagator.spe, beta, gamma
         if q not in self.nlbc_dict or self.nlbc_dict[q].coefs.shape[0] < n_x:
             self.nlbc_dict[q] = propagator.calc_upper_nlbc(beta, gamma)
         upper_nlbc = self.nlbc_dict[q]
@@ -175,7 +185,37 @@ class NLBCManager:
 
         return upper_nlbc
 
+
+def d2a_n_eq_ba_n(b):
+    c1 = (b+2-cm.sqrt(b**2+4*b))/2
+    c2 = 1.0 / c1
+    return [c1, c2][abs(c1) > abs(c2)]
+
+
+def sqr_eq(a, b, c):
+    c1 = (-b + cm.sqrt(b**2 - 4 * a * c)) / (2 * a)
+    c2 = (-b - cm.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
+    return [c1, c2][abs(c1) > abs(c2)]
+
 # def bessel_ratio(c, d, j, tol):
 #     return lentz(lambda n: (-1)**(n+1) * 2.0 * (j + (2.0 + d) / c + n - 1) * (c / 2.0))
 
 
+def lentz(cont_frac_seq, tol=1e-20):
+    """
+    Lentz W. J. Generating Bessel functions in Mie scattering calculations using continued fractions
+    //Applied Optics. – 1976. – 15. – №. 3. – P. 668-671.
+    :param cont_frac_seq: continued fraction sequence
+    :param tol: absolute tolerance
+    """
+    num = cont_frac_seq(2) + 1.0 / cont_frac_seq(1)
+    den = cont_frac_seq(2)
+    y = cont_frac_seq(1) * num / den
+    i = 3
+    while abs(num / den - 1) > tol:
+        num = cont_frac_seq(i) + 1.0 / num
+        den = cont_frac_seq(i) + 1.0 / den
+        y = y * num / den
+        i += 1
+
+    return y

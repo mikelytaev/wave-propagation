@@ -4,16 +4,13 @@ import numpy as np
 
 class Source:
 
-    def __init__(self, freq_hz):
-        self.freq_hz = freq_hz
-
     def max_angle(self):
         pass
 
 
 class GaussSource(Source):
 
-    def __init__(self, *, freq_hz, depth, beam_width, eval_angle):
+    def __init__(self, *, freq_hz=None, depth, beam_width, eval_angle):
         self.freq_hz = freq_hz
         self.depth = depth
         self.beam_width = beam_width
