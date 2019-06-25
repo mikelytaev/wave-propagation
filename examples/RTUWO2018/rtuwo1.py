@@ -1,8 +1,8 @@
 from rwp.SSPade import *
 from rwp.WPVis import *
+from rwp.environment import *
 from rwp.petool import PETOOLPropagationTask
 from rwp.crank_nicolson import *
-from propagators.sspade import TerrainMethod
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()

@@ -1,6 +1,6 @@
 from rwp.environment import *
 import math as fm
-from propagators._utils import *
+from rwp._utils import *
 import scipy.linalg as la
 from rwp.antennas import *
 import logging

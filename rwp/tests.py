@@ -2,7 +2,6 @@ import unittest
 
 from rwp.SSPade import *
 from rwp.environment import TransparentLinearBS, EMEnvironment
-from propagators.sspade import HelmholtzPadeSolver
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
