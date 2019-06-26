@@ -1,6 +1,9 @@
 import logging
+import pickle
+
 import math as fm
 import cmath as cm
+from dataclasses import dataclass
 from enum import Enum
 
 import mpmath
@@ -32,25 +35,27 @@ class RobinBC(BoundaryCondition):
         self.q3 = q3
 
 
-class TransparentConstBC(BoundaryCondition):
+class TransparentBC(BoundaryCondition):
     pass
 
 
-class TransparentLinearBC(BoundaryCondition):
+class TransparentConstBC(TransparentBC):
     pass
 
 
-"""
-q_{1}u+q_{2}u'=0
-"""
-class LocalBC(BoundaryCondition):
+class TransparentLinearBC(TransparentBC):
+    pass
 
-    def __init__(self, q1: complex, q2: complex):
+
+class DiscreteLocalBC(BoundaryCondition):
+
+    def __init__(self, q1: complex, q2: complex, q3: complex):
         self.q1 = q1
         self.q2 = q2
+        self.q3 = q3
 
 
-class NonLocalBC(BoundaryCondition):
+class DiscreteNonLocalBC(BoundaryCondition):
 
     def __init__(self, r0: float, r1: float, coefs: "numpy array"):
         self.r0 = r0
@@ -85,30 +90,49 @@ class HelmholtzEnvironment:
         self.knife_edges = []
 
 
-        #two_way=False, iter_num=None, max_range_m, max_angle=None,
-        #         dx_wl=None, dz_wl=None, n_dx_out=None, n_dz_out=None, pade_order=None, z_order=4, spe=False,
-        #         terrain_method=None,
-
-
-class HelmholtzPropagatorComputationalParams:
+class HelmholtzPropagatorStorage:
 
     def __init__(self):
-        self.two_way = False
-        self.two_way_iter_num = None
-        self.two_way_threshold = None
-        self.max_range_m = None
-        self.max_height_m = None
-        self.max_propagation_angle = None
-        self.dx_wl = None
-        self.dz_wl = None
-        self.x_output_filter = None
-        self.z_output_filter = None
-        self.exp_pade_order = None
-        self.standard_pe = False
-        self.sqrt_alpha = None
-        self.z_order = None
-        self.terrain_method = None
-        self.tol = None
+        pass
+
+    def get_lower_nlbc(self, *, k0, dx_wl, dz_wl, pade_order, z_order, sqrt_alpha, spe, beta, gamma, n_x):
+        pass
+
+    def set_lower_nlbc(self, *, k0, dx_wl, dz_wl, pade_order, z_order, sqrt_alpha, spe, beta, gamma, nlbc_coefs):
+        pass
+
+    def get_upper_nlbc(self, *, k0, dx_wl, dz_wl, pade_order, z_order, sqrt_alpha, spe, beta, gamma, n_x):
+        pass
+
+    def set_upper_nlbc(self, *, k0, dx_wl, dz_wl, pade_order, z_order, sqrt_alpha, spe, beta, gamma, nlbc_coefs):
+        pass
+
+@dataclass
+class HelmholtzPropagatorComputationalParams:
+    max_range_m: float
+    max_height_m: float
+    dx_wl: float
+    dz_wl: float
+    max_propagation_angle: float
+    exp_pade_order: tuple = (1, 1)
+    x_output_filter: int = 1
+    z_output_filter: int = 1
+    two_way: bool = False
+    two_way_iter_num: int = 0
+    two_way_threshold: float = 0.05
+    standard_pe: bool = False
+    sqrt_alpha: float = 0
+    z_order: int = 4
+    terrain_method: TerrainMethod = TerrainMethod.no
+    tol: float = 1e-11
+    storage: HelmholtzPropagatorStorage = None
+
+
+@dataclass
+class HelmholtzField:
+    x_grid_m: np.ndarray = None
+    z_grid_m: np.ndarray = None
+    field: np.ndarray = None
 
 
 class HelmholtzPadeSolver:
@@ -138,6 +162,9 @@ class HelmholtzPadeSolver:
 
         self.pade_coefs = pade_propagator_coefs(pade_order=self.params.exp_pade_order, diff2=diff2, k0=self.k0,
                                                 dx=self.dx_m, spe=self.params.standard_pe, alpha=self.params.sqrt_alpha)
+
+        self.lower_nlbc = []
+        self.upper_nlbc = []
 
     def _optimize_params(self):
         #optimize max angle
@@ -289,6 +316,48 @@ class HelmholtzPadeSolver:
         r3 = 2 * a * q2
         return r0, r1, r2 * phi[0] + r3 * phi[1]
 
+    def prepare_nlbc(self):
+        if isinstance(self.env.lower_bc, TransparentBC):
+            beta = self.env.n2minus1(0, self.env.z_min - 1)
+            gamma = 0
+            if self.params.storage:
+                self.lower_nlbc = self.params.storage.get_lower_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
+                                                                     pade_order=self.params.exp_pade_order, z_order=self.params.z_order,
+                                                                     sqrt_alpha=self.params.sqrt_alpha, spe=self.params.spe, beta=beta,
+                                                                     gamma=gamma, n_x=self.n_x)
+
+                if self.lower_nlbc is None:
+                    self.lower_nlbc = self.calc_lower_nlbc(beta)
+                    self.params.storage.set_lower_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
+                                                       pade_order=self.params.exp_pade_order,
+                                                       z_order=self.params.z_order,
+                                                       sqrt_alpha=self.params.sqrt_alpha, spe=self.params.spe,
+                                                       beta=beta,
+                                                       gamma=gamma, nlbc_coefs=self.lower_nlbc)
+            else:
+                self.lower_nlbc = self.calc_lower_nlbc(beta)
+
+        if isinstance(self.env.upper_bc, TransparentBC):
+            beta = self.env.n2minus1(0, self.env.z_max + 1)
+            gamma = self.env.n2minus1(0, self.env.z_max + 1) - self.env.n2minus1(0, self.env.z_max)
+            if self.params.storage:
+                self.upper_nlbc = self.params.storage.get_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
+                                                                     pade_order=self.params.exp_pade_order, z_order=self.params.z_order,
+                                                                     sqrt_alpha=self.params.sqrt_alpha, spe=self.params.spe, beta=beta,
+                                                                     gamma=gamma, n_x=self.n_x)
+
+                if self.upper_nlbc is None:
+                    self.upper_nlbc = self.calc_upper_nlbc(beta, gamma)
+                    self.params.storage.set_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
+                                                       pade_order=self.params.exp_pade_order,
+                                                       z_order=self.params.z_order,
+                                                       sqrt_alpha=self.params.sqrt_alpha, spe=self.params.spe,
+                                                       beta=beta,
+                                                       gamma=gamma, nlbc_coefs=self.lower_nlbc)
+            else:
+                self.upper_nlbc = self.calc_upper_nlbc(beta, gamma)
+
+
     def _calc_nlbc(self, diff_eq_solution_ratio):
         num_roots, den_roots = list(zip(*self.pade_coefs))
         m_size = len(self.pade_coefs)
@@ -369,18 +438,20 @@ class HelmholtzPadeSolver:
 
             return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
 
-    def propagate(self, initials: list, *, direction=1, lower_bc, upper_bc, n_dx_out=1, n_dz_out=1):
+    def propagate(self, initials: list, *, direction=1):
+        self.prepare_nlbc()
         x_computational_grid = np.arange(0, self.n_x) * self.dx_m
-        field = Field(x_computational_grid[::n_dx_out], self.z_computational_grid[::n_dz_out],
-                      freq_hz=self.freq_hz, precision=self.tol)
+        field = HelmholtzField(x_grid_m=x_computational_grid[::self.params.x_output_filter],
+                               z_grid_m=self.z_computational_grid[::self.params.z_output_filter])
         reflected = [np.empty(0)] * self.n_x
         if direction == 1 and len(initials[0]) > 0:
             phi = initials[0]
         else:
             phi = self.z_computational_grid * 0j
 
-        field.field[0, :] = phi[::n_dz_out]
-        phi_0, phi_J = np.zeros((self.n_x, max(self.pade_order)), dtype=complex), np.zeros((self.n_x, max(self.pade_order)), dtype=complex)
+        field.field[0, :] = phi[::self.params.z_output_filter]
+        phi_0 = np.zeros((self.n_x, max(self.params.exp_pade_order)), dtype=complex)
+        phi_J = np.zeros((self.n_x, max(self.params.exp_pade_order)), dtype=complex)
 
         if direction == 1:
             iterator = enumerate(x_computational_grid[1:], start=1)
@@ -407,9 +478,9 @@ class HelmholtzPadeSolver:
                 het = self.env.n2m1_profile(x, self.z_computational_grid[terr_i::], self.freq_hz) + 0j
 
             # process boundary conditions
-            if isinstance(lower_bc, NonLocalBC):
-                lower_convolution = np.einsum('ijk,ik->j', lower_bc.coefs[1:x_i], phi_0[x_i-1:0:-1])
-            if isinstance(upper_bc, NonLocalBC):
+            if isinstance(self.env.lower_bc, TransparentBC):
+                lower_convolution = np.einsum('ijk,ik->j', self.lower_nlbc[1:x_i], phi_0[x_i-1:0:-1])
+            if isinstance(self.env.upper_bc, TransparentBC):
                 upper_convolution = np.einsum('ijk,ik->j', upper_bc.coefs[1:x_i], phi_J[x_i-1:0:-1])
 
             for pc_i, (a, b) in enumerate(self.pade_coefs):
@@ -453,3 +524,41 @@ class HelmholtzPadeSolver:
         else:
             field.field = field.field[::-1, :]
             return field, reflected[::-1]
+
+
+class PickleStorage(HelmholtzPropagatorStorage):
+
+    def __init__(self, name='nlbc'):
+        self.file_name = name
+        import os
+        if os.path.exists(self.file_name):
+            with open(self.file_name, 'rb') as f:
+                self.nlbc_dict = pickle.load(f)
+        else:
+            self.nlbc_dict = {}
+
+    def get_lower_nlbc(self, propagator: HelmholtzPadeSolver, n_x):
+        beta = propagator.env.ground_material.complex_permittivity(propagator.freq_hz) - 1
+        gamma = 0
+        q = 'lower', propagator.k0, propagator.dx_m, propagator.dz_m, propagator.pade_order, propagator.z_order, propagator.spe, beta, gamma
+        if q not in self.nlbc_dict or self.nlbc_dict[q].coefs.shape[0] < n_x:
+            self.nlbc_dict[q] = propagator.calc_lower_nlbc(beta)
+        lower_nlbc = self.nlbc_dict[q]
+
+        with open(self.file_name, 'wb') as f:
+            pickle.dump(self.nlbc_dict, f)
+
+        return lower_nlbc
+
+    def get_upper_nlbc(self, propagator: HelmholtzPadeSolver, n_x):
+        gamma = propagator.env.n2m1_profile(0, propagator.env.z_max+1, propagator.freq_hz) - propagator.env.n2m1_profile(0, propagator.env.z_max, propagator.freq_hz)
+        beta = propagator.env.n2m1_profile(0, propagator.env.z_max, propagator.freq_hz) - gamma * propagator.env.z_max
+        q = 'upper', propagator.k0, propagator.dx_m, propagator.dz_m, propagator.pade_order, propagator.z_order, propagator.spe, beta, gamma
+        if q not in self.nlbc_dict or self.nlbc_dict[q].coefs.shape[0] < n_x:
+            self.nlbc_dict[q] = propagator.calc_upper_nlbc(beta, gamma)
+        upper_nlbc = self.nlbc_dict[q]
+
+        with open(self.file_name, 'wb') as f:
+            pickle.dump(self.nlbc_dict, f)
+
+        return upper_nlbc

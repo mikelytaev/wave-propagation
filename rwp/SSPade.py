@@ -1,6 +1,5 @@
 import logging
 import math as fm
-import pickle
 
 import pyximport
 
@@ -10,7 +9,7 @@ from rwp.antennas import *
 from rwp.environment import *
 from propagators._utils import *
 from rwp.field import Field
-from propagators.sspade import LocalBC, TerrainMethod, HelmholtzPadeSolver
+from propagators.sspade import LocalBC, TerrainMethod, HelmholtzPadeSolver, HelmholtzPropagatorStorage
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from propagators._cn_utils import *
@@ -90,9 +89,9 @@ class TroposphericRadioWaveSSPadePropagator:
 
 
     def _prepare_bc(self):
-        upper_bc = NLBCManager(self.nlbc_manager_path).get_upper_nlbc(self.propagator, self.n_x)
+        upper_bc = HelmholtzPropagatorStorage(self.nlbc_manager_path).get_upper_nlbc(self.propagator, self.n_x)
         if self.terrain_method == TerrainMethod.pass_through:
-            lower_bc = NLBCManager(self.nlbc_manager_path).get_lower_nlbc(self.propagator, self.n_x)
+            lower_bc = HelmholtzPropagatorStorage(self.nlbc_manager_path).get_lower_nlbc(self.propagator, self.n_x)
         else:
             if isinstance(self.env.ground_material, PerfectlyElectricConducting):
                 if self.src.polarz == 'H':
@@ -136,44 +135,6 @@ class TroposphericRadioWaveSSPadePropagator:
         logging.debug("Elapsed time: " + str(time.time() - start_time))
 
         return field
-
-
-class NLBCManager:
-
-    def __init__(self, name='nlbc'):
-        self.file_name = name
-        import os
-        if os.path.exists(self.file_name):
-            with open(self.file_name, 'rb') as f:
-                self.nlbc_dict = pickle.load(f)
-        else:
-            self.nlbc_dict = {}
-
-    def get_lower_nlbc(self, propagator: HelmholtzPadeSolver, n_x):
-        beta = propagator.env.ground_material.complex_permittivity(propagator.freq_hz) - 1
-        gamma = 0
-        q = 'lower', propagator.k0, propagator.dx_m, propagator.dz_m, propagator.pade_order, propagator.z_order, propagator.spe, beta, gamma
-        if q not in self.nlbc_dict or self.nlbc_dict[q].coefs.shape[0] < n_x:
-            self.nlbc_dict[q] = propagator.calc_lower_nlbc(beta)
-        lower_nlbc = self.nlbc_dict[q]
-
-        with open(self.file_name, 'wb') as f:
-            pickle.dump(self.nlbc_dict, f)
-
-        return lower_nlbc
-
-    def get_upper_nlbc(self, propagator: HelmholtzPadeSolver, n_x):
-        gamma = propagator.env.n2m1_profile(0, propagator.env.z_max+1, propagator.freq_hz) - propagator.env.n2m1_profile(0, propagator.env.z_max, propagator.freq_hz)
-        beta = propagator.env.n2m1_profile(0, propagator.env.z_max, propagator.freq_hz) - gamma * propagator.env.z_max
-        q = 'upper', propagator.k0, propagator.dx_m, propagator.dz_m, propagator.pade_order, propagator.z_order, propagator.spe, beta, gamma
-        if q not in self.nlbc_dict or self.nlbc_dict[q].coefs.shape[0] < n_x:
-            self.nlbc_dict[q] = propagator.calc_upper_nlbc(beta, gamma)
-        upper_nlbc = self.nlbc_dict[q]
-
-        with open(self.file_name, 'wb') as f:
-            pickle.dump(self.nlbc_dict, f)
-
-        return upper_nlbc
 
 # def bessel_ratio(c, d, j, tol):
 #     return lentz(lambda n: (-1)**(n+1) * 2.0 * (j + (2.0 + d) / c + n - 1) * (c / 2.0))
