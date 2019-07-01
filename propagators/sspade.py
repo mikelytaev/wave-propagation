@@ -89,11 +89,11 @@ class HelmholtzEnvironment:
     upper_bc: BoundaryCondition = TransparentConstBC()
     z_min: float = 0
     z_max: float = 300
-    n2minus1: types.FunctionType = lambda x, z, freq_hz: 0
+    n2minus1: types.FunctionType = lambda x, z, freq_hz: z*0
     use_n2minus1: bool = True
-    rho: types.FunctionType = lambda x, z: 1
+    rho: types.FunctionType = lambda x, z: z*0+1
     use_rho: bool = True
-    terrain: types.FunctionType = lambda x: 0
+    terrain: types.FunctionType = lambda x: x*0
     knife_edges: List[KnifeEdge] = field(default_factory=list)
 
 
@@ -173,7 +173,7 @@ class HelmholtzPadeSolver:
                                                 dx=self.dx_m, spe=self.params.standard_pe, alpha=self.params.sqrt_alpha)
 
         self.lower_bc = []
-        self.upper_nlbc = []
+        self.upper_bc = []
 
     def _optimize_params(self):
         #optimize max angle
@@ -328,6 +328,22 @@ class HelmholtzPadeSolver:
         r3 = 2 * a * q2
         return r0, r1, r2 * phi[0] + r3 * phi[1]
 
+    def _calc_lower_lbc(self, *, local_bc: RobinBC, a, b, x, z_min, phi):
+        q1, q2 = local_bc.q1, local_bc.q2
+        r0 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + b * (self.env.n2minus1(x, z_min, self.freq_hz))) + 2 * b * (self.dz_m * q1 - q2)
+        r1 = 2 * b * q2
+        r2 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + a * (self.env.n2minus1(x, z_min, self.freq_hz))) + 2 * a * (self.dz_m * q1 - q2)
+        r3 = 2 * a * q2
+        return r0, r1, r2 * phi[0] + r3 * phi[1]
+
+    def _calc_upper_lbc(self, *, local_bc: RobinBC, a, b, x, z_max, phi):
+        q1, q2 = local_bc.q1, local_bc.q2
+        r1 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + b * (self.env.n2minus1(x, z_max, self.freq_hz))) + 2 * b * (self.dz_m * q1 - q2)
+        r0 = 2 * b * q2
+        r3 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + a * (self.env.n2minus1(x, z_max, self.freq_hz))) + 2 * a * (self.dz_m * q1 - q2)
+        r2 = 2 * a * q2
+        return r0, r1, r2 * phi[-2] + r3 * phi[-1]
+
     def prepare_boundary_conditions(self):
         if isinstance(self.env.lower_bc, TransparentBC) and \
                 self.params.terrain_method in [TerrainMethod.pass_through, TerrainMethod.no]:
@@ -356,13 +372,13 @@ class HelmholtzPadeSolver:
             beta = self.env.n2minus1(0, self.env.z_max + 1)
             gamma = self.env.n2minus1(0, self.env.z_max + 1) - self.env.n2minus1(0, self.env.z_max)
             if self.params.storage:
-                self.upper_nlbc = self.params.storage.get_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
-                                                                     pade_order=self.params.exp_pade_order, z_order=self.params.z_order,
-                                                                     sqrt_alpha=self.params.sqrt_alpha, spe=self.params.spe, beta=beta,
-                                                                     gamma=gamma, n_x=self.n_x)
+                self.upper_bc = self.params.storage.get_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
+                                                                   pade_order=self.params.exp_pade_order, z_order=self.params.z_order,
+                                                                   sqrt_alpha=self.params.sqrt_alpha, spe=self.params.spe, beta=beta,
+                                                                   gamma=gamma, n_x=self.n_x)
 
-                if self.upper_nlbc is None:
-                    self.upper_nlbc = self.calc_upper_nlbc(beta, gamma)
+                if self.upper_bc is None:
+                    self.upper_bc = self.calc_upper_nlbc(beta, gamma)
                     self.params.storage.set_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
                                                        pade_order=self.params.exp_pade_order,
                                                        z_order=self.params.z_order,
@@ -370,9 +386,9 @@ class HelmholtzPadeSolver:
                                                        beta=beta,
                                                        gamma=gamma, nlbc_coefs=self.lower_bc)
             else:
-                self.upper_nlbc = self.calc_upper_nlbc(beta, gamma)
+                self.upper_bc = self.calc_upper_nlbc(beta, gamma)
         else:
-            self.upper_nlbc = self.env.upper_bc
+            self.upper_bc = self.env.upper_bc
 
 
     def _calc_nlbc(self, diff_eq_solution_ratio):
@@ -487,10 +503,10 @@ class HelmholtzPadeSolver:
         for x_i, x in iterator:
             terr_i = int(round(self.env.terrain(x) / self.dz_m))
 
-            if self.terrain_method == TerrainMethod.pass_through:
+            if self.params.terrain_method == TerrainMethod.pass_through:
                 het = self.env.n2m1_profile(x, self.z_computational_grid, self.freq_hz) + 0j
                 het[0:terr_i:] = self.env.ground_material.complex_permittivity(self.freq_hz) - 1
-            elif self.terrain_method == TerrainMethod.staircase:
+            elif self.params.terrain_method == TerrainMethod.staircase:
                 phi = phi[terr_i::]
                 het = self.env.n2m1_profile(x, self.z_computational_grid[terr_i::], self.freq_hz) + 0j
 
@@ -510,13 +526,9 @@ class HelmholtzPadeSolver:
                 if isinstance(self.upper_bc, DiscreteNonLocalBC):
                     upper_bound = 1, -self.upper_bc.coefs[0, pc_i, pc_i], upper_convolution[pc_i] + self.upper_bc.coefs[0, pc_i].dot(phi_J[x_i])
                 elif isinstance(self.upper_bc, RobinBC):
-                    raise Exception("Not supported yet")
+                    upper_bound = self._calc_upper_lbc(local_bc=self.lower_bc, a=a, b=b, x=x, z_max=self.z_computational_grid[-1], phi=phi)
 
-                # propagate
-                if polarz == 'H':
-                    phi = self._Crank_Nikolson_propagate_deprecated(a, b, het, phi, lower_bound=lower_bound, upper_bound=upper_bound)
-                else:
-                    phi = self._Crank_Nikolson_propagate(a, b, lambda z: self.env.n2minus1(x, z, self.freq_hz),
+                phi = self._Crank_Nikolson_propagate(a, b, lambda z: self.env.n2minus1(x, z, self.freq_hz),
                                                          lambda z: self.env.rho(x, z), phi,
                                                          lower_bound=lower_bound, upper_bound=upper_bound)
 
@@ -529,7 +541,7 @@ class HelmholtzPadeSolver:
                 if initials[x_i].size > 0:
                     phi[imp_i] = -initials[x_i] * cm.exp(-1j * self.k0 * x_computational_grid[x_i])
 
-            if self.terrain_method == TerrainMethod.staircase:
+            if self.params.terrain_method == TerrainMethod.staircase:
                 phi = np.concatenate((np.zeros(len(self.z_computational_grid) - len(phi)), phi))
 
             if divmod(x_i, self.params.x_output_filter)[1] == 0:
