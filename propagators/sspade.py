@@ -123,8 +123,8 @@ class HelmholtzPropagatorComputationalParams:
     max_propagation_angle: float = None
     max_src_angle: float = 0
     exp_pade_order: tuple = (1, 1)
-    x_output_filter: int = 1
-    z_output_filter: int = 1
+    x_output_filter: int = None
+    z_output_filter: int = None
     two_way: bool = False
     two_way_iter_num: int = 0
     two_way_threshold: float = 0.05
@@ -347,7 +347,7 @@ class HelmholtzPadeSolver:
     def prepare_boundary_conditions(self):
         if isinstance(self.env.lower_bc, TransparentBC) and \
                 self.params.terrain_method in [TerrainMethod.pass_through, TerrainMethod.no]:
-            beta = self.env.n2minus1(0, self.env.z_min - 1)
+            beta = self.env.n2minus1(0, self.env.z_min - 1, self.freq_hz)
             gamma = 0
             if self.params.storage:
                 self.lower_bc = self.params.storage.get_lower_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
@@ -369,8 +369,8 @@ class HelmholtzPadeSolver:
             self.lower_bc = self.env.lower_bc
 
         if isinstance(self.env.upper_bc, TransparentBC):
-            beta = self.env.n2minus1(0, self.env.z_max + 1)
-            gamma = self.env.n2minus1(0, self.env.z_max + 1) - self.env.n2minus1(0, self.env.z_max)
+            beta = self.env.n2minus1(0, self.env.z_max + 1, self.freq_hz)
+            gamma = self.env.n2minus1(0, self.env.z_max + 1, self.freq_hz) - self.env.n2minus1(0, self.env.z_max, self.freq_hz)
             if self.params.storage:
                 self.upper_bc = self.params.storage.get_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
                                                                    pade_order=self.params.exp_pade_order, z_order=self.params.z_order,
@@ -390,12 +390,11 @@ class HelmholtzPadeSolver:
         else:
             self.upper_bc = self.env.upper_bc
 
-
     def _calc_nlbc(self, diff_eq_solution_ratio):
         num_roots, den_roots = list(zip(*self.pade_coefs))
         m_size = len(self.pade_coefs)
         tau = 1.001
-        if max(self.pade_order) == 1:
+        if max(self.params.exp_pade_order) == 1:
             def nlbc_transformed(t):
                 return diff_eq_solution_ratio(((1 - t) / (-num_roots[0] + den_roots[0] * t)))
         else:
@@ -414,7 +413,7 @@ class HelmholtzPadeSolver:
                 return res.reshape(m_size**2)
 
         int_eps = 0#1e-8
-        fcca = FCCAdaptiveFourier(2 * fm.pi - 2 * int_eps, -np.arange(0, self.n_x), rtol=self.tol)
+        fcca = FCCAdaptiveFourier(2 * fm.pi - 2 * int_eps, -np.arange(0, self.n_x), rtol=self.params.tol)
 
         coefs = (tau**np.repeat(np.arange(0, self.n_x)[:, np.newaxis], m_size ** 2, axis=1) / (2*fm.pi) *
                 fcca.forward(lambda t: nlbc_transformed(t), -fm.pi, fm.pi)).reshape((self.n_x, m_size, m_size))
@@ -426,18 +425,19 @@ class HelmholtzPadeSolver:
         alpha = self.alpha
 
         def diff_eq_solution_ratio(s, xi):
-            k_d = self.wavelength / 2 / self.dx_m
-            k_x = k_d * self.k0 + 1j / self.dx_m * cm.log(xi)
-            k_z = cm.sqrt(self.k0**2 - k_x ** 2)
-            yy = cm.sqrt(self.k0**2 * (beta + 1) - k_x ** 2)
-            refl_coef = (yy - (beta+1) * k_z) / (yy + (beta+1) * k_z)
-
-            theta = 30
-            refl_coef = cm.exp(-10*((k_x - self.k0 * cm.cos(theta * cm.pi / 180))) ** 2)
+            # k_d = self.wavelength / 2 / self.dx_m
+            # k_x = k_d * self.k0 + 1j / self.dx_m * cm.log(xi)
+            # k_z = cm.sqrt(self.k0**2 - k_x ** 2)
+            # yy = cm.sqrt(self.k0**2 * (beta + 1) - k_x ** 2)
+            # refl_coef = (yy - (beta+1) * k_z) / (yy + (beta+1) * k_z)
+            #
+            # theta = 30
+            # refl_coef = cm.exp(-10*((k_x - self.k0 * cm.cos(theta * cm.pi / 180))) ** 2)
             # if abs(refl_coef) > 0.4:
             #     print("refl_coef = " + str(refl_coef) + "k_x / k = " + str(k_x / self.k0))
 
             #beta = 0
+            refl_coef = 0
             a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
             a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
             c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - 0)
@@ -512,7 +512,7 @@ class HelmholtzPadeSolver:
 
             # process boundary conditions
             if isinstance(self.lower_bc, DiscreteNonLocalBC):
-                lower_convolution = np.einsum('ijk,ik->j', self.lower_bc[1:x_i], phi_0[x_i - 1:0:-1])
+                lower_convolution = np.einsum('ijk,ik->j', self.lower_bc.coefs[1:x_i], phi_0[x_i - 1:0:-1])
             if isinstance(self.upper_bc, DiscreteNonLocalBC):
                 upper_convolution = np.einsum('ijk,ik->j', self.upper_bc.coefs[1:x_i], phi_J[x_i-1:0:-1])
 
