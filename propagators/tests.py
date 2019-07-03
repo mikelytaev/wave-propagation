@@ -104,6 +104,34 @@ class HelmholtzPropagatorTest(unittest.TestCase):
         self.assertTrue(energy_decaying(f, x_start_m=20))
         self.assertTrue(np.linalg.norm(f.field[-1, :]) < 5e-11)
 
+    def test_nlbc_storage(self):
+        logging.basicConfig(level=logging.DEBUG)
+        nlbc_file_name = 'nlbc'
+        import os
+        if os.path.isfile(nlbc_file_name):
+            os.remove(nlbc_file_name)
+        env = HelmholtzEnvironment(x_max_m=5000,
+                                   z_min=0,
+                                   z_max=300,
+                                   lower_bc=TransparentConstBC(),
+                                   upper_bc=TransparentConstBC(),
+                                   use_n2minus1=False,
+                                   use_rho=False)
+
+        wavelength = 0.1
+        src = GaussSource(freq_hz=1, depth=150, beam_width=15, eval_angle=0)
+        k0 = 2 * cm.pi / wavelength
+        params = HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8), max_src_angle=src.max_angle(), dz_wl=0.5,
+                                                        dx_wl=50, tol=1e-11, storage=PickleStorage(nlbc_file_name))
+        propagator = HelmholtzPadeSolver(env=env, wavelength=wavelength, freq_hz=300e6, params=params)
+        initials_fw = [np.empty(0)] * propagator.n_x
+        initials_fw[0] = np.array([src.aperture(k0, z) for z in propagator.z_computational_grid])
+        f1, r = propagator.propagate(initials=initials_fw, direction=1)
+        f2, r = propagator.propagate(initials=initials_fw, direction=1)
+
+        self.assertTrue(os.path.isfile(nlbc_file_name))
+        self.assertTrue(np.linalg.norm(f1.field - f2.field) < 1e-11)
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
