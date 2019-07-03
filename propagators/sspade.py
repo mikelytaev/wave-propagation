@@ -1,6 +1,7 @@
 import logging
 import pickle
 import types
+import time
 
 import math as fm
 import cmath as cm
@@ -13,7 +14,6 @@ from transforms.fcc_fourier import FCCAdaptiveFourier
 from scipy import linalg as la
 
 from propagators._utils import *
-from rwp.field import Field
 
 import pyximport
 pyximport.install(setup_args={"include_dirs": np.get_include()})
@@ -76,7 +76,7 @@ class TerrainMethod(Enum):
 
 
 @dataclass
-class KnifeEdge:
+class Edge:
     x: float
     z_min: float
     z_max: float
@@ -94,7 +94,7 @@ class HelmholtzEnvironment:
     rho: types.FunctionType = lambda x, z: z*0+1
     use_rho: bool = True
     terrain: types.FunctionType = lambda x: x*0
-    knife_edges: List[KnifeEdge] = field(default_factory=list)
+    knife_edges: List[Edge] = field(default_factory=list)
 
 
 class HelmholtzPropagatorStorage:
@@ -156,6 +156,7 @@ class HelmholtzPadeSolver:
         self._optimize_params()
         self.z_computational_grid, self.dz_m = np.linspace(self.env.z_min, self.env.z_max, self.n_z, retstep=True)
         self.dx_m = self.params.dx_wl * wavelength
+        self.x_computational_grid = np.arange(0, self.n_x) * self.dx_m
 
         if self.params.z_order == 2:
             self.alpha = 0
@@ -217,7 +218,6 @@ class HelmholtzPadeSolver:
 
         self.params.x_output_filter = self.params.x_output_filter or fm.ceil(self.n_x / x_approx_sampling)
         self.params.z_output_filter = self.params.z_output_filter or fm.ceil(self.n_z / z_approx_sampling)
-
 
     def _optimal_propagation_angle(self):
         if len(self.env.knife_edges) > 0:
@@ -344,7 +344,7 @@ class HelmholtzPadeSolver:
         r2 = 2 * a * q2
         return r0, r1, r2 * phi[-2] + r3 * phi[-1]
 
-    def prepare_boundary_conditions(self):
+    def _prepare_boundary_conditions(self):
         if isinstance(self.env.lower_bc, TransparentBC) and \
                 self.params.terrain_method in [TerrainMethod.pass_through, TerrainMethod.no]:
             beta = self.env.n2minus1(0, self.env.z_min - 1, self.freq_hz)
@@ -356,7 +356,7 @@ class HelmholtzPadeSolver:
                                                                    gamma=gamma, n_x=self.n_x)
 
                 if self.lower_bc is None:
-                    self.lower_bc = self.calc_lower_nlbc(beta)
+                    self.lower_bc = self._calc_lower_nlbc(beta)
                     self.params.storage.set_lower_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
                                                        pade_order=self.params.exp_pade_order,
                                                        z_order=self.params.z_order,
@@ -364,7 +364,7 @@ class HelmholtzPadeSolver:
                                                        beta=beta,
                                                        gamma=gamma, nlbc=self.lower_bc)
             else:
-                self.lower_bc = self.calc_lower_nlbc(beta)
+                self.lower_bc = self._calc_lower_nlbc(beta)
         else:
             self.lower_bc = self.env.lower_bc
 
@@ -378,7 +378,7 @@ class HelmholtzPadeSolver:
                                                                    gamma=gamma, n_x=self.n_x)
 
                 if self.upper_bc is None:
-                    self.upper_bc = self.calc_upper_nlbc(beta, gamma)
+                    self.upper_bc = self._calc_upper_nlbc(beta, gamma)
                     self.params.storage.set_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
                                                        pade_order=self.params.exp_pade_order,
                                                        z_order=self.params.z_order,
@@ -386,7 +386,7 @@ class HelmholtzPadeSolver:
                                                        beta=beta,
                                                        gamma=gamma, nlbc=self.lower_bc)
             else:
-                self.upper_bc = self.calc_upper_nlbc(beta, gamma)
+                self.upper_bc = self._calc_upper_nlbc(beta, gamma)
         else:
             self.upper_bc = self.env.upper_bc
 
@@ -420,7 +420,7 @@ class HelmholtzPadeSolver:
 
         return DiscreteNonLocalBC(r0=1, r1=1, coefs=coefs)
 
-    def calc_lower_nlbc(self, beta):
+    def _calc_lower_nlbc(self, beta):
         logging.debug('Computing lower nonlocal boundary condition...')
         alpha = self.alpha
 
@@ -447,7 +447,7 @@ class HelmholtzPadeSolver:
 
         return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
 
-    def calc_upper_nlbc(self, beta, gamma):
+    def _calc_upper_nlbc(self, beta, gamma):
         logging.debug('Computing upper nonlocal boundary condition...')
         alpha = self.alpha
         if abs(gamma) < 10 * np.finfo(float).eps:
@@ -471,10 +471,9 @@ class HelmholtzPadeSolver:
 
             return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
 
-    def propagate(self, initials: list, *, direction=1):
-        self.prepare_boundary_conditions()
-        x_computational_grid = np.arange(0, self.n_x) * self.dx_m
-        field = HelmholtzField(x_grid_m=x_computational_grid[::self.params.x_output_filter],
+    def _propagate(self, initials: list, direction=1):
+        self._prepare_boundary_conditions()
+        field = HelmholtzField(x_grid_m=self.x_computational_grid[::self.params.x_output_filter],
                                z_grid_m=self.z_computational_grid[::self.params.z_output_filter])
         reflected = [np.empty(0)] * self.n_x
         if direction == 1 and len(initials[0]) > 0:
@@ -487,9 +486,9 @@ class HelmholtzPadeSolver:
         phi_J = np.zeros((self.n_x, max(self.params.exp_pade_order)), dtype=complex)
 
         if direction == 1:
-            iterator = enumerate(x_computational_grid[1:], start=1)
+            iterator = enumerate(self.x_computational_grid[1:], start=1)
         else:
-            iterator = enumerate(x_computational_grid[-2::-1], start=1)
+            iterator = enumerate(self.x_computational_grid[-2::-1], start=1)
             initials = initials[::-1]
 
         edges_dict = {}
@@ -536,10 +535,10 @@ class HelmholtzPadeSolver:
 
             if x_i in edges_dict:
                 imp_i = self.z_computational_grid <= edges_dict[x_i].height
-                reflected[x_i] = np.copy(phi[imp_i]) * cm.exp(1j * self.k0 * x_computational_grid[x_i])
+                reflected[x_i] = np.copy(phi[imp_i]) * cm.exp(1j * self.k0 * self.x_computational_grid[x_i])
                 phi[imp_i] = 0
                 if initials[x_i].size > 0:
-                    phi[imp_i] = -initials[x_i] * cm.exp(-1j * self.k0 * x_computational_grid[x_i])
+                    phi[imp_i] = -initials[x_i] * cm.exp(-1j * self.k0 * self.x_computational_grid[x_i])
 
             if self.params.terrain_method == TerrainMethod.staircase:
                 phi = np.concatenate((np.zeros(len(self.z_computational_grid) - len(phi)), phi))
@@ -548,13 +547,44 @@ class HelmholtzPadeSolver:
                 field.field[divmod(x_i, self.params.x_output_filter)[0], :] = phi[::self.params.z_output_filter]
                 logging.debug('SSPade propagation x = ' + str(x) + "   " + str(np.linalg.norm(phi[::self.params.z_output_filter])))
 
-        field.field *= np.tile(np.exp(1j * self.k0 * x_computational_grid[::self.params.x_output_filter]),
+        field.field *= np.tile(np.exp(1j * self.k0 * self.x_computational_grid[::self.params.x_output_filter]),
                                (len(self.z_computational_grid[::self.params.z_output_filter]), 1)).T
         if direction == 1:
             return field, reflected
         else:
             field.field = field.field[::-1, :]
             return field, reflected[::-1]
+
+    def calculate(self, initial_func: types.FunctionType):
+        start_time = time.time()
+        initials_fw = [np.empty(0)] * self.n_x
+        reflected_bw = initials_fw.copy()
+        initials_fw[0] = np.array([initial_func(a) for a in self.z_computational_grid])
+        field = HelmholtzField(x_grid_m=self.x_computational_grid[::self.params.x_output_filter],
+                               z_grid_m=self.z_computational_grid[::self.params.z_output_filter])
+
+        if self.params.two_way_iter_num in [None, 0]:
+            self.params.two_way_iter_num = 10000000
+
+        for i in range(0, self.params.two_way_iter_num):
+            field_fw, reflected_fw = self._propagate(initials=reflected_bw, direction=1)
+
+            prev_field = field.copy
+            field.field += field_fw.field
+            if not self.params.two_way:
+                break
+
+            field_bw, reflected_bw = self._propagate(initials=reflected_fw, direction=-1)
+            field.field += field_bw.field
+
+            err = np.linalg.norm(field.field - prev_field.field) / np.linalg.norm(field.field)
+            logging.debug("Iteration no " + str(i) + "relative error = " + str(err))
+            if err < self.params.two_way_threshold:
+                break
+
+        logging.debug("Elapsed time: " + str(time.time() - start_time))
+
+        return field
 
 
 class PickleStorage(HelmholtzPropagatorStorage):

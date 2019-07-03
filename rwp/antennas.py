@@ -6,6 +6,11 @@ __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 class Source:
 
+    def __init__(self, freq_hz=None, wavelength=None, polarz='H'):
+        self.freq_hz = freq_hz
+        self.wavelength = wavelength
+        self.polarz = polarz
+
     def max_angle(self):
         pass
 

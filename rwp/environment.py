@@ -304,11 +304,11 @@ class Troposphere:
 
     def is_homogeneous(self):
         return (self.Earth_radius is None or self.Earth_radius == float("Inf")) \
-               and len(self.vegetation) == 0 and \
+               and len(self.vegetation) == 0 and self.terrain.is_homogeneous() and \
                self.M_profile is None
 
 
-class knife_edge3d:
+class KnifeEdge3d:
 
     def __init__(self, x1, y1, x2, y2, height):
         self.x1 = x1

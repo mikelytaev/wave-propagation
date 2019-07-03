@@ -40,7 +40,7 @@ def local_bc(lbc):
     propagator = HelmholtzPadeSolver(env=env, wavelength=wavelength, freq_hz=300e6, params=params)
     initials_fw = [np.empty(0)] * propagator.n_x
     initials_fw[0] = np.array([src.aperture(k0, z) for z in propagator.z_computational_grid])
-    f, r = propagator.propagate(initials=initials_fw, direction=1)
+    f, r = propagator._propagate(initials=initials_fw, direction=1)
 
     plt.imshow(10*np.log10(np.abs(f.field.T[::-1, :])), cmap=plt.get_cmap('jet'), norm=Normalize(-50, 10))
     plt.colorbar(fraction=0.046, pad=0.04)
@@ -64,7 +64,7 @@ def transparent_const_bc(src):
     propagator = HelmholtzPadeSolver(env=env, wavelength=wavelength, freq_hz=300e6, params=params)
     initials_fw = [np.empty(0)] * propagator.n_x
     initials_fw[0] = np.array([src.aperture(k0, z) for z in propagator.z_computational_grid])
-    f, r = propagator.propagate(initials=initials_fw, direction=1)
+    f, r = propagator._propagate(initials=initials_fw, direction=1)
 
     plt.imshow(10 * np.log10(np.abs(f.field.T[::-1, :])), cmap=plt.get_cmap('jet'), norm=Normalize(-50, 10))
     plt.colorbar(fraction=0.046, pad=0.04)
@@ -126,8 +126,8 @@ class HelmholtzPropagatorTest(unittest.TestCase):
         propagator = HelmholtzPadeSolver(env=env, wavelength=wavelength, freq_hz=300e6, params=params)
         initials_fw = [np.empty(0)] * propagator.n_x
         initials_fw[0] = np.array([src.aperture(k0, z) for z in propagator.z_computational_grid])
-        f1, r = propagator.propagate(initials=initials_fw, direction=1)
-        f2, r = propagator.propagate(initials=initials_fw, direction=1)
+        f1, r = propagator._propagate(initials=initials_fw, direction=1)
+        f2, r = propagator._propagate(initials=initials_fw, direction=1)
 
         self.assertTrue(os.path.isfile(nlbc_file_name))
         self.assertTrue(np.linalg.norm(f1.field - f2.field) < 1e-11)
