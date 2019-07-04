@@ -37,7 +37,7 @@ class TroposphericRadioWaveSSPadePropagator:
                 else:
                     q1, q2 = 1j * k0 * self.env.ground_material.complex_permittivity(self.src.freq_hz) ** (-1 / 2), 1
 
-                lower_bc = RobinBC(q1, q2, 0)
+            lower_bc = RobinBC(q1, q2, 0)
 
         if self.src.polarz.upper() == 'V':
             rho = lambda x, z: 1 / (self.env.n2m1_profile(x, z, self.src.freq_hz) + 1)
