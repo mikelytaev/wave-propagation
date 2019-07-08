@@ -1,41 +1,22 @@
 import unittest
 
 from rwp.SSPade import *
-from rwp.environment import TransparentLinearBS, EMEnvironment
-from propagators.sspade import HelmholtzPadeSolver
+from rwp.environment import Troposphere
+
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 
 class TestSSPade(unittest.TestCase):
-    tol = 1e-14
 
-    def test_lentz(self):
-        self.assertTrue(abs(lentz(lambda n: (n > 1) * 2.0 + (n < 2) * 1.0, self.tol)-fm.sqrt(2)) < self.tol)
-
-    def nlbc_test(self):
+    def test_std_atmo(self):
         logging.basicConfig(level=logging.DEBUG)
-        env = EMEnvironment()
-        env.z_max = 300
-        env.N_profile = lambda x, z: z / 6371000 * 1e6
-        env.upper_boundary = TransparentLinearBS(1 / 6371000 * 1e6)
-        pp = HelmholtzPadeSolver(env=env, wavelength=0.03, pade_order=(1, 1), tol=1e-11)
-        pp.dx_m = 10
-        pp.n_x = 12001
-        pp.dz_m = 1
-        pp.n_z = 301
-        pp.calc_nlbc()
-
-    def tomas_method_test(self):
-        n = 10
-        b = np.random.rand(n) + 1j*np.random.rand(n)
-        a = np.random.rand(n-1) + 1j*np.random.rand(n-1)
-        c = np.random.rand(n-1) + 1j*np.random.rand(n-1)
-        matrix = np.diag(b, 0) + np.diag(a, -1) + np.diag(c, 1)
-        rhs = np.random.rand(n) + 1j*np.random.rand(n)
-        res1 = np.linalg.solve(matrix, rhs)
-        res2 = tridiag_method(a, b, c, rhs)
-        self.assertTrue(np.linalg.norm(res1 - res2)/np.linalg.norm(res1) < 1e-5)
+        environment = Troposphere()
+        environment.ground_material = PerfectlyElectricConducting()
+        environment.z_max = 300
+        antenna = GaussAntenna(wavelength=0.1, height=30, beam_width=2, eval_angle=0, polarz='H')
+        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=120e3, comp_params=HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8)))
+        propagator.calculate()
 
 
 if __name__ == '__main__':

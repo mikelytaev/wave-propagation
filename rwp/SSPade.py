@@ -49,7 +49,7 @@ class TroposphericRadioWaveSSPadePropagator:
                                              upper_bc=TransparentLinearBC(),
                                              z_min=0,
                                              z_max=env.z_max,
-                                             n2minus1=self.env.n2m1_profile(),
+                                             n2minus1=self.env.n2m1_profile,
                                              use_n2minus1=self.env.is_homogeneous(),
                                              rho=rho,
                                              use_rho=self.env.is_homogeneous() or self.src.polarz.upper() == 'H',
@@ -58,7 +58,10 @@ class TroposphericRadioWaveSSPadePropagator:
         for kn in self.env.knife_edges:
             self.helm_env.knife_edges += Edge(x=kn.range, z_min=0, z_max=kn.height)
 
-        self.propagator = HelmholtzPadeSolver(env=self.env, wavelength=self.src.wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)
+        self.propagator = HelmholtzPadeSolver(env=self.helm_env, wavelength=self.src.wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)
+
+    def calculate(self):
+        self.propagator.calculate(lambda z: self.src.aperture(z))
 
 
 # def bessel_ratio(c, d, j, tol):

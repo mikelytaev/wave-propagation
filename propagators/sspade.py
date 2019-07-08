@@ -114,6 +114,7 @@ class HelmholtzPropagatorStorage:
     def set_upper_nlbc(self, *, k0, dx_wl, dz_wl, pade_order, z_order, sqrt_alpha, spe, beta, gamma, nlbc: DiscreteNonLocalBC):
         pass
 
+
 @dataclass
 class HelmholtzPropagatorComputationalParams:
     max_range_m: float = None
@@ -467,7 +468,7 @@ class HelmholtzPadeSolver:
                 a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) - b
                 a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) + b
                 c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
-                return bessel_ratio_4th_order(a_m1, a_1, b, c, d, len(self.z_computational_grid)-1, self.tol)
+                return bessel_ratio_4th_order(a_m1, a_1, b, c, d, len(self.z_computational_grid)-1, self.params.tol)
 
             return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
 
@@ -507,7 +508,6 @@ class HelmholtzPadeSolver:
                 het[0:terr_i:] = self.env.ground_material.complex_permittivity(self.freq_hz) - 1
             elif self.params.terrain_method == TerrainMethod.staircase:
                 phi = phi[terr_i::]
-                het = self.env.n2m1_profile(x, self.z_computational_grid[terr_i::], self.freq_hz) + 0j
 
             # process boundary conditions
             if isinstance(self.lower_bc, DiscreteNonLocalBC):
@@ -558,7 +558,6 @@ class HelmholtzPadeSolver:
     def calculate(self, initial_func: types.FunctionType):
         start_time = time.time()
         initials_fw = [np.empty(0)] * self.n_x
-        reflected_bw = initials_fw.copy()
         initials_fw[0] = np.array([initial_func(a) for a in self.z_computational_grid])
         field = HelmholtzField(x_grid_m=self.x_computational_grid[::self.params.x_output_filter],
                                z_grid_m=self.z_computational_grid[::self.params.z_output_filter])
@@ -567,17 +566,17 @@ class HelmholtzPadeSolver:
             self.params.two_way_iter_num = 10000000
 
         for i in range(0, self.params.two_way_iter_num):
-            field_fw, reflected_fw = self._propagate(initials=reflected_bw, direction=1)
+            field_fw, initials_fw = self._propagate(initials=initials_fw, direction=1)
 
-            prev_field = field.copy
+            prev_field = field.field.copy
             field.field += field_fw.field
             if not self.params.two_way:
                 break
 
-            field_bw, reflected_bw = self._propagate(initials=reflected_fw, direction=-1)
+            field_bw, initials_fw = self._propagate(initials=initials_fw, direction=-1)
             field.field += field_bw.field
 
-            err = np.linalg.norm(field.field - prev_field.field) / np.linalg.norm(field.field)
+            err = np.linalg.norm(field.field - prev_field) / np.linalg.norm(field.field)
             logging.debug("Iteration no " + str(i) + "relative error = " + str(err))
             if err < self.params.two_way_threshold:
                 break
