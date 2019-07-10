@@ -10,18 +10,20 @@ __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 
 def get_fcft_grid(m, b):
-    return np.linspace(-b / 2, b / 2, m)
+    return np.arange(0, m) * b / m - b / 2
 
 
 def frft(x, alpha):
-    m = x.size
-    y = np.arange(0, 2 * m) * 0j
-    y[0:m] = np.array(x) * np.exp(-cm.pi * 1j * np.arange(0, m) ** 2 * alpha)
-    z = np.arange(0, 2 * m) * 0j
-    z[0:m] = np.exp(cm.pi * 1j * np.arange(0, m) ** 2 * alpha)
-    z[m:2 * m] = np.exp(cm.pi * 1j * (np.arange(m, 2 * m) - 2 * m) ** 2 * alpha)
+    m = x.shape[-1]
+    if len(x.shape) == 1:
+        x = x.reshape(1, m)
+    y = np.zeros((x.shape[0], 2*x.shape[1]), dtype=complex)
+    y[:, 0:m] = x * np.exp(-cm.pi * 1j * np.arange(0, m) ** 2 * alpha)
+    z = np.zeros((x.shape[0], 2*x.shape[1]), dtype=complex)
+    z[:, 0:m] = np.exp(cm.pi * 1j * np.arange(0, m) ** 2 * alpha)
+    z[:, m:2 * m] = np.exp(cm.pi * 1j * (np.arange(m, 2 * m) - 2 * m) ** 2 * alpha)
     w = np.fft.ifft((np.fft.fft(y) * np.fft.fft(z)))
-    return np.exp(-cm.pi * 1j * np.arange(0, m) ** 2 * alpha) * w[0:m]
+    return np.exp(-cm.pi * 1j * np.arange(0, m) ** 2 * alpha) * w[:, 0:m]
 
 
 def fcft(f_x, a, b):
@@ -30,7 +32,7 @@ def fcft(f_x, a, b):
     1/\sqrt{2 \pi} \int\limits_{-a/2}^{a/2} f(t)\exp (-itx_{k})dt
     :param f_x: input function values in points np.linspace(-a/2, a/2, m)
     """
-    m = f_x.size
+    m = f_x.shape[-1]
     delta = a * b / (2 * cm.pi * m ** 2)
     beta = a / m
     w = frft(np.exp(cm.pi * 1j * np.arange(0, m) * m * delta) * f_x, delta)

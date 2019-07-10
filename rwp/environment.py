@@ -304,7 +304,7 @@ class Troposphere:
 
     def is_homogeneous(self):
         return (self.Earth_radius is None or self.Earth_radius == float("Inf")) \
-               and len(self.vegetation) == 0 and self.terrain.is_homogeneous() and \
+               and len(self.vegetation) == 0 and \
                self.M_profile is None
 
 
