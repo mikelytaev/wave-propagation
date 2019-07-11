@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import logging
 
 import numpy as np
+import scipy.linalg as sla
 import cmath as cm
 
 from transforms.frft import *
@@ -70,8 +71,8 @@ class ThinScattering:
                 self.quad_x_grid[body_index] = np.array([(body.x1_m + body.x2_m) / 2])
                 self.quad_weights[body_index] = np.array([body.x2_m - body.x1_m])
             else:
-                self.quad_x_grid[body_index], dx = np.linspace(body.x1_m, body.x2_m, self.params.quadrature_points)
-                self.quad_weights[body_index] = np.concatenate(([dx / 2], np.repeat(dx, self.params.quadrature_points - 2), [dx / 2]))
+                self.quad_x_grid[body_index, :], dx = np.linspace(body.x1_m, body.x2_m, self.params.quadrature_points, retstep=True)
+                self.quad_weights[body_index, :] = np.concatenate(([dx / 2], np.repeat(dx, self.params.quadrature_points - 2), [dx / 2]))
 
         self.qrc_q = 1 / cm.sqrt(2*cm.pi) * np.exp(-1j * 100 * self.p_computational_grid)
 
@@ -93,16 +94,16 @@ class ThinScattering:
         d = -np.sqrt((np.sqrt((self.k0 ** 2 - p ** 2) ** 2 + (alpha*self.k0 ** 2) ** 2) + (self.k0 ** 2 - p ** 2)) / 2)
         return a + 1j*d
 
-    def _ker(self, body_number, i, j):
+    def _ker(self, body_number_i, body_number_j, i, j):
         pv, pshv = np.meshgrid(self.p_computational_grid, self.p_computational_grid, indexing='ij')
-        return self.k0**2 / cm.sqrt(2*cm.pi) * self._body_z_fourier(body_number, self.quad_x_grid[body_number][i], pv - pshv) * \
-               self.green_function(self.quad_x_grid[body_number][i], self.quad_x_grid[body_number][j], pv) * self.quad_weights[body_number][i]
+        return self.k0**2 / cm.sqrt(2*cm.pi) * self._body_z_fourier(body_number_i, self.quad_x_grid[body_number_i][i], pv - pshv) * \
+               self.green_function(self.quad_x_grid[body_number_i][i], self.quad_x_grid[body_number_j][j], pshv) * self.quad_weights[body_number_i][i]
 
     def _rhs(self, body_number, i):
         pv, pshv = np.meshgrid(self.p_computational_grid, self.p_computational_grid, indexing='ij')
         qv, qshv = np.meshgrid(self.p_computational_grid, self.qrc_q, indexing='ij')
         m = self._body_z_fourier(body_number, self.quad_x_grid[body_number][i], pv - pshv) * \
-            self.green_function(self.quad_x_grid[body_number][i], 0, pv) * qshv * self.quad_weights[body_number][i]
+            self.green_function(self.quad_x_grid[body_number][i], 0, pshv) * qshv * self.quad_weights[body_number][i]
         if self.p_grid_is_regular:
             return np.sum(m, axis=1) * self.d_p    #TODO improve integral approximation??
         else:
@@ -116,38 +117,47 @@ class ThinScattering:
             f[abs(p) < 0.0000001] = b - a
             res += f
 
-        res *= 1 / cm.sqrt(2*cm.pi) * self.bodies[body_number].eps_r - 1
+        res *= 1 / cm.sqrt(2*cm.pi) * (self.bodies[body_number].eps_r - 1)
         return res
 
     def _super_ker(self):
         sk = np.empty((self.super_ker_size, self.super_ker_size), dtype=complex)
         ks = self.params.p_grid_size
+        t = self.params.p_grid_size * self.params.quadrature_points
         for body_i in range(0, len(self.bodies)):
             for body_j in range(0, len(self.bodies)):
                 for x_i in range(0, len(self.quad_x_grid[body_i])):
                     for x_j in range(0, len(self.quad_x_grid[body_j])):
-                        sk[ks*x_i:ks*(x_i + 1):, ks*x_j:ks*(x_j + 1):] = self._ker(body_i, x_i, x_j)
+                        sk[(body_i*t + ks*x_i):(body_i*t + ks*(x_i + 1)):, (body_j*t + ks*x_j):(body_j*t + ks*(x_j + 1)):] = \
+                            self._ker(body_i, body_j, x_i, x_j)
         return sk
 
     def _super_rhs(self):
         rs = np.empty(self.super_ker_size, dtype=complex)
         ks = self.params.p_grid_size
+        t = self.params.p_grid_size * self.params.quadrature_points
         for body_i in range(0, len(self.bodies)):
             for x_i in range(0, len(self.quad_x_grid[body_i])):
-                rs[ks*x_i:ks*(x_i + 1):] = self._rhs(body_i, x_i)
+                rs[(body_i*t + ks*x_i):(body_i*t + ks*(x_i + 1)):] = self._rhs(body_i, x_i)
         return rs
 
     def calculate(self):
         ker = self._super_ker()
         rhs = self._super_rhs()
-        super_phi = np.linalg.solve(ker*self.d_p, rhs)
+        if len(self.bodies) > 0:
+            logging.debug("||ker|| = %d, cond(ker) = %d", np.linalg.norm(ker), np.linalg.cond(ker))
+            logging.debug("||rhs|| = %d", np.linalg.norm(rhs))
+            super_phi = sla.solve(np.eye(self.super_ker_size) + ker*self.d_p, rhs, overwrite_a=True, overwrite_b=True,
+                                  check_finite=False)
+            logging.debug("||s_phi|| = %d", np.linalg.norm(super_phi))
 
         ks = self.params.p_grid_size
+        t = self.params.p_grid_size * self.params.quadrature_points
         psi = self.green_function(self.x_computational_grid, 0, self.p_computational_grid) * self.qrc_q
         for body_i in range(0, len(self.bodies)):
             for x_i in range(0, len(self.quad_x_grid[body_i])):
-                phi = super_phi[ks*x_i:ks*(x_i + 1):]
+                phi = super_phi[(body_i*t + ks*x_i):(body_i*t + ks*(x_i + 1)):]
                 psi += -self.k0**2/cm.sqrt(2*cm.pi) * self.green_function(
-                    self.x_computational_grid, self.quad_x_grid[x_i], self.p_computational_grid) * phi
+                    self.x_computational_grid, self.quad_x_grid[body_i][x_i], self.p_computational_grid) * phi
 
-        return ifcft(psi, self.max_p, self.params.z_max_m)
+        return ifcft(psi, 2 * self.max_p, 2 * self.params.z_max_m)

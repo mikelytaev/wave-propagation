@@ -14,14 +14,14 @@ class KnifeEdgeDiffractionCalculator:
             raise Exception("Vertical polarization not yet supported")
 
         self.src = src
-        width = 1e-5
+        width = 3e-5
         eps_r = 1e7
         alpha = 1e-5
         bodies = []
         for ke in env.knife_edges:
             bodies += [Plate(x0_m=ke.range, z1_m=-ke.height, z2_m=ke.height, width_m=width, eps_r=eps_r)]
 
-        params = ThinScatteringComputationalParams(max_p_k0=0.5, p_grid_size=500, x_grid_size=1000, x_min_m=0,
+        params = ThinScatteringComputationalParams(max_p_k0=0.5, p_grid_size=1000, x_grid_size=1000, x_min_m=0,
                                                    x_max_m=max_range_m, z_min_m=-max_height_m, z_max_m=max_height_m,
                                                    quadrature_points=1, alpha=alpha)
 
