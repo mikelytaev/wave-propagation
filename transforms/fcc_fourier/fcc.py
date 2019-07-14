@@ -99,7 +99,7 @@ def chebyshev_weights(k: complex, n: int):
     return w, rho
 
 
-def cheb_grid(a, b, n):
+def chebyshev_grid(a, b, n):
     return a + (b - a) * (np.cos(np.linspace(0, fm.pi, n + 1)) + 1) / 2
 
 
@@ -137,7 +137,7 @@ class FCCFourier:
         if f.ndim == 1:
             f = f[:, np.newaxis]
         return np.tile(np.exp(1j*self.kn.real*(x_b+x_a)/2)[:, np.newaxis], (1, f.shape[1])) * (
-            (self.fw * np.exp(-self.kn[:, np.newaxis].imag.dot(cheb_grid(x_a, x_b, self.x_n)[np.newaxis, :]))).dot(f))
+            (self.fw * np.exp(-self.kn[:, np.newaxis].imag.dot(chebyshev_grid(x_a, x_b, self.x_n)[np.newaxis, :]))).dot(f))
 
 
 class FCCAdaptiveFourier:
@@ -159,7 +159,7 @@ class FCCAdaptiveFourier:
 
     def forward(self, f, x_a, x_b):
         assert abs((x_b - x_a) / self.domain_size - 1) < self.rtol, 'wrong integration domain size'
-        i_val = self.fcc_integrators_dict[1].forward(np.array([f(a) for a in cheb_grid(x_a, x_b, self.x_n)]), x_a, x_b)
+        i_val = self.fcc_integrators_dict[1].forward(np.array([f(a) for a in chebyshev_grid(x_a, x_b, self.x_n)]), x_a, x_b)
         return self._rec_forward(f, x_a, x_b, i_val)
 
     def transform(self, f, x_a, x_b):
@@ -181,8 +181,8 @@ class FCCAdaptiveFourier:
         index = round(self.domain_size / (x_c - x_a))
         if index not in self.fcc_integrators_dict:
             self.fcc_integrators_dict[index] = FCCFourier(x_c - x_a, self.x_n, self.kn)
-        left_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in cheb_grid(x_a, x_c, self.x_n)]), x_a, x_c)
-        right_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in cheb_grid(x_c, x_b, self.x_n)]), x_c, x_b)
+        left_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in chebyshev_grid(x_a, x_c, self.x_n)]), x_a, x_c)
+        right_val = self.fcc_integrators_dict[index].forward(np.array([f(a) for a in chebyshev_grid(x_c, x_b, self.x_n)]), x_c, x_b)
         if norm(i_val - left_val - right_val) < self.rtol * norm(i_val):
             return left_val + right_val
         else:

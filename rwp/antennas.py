@@ -6,38 +6,36 @@ __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 class Source:
 
-    def __init__(self, freq_hz=None, wavelength=None, polarz='H'):
-        self.freq_hz = freq_hz
-        self.wavelength = wavelength
-        self.polarz = polarz
-
-    def max_angle(self):
-        pass
-
-
-class GaussAntenna(Source):
-
-    def __init__(self, *, freq_hz=None, wavelength=None, height, beam_width, eval_angle, polarz):
-        self.height = height
+    def __init__(self, height_m, freq_hz=None, wavelength=None, polarz='H'):
         if freq_hz is None:
             self.wavelength = wavelength
             self.freq_hz = 3e8 / self.wavelength
         else:
             self.freq_hz = freq_hz
             self.wavelength = 3e8 / freq_hz
+        self.polarz = polarz
+        self.height_m = height_m
         self.k0 = 2 * cm.pi / self.wavelength
+
+    def max_angle(self):
+        return 90
+
+
+class GaussAntenna(Source):
+
+    def __init__(self, *, freq_hz=None, wavelength=None, height, beam_width, eval_angle, polarz):
+        super().__init__(height_m=height, freq_hz=freq_hz, wavelength=wavelength, polarz=polarz)
         self.beam_width = beam_width
         self.eval_angle = eval_angle
-        self.polarz = polarz
         self._ww = cm.sqrt(2 * cm.log(2)) / (self.k0 * cm.sin(beam_width * cm.pi / 180 / 2))
 
     def _ufsp(self, z):
         return 1 / (cm.sqrt(cm.pi) * self._ww) * np.exp(-1j * self.k0 * np.sin(self.eval_angle * cm.pi / 180) * z) * \
-               np.exp(-((z - self.height) / self._ww) ** 2)
+               np.exp(-((z - self.height_m) / self._ww) ** 2)
 
     def _ufsn(self, z):
         return 1 / (cm.sqrt(cm.pi) * self._ww) * np.exp(-1j * self.k0 * np.sin(self.eval_angle * cm.pi / 180) * (-z)) * \
-               np.exp(-((-z - self.height) / self._ww) ** 2)
+               np.exp(-((-z - self.height_m) / self._ww) ** 2)
 
     def aperture(self, z):
         if self.polarz.upper() == 'H':

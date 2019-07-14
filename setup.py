@@ -29,8 +29,7 @@ setup(
         'scipy',
         'mpmath',
         'matplotlib',
-        'cython',
-        'fcc_fourier'
+        'cython'
     ],
     ext_modules=extensions,
     zip_safe=False,
