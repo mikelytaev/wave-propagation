@@ -34,7 +34,7 @@ class KnifeEdgeDiffractionCalculator:
         else:
             def fur_q_func(z_spectral_points):
                 return 1 / cm.sqrt(2*cm.pi) * (np.exp(-1j * src.height_m * z_spectral_points) - np.exp(1j * src.height_m * z_spectral_points))
-        self.ts = ThinScattering(wavelength=src.wavelength, fur_q_func=fur_q_func, bodies=bodies, params=params)
+        self.ts = ThinScattering(wavelength=src.wavelength, fur_q_func=fur_q_func, bodies=bodies, params=params, save_debug=True)
 
     def calculate(self):
         f = self.ts.calculate()

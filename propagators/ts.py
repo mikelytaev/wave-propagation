@@ -57,9 +57,16 @@ class ThinScatteringComputationalParams:
     spectral_integration_method: SpectralIntegrationMethod
 
 
+class ThinScatteringDebugData:
+
+    def __init__(self):
+        self.phi = None
+        self.rhs = None
+
+
 class ThinScattering:
 
-    def __init__(self, wavelength, bodies, params: ThinScatteringComputationalParams, fur_q_func: types.FunctionType = None):
+    def __init__(self, wavelength, bodies, params: ThinScatteringComputationalParams, fur_q_func: types.FunctionType = None, save_debug=False):
         self.bodies = bodies
         self.params = params
         self.k0 = 2 * cm.pi / wavelength
@@ -98,6 +105,8 @@ class ThinScattering:
         self.super_ker_size = len(self.p_computational_grid) * self.params.quadrature_points * len(bodies)
         gms = self.super_ker_size**2 * 16 /1024/1024
         logging.debug("matrix %d x %d, size = %d mb", self.super_ker_size, self.super_ker_size, gms)
+
+        self.debug_data = ThinScatteringDebugData() if save_debug else None
 
     def green_function(self, x, xsh, p):
         if len(p.shape) == 2:
@@ -162,9 +171,10 @@ class ThinScattering:
 
     def _int_green_f(self, h, xi, xj, p):
         if abs(xi - xj) < 0.00000001:
-            return 1 / self._gamma(h)**2 * (np.exp(-self._gamma(p)*h/2)-1)
+            return 1 / self._gamma(p)**2 * (np.exp(-self._gamma(p)*h/2)-1)
         else:
-            return 1 / (2*self._gamma(h)**2) *np.exp(-self._gamma(p)*abs(xi-xj))*(np.exp(-self._gamma(p)*h/2) - np.exp(self._gamma(p)*h/2))
+            return 1 / (2*self._gamma(p)**2) *np.exp(-self._gamma(p)*abs(xi-xj))*(np.exp(-self._gamma(p)*h/2) - np.exp(self._gamma(p)*h/2))
+        return self.green_function(xi, xj, p) * h
 
     def calculate(self):
         if len(self.bodies) > 0:
@@ -178,6 +188,10 @@ class ThinScattering:
             logging.debug("Solving system of integral equations")
             super_phi = sla.solve(left, rhs)
             #logging.debug("||s_phi|| = %d", np.linalg.norm(super_phi))
+
+        if self.debug_data:
+            self.debug_data.phi = super_phi
+            self.debug_data.rhs = rhs
 
         logging.debug("Preparing psi")
         ks = len(self.p_computational_grid)
