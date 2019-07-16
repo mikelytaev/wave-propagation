@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import logging
 import types
 from enum import Enum
+from copy import deepcopy
 
 import numpy as np
 import scipy.linalg as sla
@@ -47,7 +48,6 @@ class SpectralIntegrationMethod(Enum):
 class ThinScatteringComputationalParams:
     max_p_k0: float
     p_grid_size: int
-    x_grid_size: int
     x_min_m: float
     x_max_m: float
     z_min_m: float
@@ -55,6 +55,9 @@ class ThinScatteringComputationalParams:
     quadrature_points: int
     alpha: float
     spectral_integration_method: SpectralIntegrationMethod
+    use_mean_value_theorem: bool = False
+    x_grid_size: int = None
+    dx_m: float = None
 
 
 class ThinScatteringDebugData:
@@ -66,9 +69,9 @@ class ThinScatteringDebugData:
 
 class ThinScattering:
 
-    def __init__(self, wavelength, bodies, params: ThinScatteringComputationalParams, fur_q_func: types.FunctionType = None, save_debug=False):
-        self.bodies = bodies
-        self.params = params
+    def __init__(self, wavelength, bodies, params: ThinScatteringComputationalParams, fur_q_func: types.FunctionType=None, save_debug=False):
+        self.bodies = deepcopy(bodies)
+        self.params = deepcopy(params)
         self.k0 = 2 * cm.pi / wavelength
         self.max_p = self.params.max_p_k0 * self.k0
         #self.p_computational_grid, self.d_p = np.linspace(-self.max_p, self.max_p, self.params.p_grid_size, retstep=True)
@@ -82,10 +85,20 @@ class ThinScattering:
             t = -np.concatenate((self.p_computational_grid[1::] - self.p_computational_grid[0:-1:],
                                  [self.p_computational_grid[-1] - self.p_computational_grid[-2]]))
             _, self.d_p = np.meshgrid(self.p_computational_grid, t, indexing='ij')
-        self.x_computational_grid, self.dx = np.linspace(self.params.x_min_m, self.params.x_max_m, self.params.x_grid_size, retstep=True)
+
+        if self.params.x_grid_size:
+            self.x_computational_grid, self.params.dx_m = np.linspace(self.params.x_min_m, self.params.x_max_m, self.params.x_grid_size, retstep=True)
+        elif self.params.dx_m:
+            self.x_computational_grid = np.arange(self.params.x_min_m, self.params.x_max_m, self.params.dx_m)
+            self.params.x_grid_size = len(self.x_computational_grid)
+        else:
+            raise Exception("x grid parameters not specified")
         #self.z_computational_grid, self.dz = np.linspace(self.params.z_min_m, self.params.z_max_m, retstep=True)
         self.z_computational_grid = get_fcft_grid(self.params.p_grid_size, self.params.z_max_m * 2)
         self.dz = self.z_computational_grid[1] - self.z_computational_grid[0]
+
+        if self.params.use_mean_value_theorem and self.params.quadrature_points > 1:
+            raise Exception("not supported")
 
         self.quad_x_grid = np.empty((len(self.bodies), self.params.quadrature_points))
         self.quad_weights = np.empty((len(self.bodies), self.params.quadrature_points))
@@ -124,16 +137,14 @@ class ThinScattering:
 
     def _ker(self, body_number_i, body_number_j, i, j):
         pv, pshv = np.meshgrid(self.p_computational_grid, self.p_computational_grid, indexing='ij')
-        return self.k0**2 / cm.sqrt(2*cm.pi) * self._body_z_fourier(body_number_i, self.quad_x_grid[body_number_i][i], pv - pshv) * \
-                self._int_green_f(self.quad_weights[body_number_i][i], self.quad_x_grid[body_number_i][i], self.quad_x_grid[body_number_j][j], pshv) * self.d_p
-            #self.green_function(self.quad_x_grid[body_number_i][i], self.quad_x_grid[body_number_j][j], pshv) * self.quad_weights[body_number_i][i] * self.d_p
+        return self.k0 ** 2 / cm.sqrt(2*cm.pi) * self._body_z_fourier(body_number_i, self.quad_x_grid[body_number_i][i], pv - pshv) * \
+               self._integral_green_function(self.quad_weights[body_number_i][i], self.quad_x_grid[body_number_i][i], self.quad_x_grid[body_number_j][j], pshv) * self.d_p
 
     def _rhs(self, body_number, i):
         pv, pshv = np.meshgrid(self.p_computational_grid, self.p_computational_grid, indexing='ij')
         _, qshv = np.meshgrid(self.p_computational_grid, self.qrc_q, indexing='ij')
         m = self._body_z_fourier(body_number, self.quad_x_grid[body_number][i], pv - pshv) * \
-            self._int_green_f(self.quad_weights[body_number][i], self.quad_x_grid[body_number][i], 0, pshv) * qshv
-            #self.green_function(self.quad_x_grid[body_number][i], 0, pshv) * qshv * self.quad_weights[body_number][i]
+            self._integral_green_function(self.quad_weights[body_number][i], self.quad_x_grid[body_number][i], 0, pshv) * qshv
 
         return np.sum(m * self.d_p, axis=1)    #TODO improve integral approximation??
 
@@ -169,29 +180,33 @@ class ThinScattering:
                 rs[(body_i*t + ks*x_i):(body_i*t + ks*(x_i + 1)):] = self._rhs(body_i, x_i)
         return rs
 
-    def _int_green_f(self, h, xi, xj, p):
-        if abs(xi - xj) < 0.00000001:
-            return 1 / self._gamma(p)**2 * (np.exp(-self._gamma(p)*h/2)-1)
+    def _integral_green_function(self, h, xi, xj, p):
+        """
+        \int\limits _{x_{i}-h/2}^{x_{i}+h/2}\tilde{G}(x',x_{j},p')dx'
+        """
+        if self.params.use_mean_value_theorem:
+            if abs(xi - xj) < 0.00000001:
+                return 1 / self._gamma(p)**2 * (np.exp(-self._gamma(p)*h/2)-1)
+            else:
+                return 1 / (2*self._gamma(p)**2) * np.exp(-self._gamma(p)*abs(xi-xj))*(np.exp(-self._gamma(p)*h/2) - np.exp(self._gamma(p)*h/2))
         else:
-            return 1 / (2*self._gamma(p)**2) *np.exp(-self._gamma(p)*abs(xi-xj))*(np.exp(-self._gamma(p)*h/2) - np.exp(self._gamma(p)*h/2))
-        return self.green_function(xi, xj, p) * h
+            return self.green_function(xi, xj, p) * h
 
     def calculate(self):
         if len(self.bodies) > 0:
             logging.debug("Preparing kernel")
-            ker = self._super_ker()
             logging.debug("Preparing right-hand side")
             rhs = self._super_rhs()
             #logging.debug("||ker|| = %d, cond(ker) = %d", np.linalg.norm(ker), np.linalg.cond(ker))
             #logging.debug("||rhs|| = %d", np.linalg.norm(rhs))
-            left = np.eye(self.super_ker_size) + ker
+            left = np.eye(self.super_ker_size) + self._super_ker()
             logging.debug("Solving system of integral equations")
             super_phi = sla.solve(left, rhs)
             #logging.debug("||s_phi|| = %d", np.linalg.norm(super_phi))
 
-        if self.debug_data:
-            self.debug_data.phi = super_phi
-            self.debug_data.rhs = rhs
+            if self.debug_data:
+                self.debug_data.phi = super_phi
+                self.debug_data.rhs = rhs
 
         logging.debug("Preparing psi")
         ks = len(self.p_computational_grid)
