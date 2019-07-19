@@ -7,25 +7,26 @@ import math as fm
 
 class KnifeEdgeDiffractionCalculator:
 
-    def __init__(self, src: Source, env: Troposphere, max_range_m, dx_m, max_height_m):
+    def __init__(self, src: Source, env: Troposphere, max_range_m, dx_m=1, max_propagation_angle=90):
         if not env.is_homogeneous():
             raise Exception("Tropospheric refraction not yet supported")
         if src.polarz.upper() == 'V':
             raise Exception("Vertical polarization not yet supported")
 
+        max_height_m = env.z_max
         self.src = src
         width = 4e-5
         eps_r = 1e7
         alpha = 1e-5
-        x_grid_size = max_range_m
+        max_p_k0 = cm.sin(max_propagation_angle / 180 * cm.pi)
         bodies = []
         for ke in env.knife_edges:
             bodies += [Plate(x0_m=ke.range, z1_m=-ke.height, z2_m=ke.height, width_m=width, eps_r=eps_r)]
 
-        params = ThinScatteringComputationalParams(max_p_k0=1.001, p_grid_size=4000, dx_m=dx_m, x_min_m=0,
+        params = ThinScatteringComputationalParams(max_p_k0=max_p_k0, p_grid_size=3500*2, dx_m=dx_m, x_min_m=0,
                                                    x_max_m=max_range_m, z_min_m=-max_height_m, z_max_m=max_height_m,
                                                    quadrature_points=1, alpha=alpha, use_mean_value_theorem=False,
-                                                   spectral_integration_method=SpectralIntegrationMethod.fractional_ft)
+                                                   spectral_integration_method=SpectralIntegrationMethod.fcc)
 
         if isinstance(src, GaussAntenna):
             def fur_q_func(z_spectral_points):
