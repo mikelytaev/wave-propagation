@@ -133,7 +133,7 @@ class HelmholtzPropagatorComputationalParams:
     sqrt_alpha: float = 0
     z_order: int = 4
     terrain_method: TerrainMethod = TerrainMethod.no
-    tol: float = 1e-11
+    tol: float = None
     storage: HelmholtzPropagatorStorage = None
 
 
@@ -206,10 +206,6 @@ class HelmholtzPadeSolver:
             self.params.dx_wl /= round(abs(cm.sqrt(n_g - 0.1)))
             self.params.dz_wl /= round(abs(cm.sqrt(n_g - 0.1)))
 
-        logging.info("dx = " + str(self.params.dx_wl) + " wavelengths")
-        logging.info("dz = " + str(self.params.dz_wl) + " wavelengths")
-        logging.info("Pade order = " + str(self.params.exp_pade_order))
-
         self.params.max_range_m = self.params.max_range_m or self.env.x_max_m
 
         self.params.dx_wl = min(self.params.dx_wl, self.params.max_range_m / self.wavelength / x_approx_sampling)
@@ -217,8 +213,16 @@ class HelmholtzPadeSolver:
         self.n_x = fm.ceil(self.params.max_range_m / self.params.dx_wl / self.wavelength) + 1
         self.n_z = fm.ceil(self.params.max_height_m / (self.params.dz_wl * self.wavelength)) + 1
 
+        logging.info("dx = " + str(self.params.dx_wl) + " wavelengths")
+        logging.info("dz = " + str(self.params.dz_wl) + " wavelengths")
+        logging.info("Pade order = " + str(self.params.exp_pade_order))
+
         self.params.x_output_filter = self.params.x_output_filter or fm.ceil(self.n_x / x_approx_sampling)
         self.params.z_output_filter = self.params.z_output_filter or fm.ceil(self.n_z / z_approx_sampling)
+
+        if not self.params.tol:
+            self.params.tol = 1e-11 if (isinstance(self.env.lower_bc, TransparentLinearBC) or
+            isinstance(self.env.upper_bc, TransparentLinearBC)) else 1e-7
 
     def _optimal_propagation_angle(self):
         if len(self.env.knife_edges) > 0:

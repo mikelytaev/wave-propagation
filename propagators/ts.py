@@ -48,16 +48,19 @@ class SpectralIntegrationMethod(Enum):
 class ThinScatteringComputationalParams:
     max_p_k0: float
     p_grid_size: int
-    x_min_m: float
-    x_max_m: float
-    z_min_m: float
-    z_max_m: float
     quadrature_points: int
     alpha: float
     spectral_integration_method: SpectralIntegrationMethod
     use_mean_value_theorem: bool = False
+    x_grid_m: np.ndarray = None
+    x_min_m: float = None
+    x_max_m: float = None
     x_grid_size: int = None
     dx_m: float = None
+    z_grid_m: np.ndarray = None
+    z_min_m: float = None
+    z_max_m: float = None
+    z_grid_size: int = None
 
 
 class ThinScatteringDebugData:
@@ -65,6 +68,7 @@ class ThinScatteringDebugData:
     def __init__(self):
         self.phi = None
         self.rhs = None
+        self.psi = None
 
 
 class ThinScattering:
@@ -86,16 +90,24 @@ class ThinScattering:
                                  [self.p_computational_grid[-1] - self.p_computational_grid[-2]]))
             _, self.d_p = np.meshgrid(self.p_computational_grid, t, indexing='ij')
 
-        if self.params.x_grid_size:
-            self.x_computational_grid, self.params.dx_m = np.linspace(self.params.x_min_m, self.params.x_max_m, self.params.x_grid_size, retstep=True)
-        elif self.params.dx_m:
+        if self.params.x_grid_m is not None:
+            self.x_computational_grid = self.params.x_grid_m
+        elif self.params.x_grid_size is not None:
+            self.x_computational_grid = np.linspace(self.params.x_min_m, self.params.x_max_m, self.params.x_grid_size)
+        elif self.params.dx_m is not None:
             self.x_computational_grid = np.arange(self.params.x_min_m, self.params.x_max_m, self.params.dx_m)
             self.params.x_grid_size = len(self.x_computational_grid)
         else:
             raise Exception("x grid parameters not specified")
-        #self.z_computational_grid, self.dz = np.linspace(self.params.z_min_m, self.params.z_max_m, retstep=True)
-        self.z_computational_grid = get_fcft_grid(self.params.p_grid_size, self.params.z_max_m * 2)
-        self.dz = self.z_computational_grid[1] - self.z_computational_grid[0]
+
+        if self.params.z_grid_m is not None:
+            if self.params.spectral_integration_method == SpectralIntegrationMethod.fractional_ft:
+                raise Exception("Arbitrary z grid not supported")
+            self.z_computational_grid = self.params.z_grid_m
+        elif self.params.spectral_integration_method == SpectralIntegrationMethod.fractional_ft:
+            self.z_computational_grid = get_fcft_grid(self.params.p_grid_size, self.params.z_max_m * 2)
+        else:
+            self.z_computational_grid = np.linspace(self.params.z_min_m, self.params.z_max_m, self.params.z_grid_size)
 
         if self.params.use_mean_value_theorem and self.params.quadrature_points > 1:
             raise Exception("not supported")
@@ -126,7 +138,8 @@ class ThinScattering:
             xv, xshv, pv = x, xsh, p
         else:
             xv, xshv, pv = np.meshgrid(x, xsh, p, indexing='ij')
-        gv = -1 / (2 * self._gamma(pv)) * np.exp(-self._gamma(pv) * np.abs(xv - xshv))
+        tgvp = self._gamma(pv)
+        gv = -1 / (2 * tgvp) * np.exp(-tgvp * np.abs(xv - xshv))
         return np.squeeze(gv)
 
     def _gamma(self, p):
@@ -151,9 +164,12 @@ class ThinScattering:
     def _body_z_fourier(self, body_number, x_m, p):
         intervals = self.bodies[body_number].get_intersecting_intervals(x_m)
         res = np.zeros(p.shape, dtype=complex)
+        p_ind = abs(p) < 0.0000001
+        f = np.empty(res.shape, dtype=complex)
         for (a, b) in intervals:
-            f = 1j / p * (np.exp(-1j * p * b) - np.exp(-1j * p * a))
-            f[abs(p) < 0.0000001] = b - a
+            f[np.logical_not(p_ind)] = 1j / p[np.logical_not(p_ind)] * (np.exp(-1j * p[np.logical_not(p_ind)] * b) -
+                                                                        np.exp(-1j * p[np.logical_not(p_ind)] * a))
+            f[p_ind] = b - a
             res += f
 
         res *= 1 / cm.sqrt(2*cm.pi) * (self.bodies[body_number].eps_r - 1)
@@ -217,6 +233,9 @@ class ThinScattering:
                 phi = super_phi[(body_i*t + ks*x_i):(body_i*t + ks*(x_i + 1)):]
                 psi += -self.k0**2/cm.sqrt(2*cm.pi) * self.green_function(
                     self.x_computational_grid, self.quad_x_grid[body_i][x_i], self.p_computational_grid) * phi
+
+        if self.debug_data:
+            self.debug_data.psi = psi
 
         logging.debug("Calculating inverse Fourier transform")
         if self.params.spectral_integration_method == SpectralIntegrationMethod.fractional_ft:

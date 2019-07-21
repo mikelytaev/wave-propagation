@@ -26,6 +26,9 @@ class Field:
     def value(self, x, z):
         return self.field[abs(self.x_grid - x).argmin(), abs(self.z_grid - z).argmin()]
 
+    def horizontal(self, z):
+        return self.field[:, abs(self.z_grid - z).argmin()]
+
     def path_loss(self, gamma=0):
         res = deepcopy(self)
         wavelength = 3e8 / self.freq_hz

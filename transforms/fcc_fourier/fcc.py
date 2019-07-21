@@ -70,7 +70,7 @@ def chebyshev_weights(k: complex, n: int):
         else:
             d1[1::2] = -d1[1::2]
         unos = np.ones(len(d1)-1)
-        m = diags([-unos, d1, unos], [-1, 0, 1])
+        m = diags([-unos, d1, unos], [-1, 0, 1], format='csr')
 
         # Right hand side
         b = np.zeros(nMax - n0 + 1)*1j

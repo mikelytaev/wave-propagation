@@ -44,9 +44,14 @@ class TroposphericRadioWaveSSPadePropagator:
         else:
             rho = lambda x, z: z*0+1
 
+        if self.env.is_flat:
+            upper_bc = TransparentConstBC()
+        else:
+            upper_bc = TransparentLinearBC()
+
         self.helm_env = HelmholtzEnvironment(x_max_m=max_range_m,
                                              lower_bc=lower_bc,
-                                             upper_bc=TransparentLinearBC(),
+                                             upper_bc=upper_bc,
                                              z_min=0,
                                              z_max=env.z_max,
                                              n2minus1=self.env.n2m1_profile,
@@ -61,7 +66,10 @@ class TroposphericRadioWaveSSPadePropagator:
         self.propagator = HelmholtzPadeSolver(env=self.helm_env, wavelength=self.src.wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)
 
     def calculate(self):
-        self.propagator.calculate(lambda z: self.src.aperture(z))
+        h_field = self.propagator.calculate(lambda z: self.src.aperture(z))
+        res = Field(x_grid=h_field.x_grid_m, z_grid=h_field.z_grid_m, freq_hz=self.src.freq_hz)
+        res.field = h_field.field
+        return res
 
 
 # def bessel_ratio(c, d, j, tol):

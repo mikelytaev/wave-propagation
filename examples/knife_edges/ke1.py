@@ -2,22 +2,59 @@ from rwp.kediffraction import *
 from rwp.antennas import *
 from rwp.environment import *
 from rwp.WPVis import *
+from rwp.SSPade import *
 
-env = Troposphere(flat=True)
-env.z_max = 500
-#env.knife_edges = [KnifeEdge(range=500, height=50)]
-antenna = Source(wavelength=1, height_m=50)
+logging.basicConfig(level=logging.DEBUG)
+environment = Troposphere(flat=True)
+environment.ground_material = PerfectlyElectricConducting()
+environment.z_max = 300
+max_range_m = 1000
+antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, eval_angle=0, polarz='V')
+propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m,
+                                                           comp_params=HelmholtzPropagatorComputationalParams(
+                                                               exp_pade_order=(7, 8)))
+sspade_field = propagator.calculate()
 
-kdc = KnifeEdgeDiffractionCalculator(src=antenna, env=env, max_range_m=5000)
-field = kdc.calculate()
+kdc = KnifeEdgeDiffractionCalculator(src=antenna, env=environment, max_range_m=max_range_m,
+                                             x_grid_m=sspade_field.x_grid, z_grid_m=sspade_field.z_grid)
+ke_field = kdc.calculate()
 
-vis = FieldVisualiser(field, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)), label='ke')
-plt = vis.plot2d(min=-40, max=0)
+sspe_vis = FieldVisualiser(sspade_field, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)), label='sspe')
+plt = sspe_vis.plot2d(min=-40, max=0)
+plt.title('The intensity of the field component 10log10|u|')
 plt.xlabel('Range (m)')
 plt.ylabel('Height (m)')
 plt.show()
 
-plt = vis.plot_hor(50)
+ke_vis = FieldVisualiser(ke_field, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)), label='ke')
+plt = ke_vis.plot2d(min=-40, max=0)
+plt.title('The intensity of the field component 10log10|u|')
 plt.xlabel('Range (m)')
-plt.ylabel('10log|u| (dB)')
+plt.ylabel('Height (m)')
 plt.show()
+
+ke_vis.plot_hor(50, sspe_vis)
+plt.title('The intensity of the field component 10log10|u|')
+plt.xlabel('Range (m)')
+plt.ylabel('Height (m)')
+plt.show()
+
+f1 = 10 * np.log10(1e-16 + np.abs(sspade_field.horizontal(50)))
+f2 = 10 * np.log10(1e-16 + np.abs(ke_field.horizontal(50)))
+np.linalg.norm(f1 - f2) / np.linalg.norm(f1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
