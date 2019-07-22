@@ -15,8 +15,10 @@ class TroposphericRadioWaveSSPadePropagator:
         k0 = 2*cm.pi / self.src.wavelength
 
         logging.info("ground refractive index: " + str(self.env.ground_material.complex_permittivity(antenna.freq_hz)))
-        if self.comp_params.terrain_method == TerrainMethod.no:
-            if abs(self.env.ground_material.complex_permittivity(antenna.freq_hz)) < 100:
+        if self.comp_params.terrain_method is None:
+            if self.env.terrain.is_homogeneous:
+                self.comp_params.terrain_method = TerrainMethod.no
+            elif abs(self.env.ground_material.complex_permittivity(antenna.freq_hz)) < 100:
                 self.comp_params.terrain_method = TerrainMethod.pass_through
             else:
                 self.comp_params.terrain_method = TerrainMethod.staircase
@@ -61,7 +63,10 @@ class TroposphericRadioWaveSSPadePropagator:
                                              terrain=self.env.terrain)
 
         for kn in self.env.knife_edges:
-            self.helm_env.knife_edges += Edge(x=kn.range, z_min=0, z_max=kn.height)
+            self.helm_env.knife_edges += [Edge(x=kn.range, z_min=0, z_max=kn.height)]
+
+        if self.comp_params.two_way is None:
+            self.comp_params.two_way = len(self.helm_env.knife_edges) > 0
 
         self.propagator = HelmholtzPadeSolver(env=self.helm_env, wavelength=self.src.wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)
 

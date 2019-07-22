@@ -99,7 +99,7 @@ def optimal_params(max_angle, threshold, dx=None, dz=None, pade_order=None, z_or
     if pade_order:
         pade_orders = [pade_order]
     else:
-        pade_orders = [(1, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)]
+        pade_orders = [(7, 8), (6, 7), (5, 6), (4, 5), (3, 4), (2, 3), (1, 2), (1, 1)]
 
     if dx:
         dxs = [dx]

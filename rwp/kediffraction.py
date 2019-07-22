@@ -7,7 +7,8 @@ import math as fm
 
 class KnifeEdgeDiffractionCalculator:
 
-    def __init__(self, src: Source, env: Troposphere, max_range_m, dx_m=1, max_propagation_angle=90, x_grid_m=None, z_grid_m=None):
+    def __init__(self, src: Source, env: Troposphere, max_range_m, dx_m=1, max_propagation_angle=90, x_grid_m=None,
+                 z_grid_m=None, p_grid_size=None):
         if not env.is_homogeneous():
             raise Exception("Tropospheric refraction not yet supported")
         if src.polarz.upper() == 'V' and len(env.knife_edges) > 0:
@@ -15,7 +16,7 @@ class KnifeEdgeDiffractionCalculator:
 
         max_height_m = env.z_max
         max_p_k0 = fm.sin(max_propagation_angle / 180 * cm.pi)
-        p_grid_size = fm.ceil(max_range_m * 3.5 / src.wavelength * max_p_k0) # empirical
+        p_grid_size = p_grid_size or fm.ceil(max_range_m * 3.5 / src.wavelength * max_p_k0) # empirical
         self.src = src
         width = 4e-5
         eps_r = 1e7

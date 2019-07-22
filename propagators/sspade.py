@@ -41,7 +41,9 @@ class TransparentBC(BoundaryCondition):
 
 
 class TransparentConstBC(TransparentBC):
-    pass
+
+    def __init__(self, n2minus1=None):
+        self.n2minus1 = n2minus1
 
 
 class TransparentLinearBC(TransparentBC):
@@ -126,13 +128,13 @@ class HelmholtzPropagatorComputationalParams:
     exp_pade_order: tuple = (1, 1)
     x_output_filter: int = None
     z_output_filter: int = None
-    two_way: bool = False
+    two_way: bool = None
     two_way_iter_num: int = 0
     two_way_threshold: float = 0.05
     standard_pe: bool = False
     sqrt_alpha: float = 0
     z_order: int = 4
-    terrain_method: TerrainMethod = TerrainMethod.no
+    terrain_method: TerrainMethod = None
     tol: float = None
     storage: HelmholtzPropagatorStorage = None
 
@@ -174,8 +176,8 @@ class HelmholtzPadeSolver:
         self.pade_coefs = pade_propagator_coefs(pade_order=self.params.exp_pade_order, diff2=diff2, k0=self.k0,
                                                 dx=self.dx_m, spe=self.params.standard_pe, alpha=self.params.sqrt_alpha)
 
-        self.lower_bc = []
-        self.upper_bc = []
+        self.lower_bc = None
+        self.upper_bc = None
 
     def _optimize_params(self):
         #optimize max angle
@@ -223,6 +225,9 @@ class HelmholtzPadeSolver:
         if not self.params.tol:
             self.params.tol = 1e-11 if (isinstance(self.env.lower_bc, TransparentLinearBC) or
             isinstance(self.env.upper_bc, TransparentLinearBC)) else 1e-7
+
+        if self.params.two_way is None:
+            self.params.two_way = False
 
     def _optimal_propagation_angle(self):
         if len(self.env.knife_edges) > 0:
@@ -323,7 +328,7 @@ class HelmholtzPadeSolver:
         c_b_left = np.concatenate((c_b_left, [upper_bound[0]]))
         c_b_right = np.concatenate(([lower_bound[1]], c_b_right))
 
-        return tridiag_method(c_b_left, d_b, c_b_right, rhs)
+        return np.array(tridiag_method(c_b_left, d_b, c_b_right, rhs))
 
     def _calc_lower_lbc(self, *, local_bc: RobinBC, a, b, x, z_min, phi):
         q1, q2 = local_bc.q1, local_bc.q2
@@ -350,6 +355,9 @@ class HelmholtzPadeSolver:
         return r0, r1, r2 * phi[-2] + r3 * phi[-1]
 
     def _prepare_boundary_conditions(self):
+        if self.lower_bc is not None and self.upper_bc is not None:
+            return
+
         if isinstance(self.env.lower_bc, TransparentBC) and \
                 self.params.terrain_method in [TerrainMethod.pass_through, TerrainMethod.no]:
             beta = self.env.n2minus1(0, self.env.z_min - 1, self.freq_hz)
@@ -374,8 +382,8 @@ class HelmholtzPadeSolver:
             self.lower_bc = self.env.lower_bc
 
         if isinstance(self.env.upper_bc, TransparentBC):
-            beta = self.env.n2minus1(0, self.env.z_max + 1, self.freq_hz)
             gamma = self.env.n2minus1(0, self.env.z_max + 1, self.freq_hz) - self.env.n2minus1(0, self.env.z_max, self.freq_hz)
+            beta = self.env.n2minus1(0, self.env.z_max, self.freq_hz) - gamma * self.env.z_max
             if self.params.storage:
                 self.upper_bc = self.params.storage.get_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
                                                                    pade_order=self.params.exp_pade_order, z_order=self.params.z_order,
@@ -498,7 +506,7 @@ class HelmholtzPadeSolver:
 
         edges_dict = {}
         for edge in self.env.knife_edges:
-            x_i = int(round(edge.range / self.dx_m))
+            x_i = int(round(edge.x / self.dx_m))
             if direction == 1:
                 edges_dict[x_i] = edge
             else:
@@ -538,7 +546,7 @@ class HelmholtzPadeSolver:
                 phi_0[x_i, pc_i], phi_J[x_i, pc_i] = phi[0], phi[-1]
 
             if x_i in edges_dict:
-                imp_i = self.z_computational_grid <= edges_dict[x_i].height
+                imp_i = np.logical_and(edges_dict[x_i].z_min <= self.z_computational_grid , self.z_computational_grid <= edges_dict[x_i].z_max)
                 reflected[x_i] = np.copy(phi[imp_i]) * cm.exp(1j * self.k0 * self.x_computational_grid[x_i])
                 phi[imp_i] = 0
                 if initials[x_i].size > 0:
@@ -572,7 +580,7 @@ class HelmholtzPadeSolver:
         for i in range(0, self.params.two_way_iter_num):
             field_fw, initials_fw = self._propagate(initials=initials_fw, direction=1)
 
-            prev_field = field.field.copy
+            prev_field = field.field.copy()
             field.field += field_fw.field
             if not self.params.two_way:
                 break
