@@ -125,7 +125,7 @@ class HelmholtzPropagatorComputationalParams:
     dz_wl: float = None
     max_propagation_angle: float = None
     max_src_angle: float = 0
-    exp_pade_order: tuple = (1, 1)
+    exp_pade_order: tuple = None
     x_output_filter: int = None
     z_output_filter: int = None
     two_way: bool = None
@@ -166,6 +166,9 @@ class HelmholtzPadeSolver:
         else:
             self.alpha = 1 / 12
 
+        if self.params.terrain_method is None:
+            self.params.terrain_method = TerrainMethod.no
+
         if not self.env.use_n2minus1 and not self.env.use_rho and self.params.terrain_method in [TerrainMethod.no, TerrainMethod.staircase]:
             def diff2(s):
                 return mpmath.acosh(1 + (self.k0 * self.dz_m) ** 2 * s / 2) ** 2 / (self.k0 * self.dz_m) ** 2
@@ -190,10 +193,14 @@ class HelmholtzPadeSolver:
 
         self.params.z_order = self.params.z_order or 4
 
-        logging.debug("Calculating optimal computational grid parameters")
-        (self.params.dx_wl, self.params.dz_wl, self.params.exp_pade_order) = \
-            optimal_params(max_angle=self.params.max_propagation_angle, threshold=5e-3, dx=self.params.dx_wl, dz=self.params.dz_wl,
-                           pade_order=self.params.exp_pade_order, z_order=self.params.z_order)
+        if self.params.dx_wl is None or self.params.dz_wl is None or self.params.exp_pade_order is None:
+            logging.debug("Calculating optimal computational grid parameters")
+            (self.params.dx_wl, self.params.dz_wl, self.params.exp_pade_order) = \
+                optimal_params(max_angle=self.params.max_propagation_angle, threshold=5e-3, dx=self.params.dx_wl,
+                               dz=self.params.dz_wl, pade_order=self.params.exp_pade_order, z_order=self.params.z_order)
+
+            if self.params.dx_wl is None or self.params.dz_wl is None or self.params.exp_pade_order is None:
+                raise Exception("Optimization failed")
 
         if self.params.max_height_m is None:
             self.params.max_height_m = abs(self.env.z_max - self.env.z_min)
@@ -338,14 +345,6 @@ class HelmholtzPadeSolver:
         r3 = 2 * a * q2
         return r0, r1, r2 * phi[0] + r3 * phi[1]
 
-    def _calc_lower_lbc(self, *, local_bc: RobinBC, a, b, x, z_min, phi):
-        q1, q2 = local_bc.q1, local_bc.q2
-        r0 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + b * (self.env.n2minus1(x, z_min, self.freq_hz))) + 2 * b * (self.dz_m * q1 - q2)
-        r1 = 2 * b * q2
-        r2 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + a * (self.env.n2minus1(x, z_min, self.freq_hz))) + 2 * a * (self.dz_m * q1 - q2)
-        r3 = 2 * a * q2
-        return r0, r1, r2 * phi[0] + r3 * phi[1]
-
     def _calc_upper_lbc(self, *, local_bc: RobinBC, a, b, x, z_max, phi):
         q1, q2 = local_bc.q1, local_bc.q2
         r1 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + b * (self.env.n2minus1(x, z_max, self.freq_hz))) + 2 * b * (self.dz_m * q1 - q2)
@@ -397,7 +396,7 @@ class HelmholtzPadeSolver:
                                                        z_order=self.params.z_order,
                                                        sqrt_alpha=self.params.sqrt_alpha, spe=self.params.standard_pe,
                                                        beta=beta,
-                                                       gamma=gamma, nlbc=self.lower_bc)
+                                                       gamma=gamma, nlbc=self.upper_bc)
             else:
                 self.upper_bc = self._calc_upper_nlbc(beta, gamma)
         else:
@@ -421,15 +420,14 @@ class HelmholtzPadeSolver:
                 matrix_b[0, -1] = 1
                 matrix_b[0, 0] *= t
                 w, vr = la.eig(matrix_b, matrix_a, right=True)
-                r = np.diag([diff_eq_solution_ratio(a, t) for a in w])
+                r = np.diag([diff_eq_solution_ratio(a) for a in w])
                 res = vr.dot(r).dot(la.inv(vr))
                 return res.reshape(m_size**2)
 
-        int_eps = 0#1e-8
-        fcca = FCCAdaptiveFourier(2 * fm.pi - 2 * int_eps, -np.arange(0, self.n_x), rtol=self.params.tol)
+        fcca = FCCAdaptiveFourier(2 * fm.pi, -np.arange(0, self.n_x), rtol=self.params.tol)
 
         coefs = (tau**np.repeat(np.arange(0, self.n_x)[:, np.newaxis], m_size ** 2, axis=1) / (2*fm.pi) *
-                fcca.forward(lambda t: nlbc_transformed(t), -fm.pi, fm.pi)).reshape((self.n_x, m_size, m_size))
+                fcca.forward(lambda t: nlbc_transformed(t), 0, 2*fm.pi)).reshape((self.n_x, m_size, m_size))
 
         return DiscreteNonLocalBC(r0=1, r1=1, coefs=coefs)
 
@@ -437,7 +435,7 @@ class HelmholtzPadeSolver:
         logging.debug('Computing lower nonlocal boundary condition...')
         alpha = self.alpha
 
-        def diff_eq_solution_ratio(s, xi):
+        def diff_eq_solution_ratio(s):
             # k_d = self.wavelength / 2 / self.dx_m
             # k_x = k_d * self.k0 + 1j / self.dx_m * cm.log(xi)
             # k_z = cm.sqrt(self.k0**2 - k_x ** 2)
@@ -465,7 +463,7 @@ class HelmholtzPadeSolver:
         alpha = self.alpha
         if abs(gamma) < 10 * np.finfo(float).eps:
 
-            def diff_eq_solution_ratio(s, xi):
+            def diff_eq_solution_ratio(s):
                 a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
                 a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
                 c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
@@ -476,7 +474,7 @@ class HelmholtzPadeSolver:
             b = alpha * gamma * self.dz_m * (self.k0 * self.dz_m) ** 2
             d = gamma * self.dz_m * (self.k0 * self.dz_m) ** 2 - 2 * b
 
-            def diff_eq_solution_ratio(s, xi):
+            def diff_eq_solution_ratio(s):
                 a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) - b
                 a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) + b
                 c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)

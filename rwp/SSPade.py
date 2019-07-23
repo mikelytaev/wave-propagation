@@ -6,10 +6,14 @@ from propagators.sspade import *
 
 class TroposphericRadioWaveSSPadePropagator:
 
-    def __init__(self, *, antenna: Source, env: Troposphere, max_range_m, comp_params=HelmholtzPropagatorComputationalParams()):
+    def __init__(self, *, antenna: Source, env: Troposphere, max_range_m: float,
+                 comp_params: HelmholtzPropagatorComputationalParams = None):
         self.src = antenna
         self.env = env
-        self.comp_params = comp_params
+        if comp_params:
+            self.comp_params = comp_params
+        else:
+            self.comp_params = HelmholtzPropagatorComputationalParams()
         if len(self.env.knife_edges) == 0:
             self.comp_params.two_way = False
         k0 = 2*cm.pi / self.src.wavelength

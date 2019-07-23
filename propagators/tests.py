@@ -42,13 +42,13 @@ def local_bc(lbc):
     initials_fw[0] = np.array([src.aperture(k0, z) for z in propagator.z_computational_grid])
     f, r = propagator._propagate(initials=initials_fw, direction=1)
 
-    plt.imshow(10*np.log10(np.abs(f.field.T[::-1, :])), cmap=plt.get_cmap('jet'), norm=Normalize(-50, 10))
-    plt.colorbar(fraction=0.046, pad=0.04)
-    plt.show()
+    # plt.imshow(10*np.log10(np.abs(f.field.T[::-1, :])), cmap=plt.get_cmap('jet'), norm=Normalize(-50, 10))
+    # plt.colorbar(fraction=0.046, pad=0.04)
+    # plt.show()
     return f
 
 
-def transparent_const_bc(src):
+def transparent_const_bc(src, pade_order=(7, 8)):
     env = HelmholtzEnvironment(x_max_m=5000,
                                z_min=0,
                                z_max=300,
@@ -59,16 +59,16 @@ def transparent_const_bc(src):
 
     wavelength = 0.1
     k0 = 2 * cm.pi / wavelength
-    params = HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8), max_src_angle=src.max_angle(), dz_wl=0.5,
+    params = HelmholtzPropagatorComputationalParams(exp_pade_order=pade_order, max_src_angle=src.max_angle(), dz_wl=0.5,
                                                     dx_wl=50, tol=1e-11)
     propagator = HelmholtzPadeSolver(env=env, wavelength=wavelength, freq_hz=300e6, params=params)
     initials_fw = [np.empty(0)] * propagator.n_x
     initials_fw[0] = np.array([src.aperture(k0, z) for z in propagator.z_computational_grid])
     f, r = propagator._propagate(initials=initials_fw, direction=1)
 
-    plt.imshow(10 * np.log10(np.abs(f.field.T[::-1, :])), cmap=plt.get_cmap('jet'), norm=Normalize(-50, 10))
-    plt.colorbar(fraction=0.046, pad=0.04)
-    plt.show()
+    # plt.imshow(10 * np.log10(np.abs(f.field.T[::-1, :])), cmap=plt.get_cmap('jet'), norm=Normalize(-50, 10))
+    # plt.colorbar(fraction=0.046, pad=0.04)
+    # plt.show()
     return f
 
 
@@ -101,6 +101,20 @@ class HelmholtzPropagatorTest(unittest.TestCase):
         logging.basicConfig(level=logging.DEBUG)
         src = GaussSource(freq_hz=1, depth=150, beam_width=2, eval_angle=-10)
         f = transparent_const_bc(src)
+        self.assertTrue(energy_decaying(f, x_start_m=20))
+        self.assertTrue(np.linalg.norm(f.field[-1, :]) < 5e-11)
+
+    def test_transparent_const_lower_cn(self):
+        logging.basicConfig(level=logging.DEBUG)
+        src = GaussSource(freq_hz=1, depth=150, beam_width=2, eval_angle=10)
+        f = transparent_const_bc(src, pade_order=(1, 1))
+        self.assertTrue(energy_decaying(f, x_start_m=20))
+        self.assertTrue(np.linalg.norm(f.field[-1, :]) < 5e-11)
+
+    def test_transparent_const_upper_cn(self):
+        logging.basicConfig(level=logging.DEBUG)
+        src = GaussSource(freq_hz=1, depth=150, beam_width=2, eval_angle=-10)
+        f = transparent_const_bc(src, pade_order=(1, 1))
         self.assertTrue(energy_decaying(f, x_start_m=20))
         self.assertTrue(np.linalg.norm(f.field[-1, :]) < 5e-11)
 

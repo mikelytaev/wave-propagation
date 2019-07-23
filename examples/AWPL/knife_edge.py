@@ -13,14 +13,19 @@ environment.M_profile = lambda x, z: elevated_duct(z)
 environment.knife_edges = [KnifeEdge(range=70e3, height=150)]
 antenna = GaussAntenna(wavelength=0.1, height=30, beam_width=2, eval_angle=0, polarz='H')
 max_range = 100000
-pade78_task = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, two_way=True, max_range_m=max_range,
-                                                    pade_order=(7, 8), z_order=2,
-                                                    dx_wl=400, n_dx_out=1, dz_wl=1, n_dz_out=1)
+
+computational_params78 = HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8), z_order=2, dx_wl=400, dz_wl=1,
+                                                                x_output_filter=1, z_output_filter=1, two_way=True,
+                                                                max_propagation_angle=10, storage=PickleStorage())
+pade78_task = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range,
+                                                    comp_params=computational_params78)
 pade78_field = pade78_task.calculate()
 
-crank_nicolson_task = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, two_way=True, max_range_m=max_range,
-                                                            pade_order=(1, 1), z_order=2,
-                                                            dx_wl=80, n_dx_out=5, dz_wl=1, n_dz_out=1)
+computational_params_cn = HelmholtzPropagatorComputationalParams(exp_pade_order=(1, 1), two_way=True, z_order=2,
+                                                                 dx_wl=80, x_output_filter=5, dz_wl=1, z_output_filter=1,
+                                                                 max_propagation_angle=10)
+crank_nicolson_task = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range,
+                                                            comp_params=computational_params_cn)
 crank_nicolson_field = crank_nicolson_task.calculate()
 
 matplotlib.rcParams.update({'font.size': 10})

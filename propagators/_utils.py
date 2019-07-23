@@ -156,7 +156,7 @@ def brewster_angle(eps1, eps2):
     """
     :param eps1: permittivity in medium 1
     :param eps2: permittivity in medium 2
-    :return: brewster angle between incident wave and normal to surface in degrees in degrees
+    :return: brewster angle between incident wave and normal to the surface in degrees
     """
     return 90 - cm.asin(1 / cm.sqrt(eps2 / eps1 + 1)) * 180 / cm.pi
 
@@ -164,7 +164,7 @@ def brewster_angle(eps1, eps2):
 def sqr_eq(a, b, c):
     c1 = (-b + cm.sqrt(b**2 - 4 * a * c)) / (2 * a)
     c2 = (-b - cm.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
-    return [c1, c2][abs(c1) > abs(c2)]
+    return c2 if abs(c1) > abs(c2) else c1
 
 
 def lentz(cont_frac_seq, tol=1e-20):
