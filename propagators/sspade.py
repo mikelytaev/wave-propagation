@@ -37,17 +37,12 @@ class RobinBC(BoundaryCondition):
 
 
 class TransparentBC(BoundaryCondition):
-    pass
-
-
-class TransparentConstBC(TransparentBC):
-
-    def __init__(self, n2minus1=None):
-        self.n2minus1 = n2minus1
-
-
-class TransparentLinearBC(TransparentBC):
-    pass
+    """
+    Assumes that m^2=\beta+\gamma z outsize the domain
+    """
+    def __init__(self, beta=1, gamma=0):
+        self.beta = beta
+        self.gamma = gamma
 
 
 class DiscreteLocalBC(BoundaryCondition):
@@ -87,8 +82,8 @@ class Edge:
 @dataclass
 class HelmholtzEnvironment:
     x_max_m: float
-    lower_bc: BoundaryCondition = TransparentConstBC()
-    upper_bc: BoundaryCondition = TransparentConstBC()
+    lower_bc: BoundaryCondition = TransparentBC()
+    upper_bc: BoundaryCondition = TransparentBC()
     z_min: float = 0
     z_max: float = 300
     n2minus1: types.FunctionType = lambda x, z, freq_hz: z*0
@@ -137,6 +132,7 @@ class HelmholtzPropagatorComputationalParams:
     terrain_method: TerrainMethod = None
     tol: float = None
     storage: HelmholtzPropagatorStorage = None
+    max_abc_permittivity: float = 1
 
 
 class HelmholtzField:
@@ -211,7 +207,7 @@ class HelmholtzPadeSolver:
         z_approx_sampling = 1000
 
         if self.params.terrain_method == TerrainMethod.pass_through:
-            n_g = self.env.ground_material.complex_permittivity(self.freq_hz)
+            n_g = self.params.max_abc_permittivity
             self.params.dx_wl /= round(abs(cm.sqrt(n_g - 0.1)))
             self.params.dz_wl /= round(abs(cm.sqrt(n_g - 0.1)))
 
@@ -230,8 +226,9 @@ class HelmholtzPadeSolver:
         self.params.z_output_filter = self.params.z_output_filter or fm.ceil(self.n_z / z_approx_sampling)
 
         if not self.params.tol:
-            self.params.tol = 1e-11 if (isinstance(self.env.lower_bc, TransparentLinearBC) or
-            isinstance(self.env.upper_bc, TransparentLinearBC)) else 1e-7
+            self.params.tol = 1e-11 if (
+                        isinstance(self.env.lower_bc, TransparentBC) and abs(self.env.lower_bc.gamma) > 1e-12 or
+                        isinstance(self.env.upper_bc, TransparentBC) and abs(self.env.upper_bc.gamma) > 1e-12) else 1e-7
 
         if self.params.two_way is None:
             self.params.two_way = False
@@ -293,37 +290,37 @@ class HelmholtzPadeSolver:
         return np.array(tridiag_method(diag_m1, d_b, diag_1, rhs))
         #return np.array(Crank_Nikolson_propagator_4th_order((self.k0 * self.dz) ** 2, a, b, alpha, het, initial, lower_bound, upper_bound))
 
-    def _Crank_Nikolson_propagate(self, a, b, m2minus1_func, rho_func, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
-        alpha_m = self.alpha * rho_func(self.z_computational_grid[1:-1:])
+    def _Crank_Nikolson_propagate(self, a, b, m2minus1_func, rho_func, initial, local_z_grid, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
+        alpha_m = self.alpha * rho_func(local_z_grid[1:-1:])
 
-        c_a_left = 1 / rho_func(self.z_computational_grid[1:-1:] - self.dz_m / 2) * \
-                   (alpha_m * (self.k0 * self.dz_m) ** 2 + a * rho_func(self.z_computational_grid[1:-1:]) +
-                    a * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(self.z_computational_grid[:-2:]))
+        c_a_left = 1 / rho_func(local_z_grid[1:-1:] - self.dz_m / 2) * \
+                   (alpha_m * (self.k0 * self.dz_m) ** 2 + a * rho_func(local_z_grid[1:-1:]) +
+                    a * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(local_z_grid[:-2:]))
 
-        c_a_right = 1 / rho_func(self.z_computational_grid[1:-1:] + self.dz_m / 2) * \
-                    (alpha_m * (self.k0 * self.dz_m) ** 2 + a * rho_func(self.z_computational_grid[1:-1:]) +
-                     a * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(self.z_computational_grid[2::]))
+        c_a_right = 1 / rho_func(local_z_grid[1:-1:] + self.dz_m / 2) * \
+                    (alpha_m * (self.k0 * self.dz_m) ** 2 + a * rho_func(local_z_grid[1:-1:]) +
+                     a * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(local_z_grid[2::]))
 
-        c_b_left = 1 / rho_func(self.z_computational_grid[1:-1:] - self.dz_m / 2) * \
-                   (alpha_m * (self.k0 * self.dz_m) ** 2 + b * rho_func(self.z_computational_grid[1:-1:]) +
-                    b * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(self.z_computational_grid[:-2:]))
+        c_b_left = 1 / rho_func(local_z_grid[1:-1:] - self.dz_m / 2) * \
+                   (alpha_m * (self.k0 * self.dz_m) ** 2 + b * rho_func(local_z_grid[1:-1:]) +
+                    b * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(local_z_grid[:-2:]))
 
-        c_b_right = 1 / rho_func(self.z_computational_grid[1:-1:] + self.dz_m / 2) * \
-                    (alpha_m * (self.k0 * self.dz_m) ** 2 + b * rho_func(self.z_computational_grid[1:-1:]) +
-                     b * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(self.z_computational_grid[2::]))
+        c_b_right = 1 / rho_func(local_z_grid[1:-1:] + self.dz_m / 2) * \
+                    (alpha_m * (self.k0 * self.dz_m) ** 2 + b * rho_func(local_z_grid[1:-1:]) +
+                     b * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(local_z_grid[2::]))
 
-        het_mid2 = 1 / rho_func(self.z_computational_grid[1:-1] + self.dz_m / 2) + \
-                   1 / rho_func(self.z_computational_grid[1:-1] - self.dz_m / 2)
+        het_mid2 = 1 / rho_func(local_z_grid[1:-1] + self.dz_m / 2) + \
+                   1 / rho_func(local_z_grid[1:-1] - self.dz_m / 2)
 
         d_a = (self.k0 * self.dz_m) ** 2 * (1 - alpha_m * het_mid2) - a * het_mid2 * \
-              rho_func(self.z_computational_grid[1:-1:]) + a * (self.k0 * self.dz_m) ** 2 * m2minus1_func(
-            self.z_computational_grid[1:-1:]) - a * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(
-            self.z_computational_grid[1:-1:]) * het_mid2
+              rho_func(local_z_grid[1:-1:]) + a * (self.k0 * self.dz_m) ** 2 * m2minus1_func(
+            local_z_grid[1:-1:]) - a * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(
+            local_z_grid[1:-1:]) * het_mid2
 
         d_b = (self.k0 * self.dz_m) ** 2 * (1 - alpha_m * het_mid2) - b * het_mid2 * \
-              rho_func(self.z_computational_grid[1:-1:]) + b * (self.k0 * self.dz_m) ** 2 * m2minus1_func(
-            self.z_computational_grid[1:-1:]) - b * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(
-            self.z_computational_grid[1:-1:]) * het_mid2
+              rho_func(local_z_grid[1:-1:]) + b * (self.k0 * self.dz_m) ** 2 * m2minus1_func(
+            local_z_grid[1:-1:]) - b * alpha_m * (self.k0 * self.dz_m) ** 2 * m2minus1_func(
+            local_z_grid[1:-1:]) * het_mid2
 
         rhs = np.concatenate(([0], d_a, [0])) * initial
         rhs[1::] += np.concatenate((c_a_left, [0])) * initial[:-1:]
@@ -343,7 +340,7 @@ class HelmholtzPadeSolver:
         r1 = 2 * b * q2
         r2 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + a * (self.env.n2minus1(x, z_min, self.freq_hz))) + 2 * a * (self.dz_m * q1 - q2)
         r3 = 2 * a * q2
-        return r0, r1, r2 * phi[0] + r3 * phi[1]
+        return DiscreteLocalBC(r0, r1, r2 * phi[0] + r3 * phi[1])
 
     def _calc_upper_lbc(self, *, local_bc: RobinBC, a, b, x, z_max, phi):
         q1, q2 = local_bc.q1, local_bc.q2
@@ -351,7 +348,7 @@ class HelmholtzPadeSolver:
         r0 = 2 * b * q2
         r3 = q2 * (self.k0 * self.dz_m) ** 2 * (1 + a * (self.env.n2minus1(x, z_max, self.freq_hz))) + 2 * a * (self.dz_m * q1 - q2)
         r2 = 2 * a * q2
-        return r0, r1, r2 * phi[-2] + r3 * phi[-1]
+        return DiscreteLocalBC(r0, r1, r2 * phi[-2] + r3 * phi[-1])
 
     def _prepare_boundary_conditions(self):
         if self.lower_bc is not None and self.upper_bc is not None:
@@ -359,7 +356,7 @@ class HelmholtzPadeSolver:
 
         if isinstance(self.env.lower_bc, TransparentBC) and \
                 self.params.terrain_method in [TerrainMethod.pass_through, TerrainMethod.no]:
-            beta = self.env.n2minus1(0, self.env.z_min - 1, self.freq_hz)
+            beta = self.env.lower_bc.beta - 1
             gamma = 0
             if self.params.storage:
                 self.lower_bc = self.params.storage.get_lower_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
@@ -381,8 +378,8 @@ class HelmholtzPadeSolver:
             self.lower_bc = self.env.lower_bc
 
         if isinstance(self.env.upper_bc, TransparentBC):
-            gamma = self.env.n2minus1(0, self.env.z_max + 1, self.freq_hz) - self.env.n2minus1(0, self.env.z_max, self.freq_hz)
-            beta = self.env.n2minus1(0, self.env.z_max, self.freq_hz) - gamma * self.env.z_max
+            gamma = self.env.upper_bc.gamma
+            beta = self.env.upper_bc.beta - 1 - gamma * self.env.z_max
             if self.params.storage:
                 self.upper_bc = self.params.storage.get_upper_nlbc(k0=self.k0, dx_wl=self.params.dx_wl, dz_wl=self.params.dz_wl,
                                                                    pade_order=self.params.exp_pade_order, z_order=self.params.z_order,
@@ -436,22 +433,10 @@ class HelmholtzPadeSolver:
         alpha = self.alpha
 
         def diff_eq_solution_ratio(s):
-            # k_d = self.wavelength / 2 / self.dx_m
-            # k_x = k_d * self.k0 + 1j / self.dx_m * cm.log(xi)
-            # k_z = cm.sqrt(self.k0**2 - k_x ** 2)
-            # yy = cm.sqrt(self.k0**2 * (beta + 1) - k_x ** 2)
-            # refl_coef = (yy - (beta+1) * k_z) / (yy + (beta+1) * k_z)
-            #
-            # theta = 30
-            # refl_coef = cm.exp(-10*((k_x - self.k0 * cm.cos(theta * cm.pi / 180))) ** 2)
-            # if abs(refl_coef) > 0.4:
-            #     print("refl_coef = " + str(refl_coef) + "k_x / k = " + str(k_x / self.k0))
-
-            #beta = 0
             refl_coef = 0
-            a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
-            a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
-            c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - 0)
+            a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
+            a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
+            c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
 
             mu = sqr_eq(a_1, c, a_m1)
             return (1 / mu + refl_coef * mu) / (1 + refl_coef)
@@ -511,13 +496,11 @@ class HelmholtzPadeSolver:
                 edges_dict[self.n_x - x_i - 1] = edge
 
         for x_i, x in iterator:
-            terr_i = int(round(self.env.terrain(x) / self.dz_m))
-
-            if self.params.terrain_method == TerrainMethod.pass_through:
-                het = self.env.n2m1_profile(x, self.z_computational_grid, self.freq_hz) + 0j
-                het[0:terr_i:] = self.env.ground_material.complex_permittivity(self.freq_hz) - 1
-            elif self.params.terrain_method == TerrainMethod.staircase:
+            if self.params.terrain_method == TerrainMethod.staircase:
+                terr_i = int(round(self.env.terrain(x) / self.dz_m))
                 phi = phi[terr_i::]
+            else:
+                terr_i = 0
 
             # process boundary conditions
             if isinstance(self.lower_bc, DiscreteNonLocalBC):
@@ -527,18 +510,22 @@ class HelmholtzPadeSolver:
 
             for pc_i, (a, b) in enumerate(self.pade_coefs):
                 # process boundary conditions
+                lower_bound = None
                 if isinstance(self.lower_bc, DiscreteNonLocalBC):
                     lower_bound = -self.lower_bc.coefs[0, pc_i, pc_i], 1, lower_convolution[pc_i] + self.lower_bc.coefs[0, pc_i].dot(phi_0[x_i])
                 elif isinstance(self.lower_bc, RobinBC):
-                    lower_bound = self._calc_lower_lbc(local_bc=self.lower_bc, a=a, b=b, x=x, z_min=self.z_computational_grid[terr_i], phi=phi)
+                    lbc = self._calc_lower_lbc(local_bc=self.lower_bc, a=a, b=b, x=x, z_min=self.z_computational_grid[terr_i], phi=phi)
+                    lower_bound = lbc.q1, lbc.q2, lbc.q3
 
+                upper_bound = None
                 if isinstance(self.upper_bc, DiscreteNonLocalBC):
                     upper_bound = 1, -self.upper_bc.coefs[0, pc_i, pc_i], upper_convolution[pc_i] + self.upper_bc.coefs[0, pc_i].dot(phi_J[x_i])
                 elif isinstance(self.upper_bc, RobinBC):
-                    upper_bound = self._calc_upper_lbc(local_bc=self.lower_bc, a=a, b=b, x=x, z_max=self.z_computational_grid[-1], phi=phi)
+                    ubc = self._calc_upper_lbc(local_bc=self.lower_bc, a=a, b=b, x=x, z_max=self.z_computational_grid[-1], phi=phi)
+                    upper_bound = ubc.q1, ubc.q2, ubc.q3
 
                 phi = self._Crank_Nikolson_propagate(a, b, lambda z: self.env.n2minus1(x, z, self.freq_hz),
-                                                         lambda z: self.env.rho(x, z), phi,
+                                                         lambda z: self.env.rho(x, z), phi, local_z_grid=self.z_computational_grid[terr_i::],
                                                          lower_bound=lower_bound, upper_bound=upper_bound)
 
                 phi_0[x_i, pc_i], phi_J[x_i, pc_i] = phi[0], phi[-1]

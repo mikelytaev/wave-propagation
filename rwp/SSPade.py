@@ -30,7 +30,7 @@ class TroposphericRadioWaveSSPadePropagator:
         logging.info("Terrain method: " + self.comp_params.terrain_method.name)
 
         if self.comp_params.terrain_method == TerrainMethod.pass_through:
-            lower_bc = TransparentConstBC()
+            lower_bc = TransparentBC(self.env.ground_material.complex_permittivity(self.src.freq_hz))
         else:
             if isinstance(self.env.ground_material, PerfectlyElectricConducting):
                 if self.src.polarz.upper() == 'H':
@@ -51,16 +51,36 @@ class TroposphericRadioWaveSSPadePropagator:
             rho = lambda x, z: z*0+1
 
         if self.env.is_flat:
-            upper_bc = TransparentConstBC()
+            upper_bc = TransparentBC(self.env.n2m1_profile(0, self.env.z_max, self.src.freq_hz) + 1)
         else:
-            upper_bc = TransparentLinearBC()
+            gamma = self.env.n2m1_profile(0, self.env.z_max + 1, self.src.freq_hz) - self.env.n2m1_profile(0, self.env.z_max,
+                                                                                               self.src.freq_hz)
+            beta = self.env.n2m1_profile(0, self.env.z_max, self.src.freq_hz) + 1
+            upper_bc = TransparentBC(beta, gamma)
+
+        if self.comp_params.terrain_method == TerrainMethod.pass_through:
+            def n2m1(x, z, freq_hz):
+                if isinstance(z, float):
+                    if z < self.env.terrain(x):
+                        return self.env.ground_material.complex_permittivity(freq_hz) - 1
+                    else:
+                        return self.env.n2m1_profile(x, z, freq_hz)
+                res = self.env.n2m1_profile(x, z, freq_hz)
+                ind = z < self.env.terrain(x)
+                res[ind] = self.env.ground_material.complex_permittivity(freq_hz) - 1
+                return res
+        else:
+            def n2m1(x, z, freq_hz):
+                return self.env.n2m1_profile(x, z, freq_hz)
+
+        self.comp_params.max_abc_permittivity = abs(self.env.ground_material.complex_permittivity(self.src.freq_hz))
 
         self.helm_env = HelmholtzEnvironment(x_max_m=max_range_m,
                                              lower_bc=lower_bc,
                                              upper_bc=upper_bc,
                                              z_min=0,
                                              z_max=env.z_max,
-                                             n2minus1=self.env.n2m1_profile,
+                                             n2minus1=n2m1,
                                              use_n2minus1=self.env.is_homogeneous(),
                                              rho=rho,
                                              use_rho=self.env.is_homogeneous() or self.src.polarz.upper() == 'H',
