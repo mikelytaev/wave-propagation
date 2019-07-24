@@ -26,11 +26,11 @@ pade_field = pade_task.calculate()
 petool_task = PETOOLPropagationTask(antenna=ant, env=env, two_way=False, max_range_m=max_range, dx_wl=400, n_dx_out=1, dz_wl=3)
 petool_field = petool_task.calculate()
 
-pade12_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                             label='Pade-[7/8] + NLBC', x_mult=1E-3)
+pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
+                           label='Pade-[7/8] + NLBC', x_mult=1E-3)
 petool_vis = FieldVisualiser(petool_field, trans_func=lambda x: x, label='SSF (PETOOL)', x_mult=1E-3)
 
-plt = pade12_vis.plot_hor_over_terrain(30, petool_vis)
+plt = pade_vis.plot_hor_over_terrain(30, petool_vis)
 plt.xlabel('Range (km)')
 plt.ylabel('10log|u| (dB)')
 plt.tight_layout()
@@ -43,7 +43,7 @@ plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-plt = pade12_vis.plot2d(min=-70, max=0)
+plt = pade_vis.plot2d(min=-70, max=0)
 plt.title('10log|u|')
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')

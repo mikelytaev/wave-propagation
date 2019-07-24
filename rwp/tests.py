@@ -78,6 +78,35 @@ class TestSSPade(unittest.TestCase):
         f2 = 10 * np.log10(1e-16 + np.abs(ke_field.horizontal(50)))
         self.assertTrue(np.linalg.norm(f1 - f2) / np.linalg.norm(f1) < 0.05)
 
+    def test_terrain(self):
+        env = Troposphere()
+        env.ground_material = VeryDryGround()
+        env.z_max = 300
+        max_range = 100000 / 5
+
+        h = 110 / 2
+        w = 10000 / 5
+        x1 = 30000 / 5
+        env.terrain = Terrain(
+            lambda x: h / 2 * (1 + fm.sin(fm.pi * (x - x1) / (2 * w))) if -w <= (x - x1) <= 3 * w else 0)
+        ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=2, eval_angle=0, polarz='H')
+
+        computational_params_pt = HelmholtzPropagatorComputationalParams(terrain_method=TerrainMethod.pass_through,
+                                                                         storage=PickleStorage())
+        pade_task_pt = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range,
+                                                             comp_params=computational_params_pt)
+        pade_field_pt = pade_task_pt.calculate()
+
+        computational_params_sc = HelmholtzPropagatorComputationalParams(terrain_method=TerrainMethod.staircase,
+                                                                         storage=PickleStorage())
+        pade_task_sc = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range,
+                                                             comp_params=computational_params_sc)
+        pade_field_sc = pade_task_sc.calculate()
+
+        f1 = 10 * np.log10(1e-16 + np.abs(pade_field_pt.horizontal_over_terrain(30, env.terrain)))
+        f2 = 10 * np.log10(1e-16 + np.abs(pade_field_sc.horizontal_over_terrain(30, env.terrain)))
+        self.assertTrue(np.linalg.norm(f1 - f2) / np.linalg.norm(f1) < 0.03)
+
 
 if __name__ == '__main__':
     unittest.main()
