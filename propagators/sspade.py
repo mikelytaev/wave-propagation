@@ -128,7 +128,7 @@ class HelmholtzPropagatorComputationalParams:
     two_way_threshold: float = 0.05
     standard_pe: bool = False
     sqrt_alpha: float = 0
-    z_order: int = 4
+    z_order: int = None
     terrain_method: TerrainMethod = None
     tol: float = None
     storage: HelmholtzPropagatorStorage = None
@@ -165,7 +165,7 @@ class HelmholtzPadeSolver:
         if self.params.terrain_method is None:
             self.params.terrain_method = TerrainMethod.no
 
-        if not self.env.use_n2minus1 and not self.env.use_rho and self.params.terrain_method in [TerrainMethod.no, TerrainMethod.staircase]:
+        if self.params.z_order > 4:
             def diff2(s):
                 return mpmath.acosh(1 + (self.k0 * self.dz_m) ** 2 * s / 2) ** 2 / (self.k0 * self.dz_m) ** 2
         else:
@@ -181,13 +181,18 @@ class HelmholtzPadeSolver:
     def _optimize_params(self):
         #optimize max angle
         self.params.max_propagation_angle = self.params.max_propagation_angle or self._optimal_propagation_angle()
-        logging.info("Propagation angle = " + str(self.params.max_propagation_angle))
+        logging.info("Max propagation angle = " + str(self.params.max_propagation_angle))
 
-        if not self.env.use_n2minus1 and not self.env.use_rho and self.params.terrain_method in [TerrainMethod.no, TerrainMethod.staircase]:
-            self.params.z_order = 5
+        if self.params.z_order is None:
+            if not self.env.use_n2minus1 and not self.env.use_rho and self.params.terrain_method in [None, TerrainMethod.no, TerrainMethod.staircase]:
+                self.params.z_order = 5
+            else:
+                self.params.z_order = 4
+
+        if self.params.z_order > 4:
             logging.info("using Pade approximation for diff2_z")
-
-        self.params.z_order = self.params.z_order or 4
+        else:
+            logging.info("z_order = " + str(self.params.z_order))
 
         if self.params.dx_wl is None or self.params.dz_wl is None or self.params.exp_pade_order is None:
             logging.debug("Calculating optimal computational grid parameters")
@@ -405,6 +410,7 @@ class HelmholtzPadeSolver:
         tau = 1.001
         if max(self.params.exp_pade_order) == 1:
             def nlbc_transformed(t):
+                t = tau * cm.exp(1j * t)
                 return diff_eq_solution_ratio(((1 - t) / (-num_roots[0] + den_roots[0] * t)))
         else:
             def nlbc_transformed(t):
@@ -521,7 +527,7 @@ class HelmholtzPadeSolver:
                 if isinstance(self.upper_bc, DiscreteNonLocalBC):
                     upper_bound = 1, -self.upper_bc.coefs[0, pc_i, pc_i], upper_convolution[pc_i] + self.upper_bc.coefs[0, pc_i].dot(phi_J[x_i])
                 elif isinstance(self.upper_bc, RobinBC):
-                    ubc = self._calc_upper_lbc(local_bc=self.lower_bc, a=a, b=b, x=x, z_max=self.z_computational_grid[-1], phi=phi)
+                    ubc = self._calc_upper_lbc(local_bc=self.upper_bc, a=a, b=b, x=x, z_max=self.z_computational_grid[-1], phi=phi)
                     upper_bound = ubc.q1, ubc.q2, ubc.q3
 
                 phi = self._Crank_Nikolson_propagate(a, b, lambda z: self.env.n2minus1(x, z, self.freq_hz),
