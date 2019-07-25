@@ -15,10 +15,11 @@ max_range = 10000
 ant_mm = GaussAntenna(freq_hz=30000e6, height=10, beam_width=10, eval_angle=0, polarz='H')
 ant_uhf = GaussAntenna(freq_hz=300e6, height=10, beam_width=10, eval_angle=0, polarz='H')
 
-pade_task_mm = TroposphericRadioWaveSSPadePropagator(antenna=ant_mm, env=env, two_way=False, max_range_m=max_range, pade_order=(7, 8))
+comp_params = HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8))
+pade_task_mm = TroposphericRadioWaveSSPadePropagator(antenna=ant_mm, env=env, max_range_m=max_range, comp_params=comp_params)
 pade_field_mm = pade_task_mm.calculate()
 
-pade_task_uhf = TroposphericRadioWaveSSPadePropagator(antenna=ant_uhf, env=env, two_way=False, max_range_m=max_range, pade_order=(7, 8))
+pade_task_uhf = TroposphericRadioWaveSSPadePropagator(antenna=ant_uhf, env=env, max_range_m=max_range)
 pade_field_uhf = pade_task_uhf.calculate()
 
 pade_vis_mm = FieldVisualiser(pade_field_mm.path_loss(gamma=0.1022), env=env, label='30 ГГц', x_mult=1e-3)
@@ -45,9 +46,4 @@ plt.xlabel('Расстояние, км')
 plt.ylabel('Потери, дБ')
 plt.tight_layout()
 plt.grid(True)
-plt.show()
-
-lower, upper = pade_task_mm._prepare_bc()
-abs_upper = [10*fm.log10(np.linalg.norm(a)) for a in upper.coefs]
-plt.plot(abs_upper)
 plt.show()

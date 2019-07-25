@@ -16,7 +16,8 @@ class TestSSPade(unittest.TestCase):
         environment.z_max = 300
         max_range_m = 1000
         antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, eval_angle=0, polarz='H')
-        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m)
+        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m,
+                                                           comp_params=HelmholtzPropagatorComputationalParams(z_order=4))
         sspade_field = propagator.calculate()
 
         kdc = KnifeEdgeDiffractionCalculator(src=antenna, env=environment, max_range_m=max_range_m,
@@ -33,7 +34,8 @@ class TestSSPade(unittest.TestCase):
         environment.z_max = 300
         max_range_m = 1000
         antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, eval_angle=0, polarz='V')
-        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m)
+        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m,
+                                                           comp_params=HelmholtzPropagatorComputationalParams(z_order=4))
         sspade_field = propagator.calculate()
 
         kdc = KnifeEdgeDiffractionCalculator(src=antenna, env=environment, max_range_m=max_range_m,
@@ -66,7 +68,8 @@ class TestSSPade(unittest.TestCase):
         environment.knife_edges = [KnifeEdge(range=200, height=50)]
         max_range_m = 300
         antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, eval_angle=0, polarz='H')
-        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m)
+        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m,
+                                                           comp_params=HelmholtzPropagatorComputationalParams(z_order=4))
         sspade_field = propagator.calculate()
 
         kdc = KnifeEdgeDiffractionCalculator(src=antenna, env=environment, max_range_m=max_range_m,
@@ -92,13 +95,13 @@ class TestSSPade(unittest.TestCase):
         ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=2, eval_angle=0, polarz='H')
 
         computational_params_pt = HelmholtzPropagatorComputationalParams(terrain_method=TerrainMethod.pass_through,
-                                                                         storage=PickleStorage())
+                                                                         z_order=4, storage=PickleStorage())
         pade_task_pt = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range,
                                                              comp_params=computational_params_pt)
         pade_field_pt = pade_task_pt.calculate()
 
         computational_params_sc = HelmholtzPropagatorComputationalParams(terrain_method=TerrainMethod.staircase,
-                                                                         storage=PickleStorage())
+                                                                         z_order=4, storage=PickleStorage())
         pade_task_sc = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range,
                                                              comp_params=computational_params_sc)
         pade_field_sc = pade_task_sc.calculate()
