@@ -81,9 +81,9 @@ class TroposphericRadioWaveSSPadePropagator:
                                              z_min=0,
                                              z_max=env.z_max,
                                              n2minus1=n2m1,
-                                             use_n2minus1=self.env.is_homogeneous(),
+                                             use_n2minus1=not self.env.is_homogeneous(),
                                              rho=rho,
-                                             use_rho=self.env.is_homogeneous() or self.src.polarz.upper() == 'H',
+                                             use_rho=(not self.env.is_homogeneous()) and self.src.polarz.upper() == 'V',
                                              terrain=self.env.terrain)
 
         for kn in self.env.knife_edges:

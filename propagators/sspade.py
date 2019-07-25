@@ -250,7 +250,7 @@ class HelmholtzPadeSolver:
             res = max(self.params.max_src_angle, fm.ceil(res))
             return res
 
-    def _Crank_Nikolson_propagate_deprecated(self, a, b, het, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
+    def _Crank_Nikolson_propagate_no_rho(self, a, b, het, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
         """
         Performs one Crank-Nikolson propagation step
         :param a: right-hand parameter
@@ -261,10 +261,10 @@ class HelmholtzPadeSolver:
         :param upper_bound: upper_bound[0]*u_{n-1} + upper_bound[1]*u_{n} = upper_bound[2]
         :return:
         """
-        if self.z_order == 2:
-            return np.array(Crank_Nikolson_propagator((self.k0 * self.dz_m) ** 2, a, b, het, initial, lower_bound, upper_bound))
-        else:
+        if self.params.z_order == 4:
             return self._Crank_Nikolson_propagate_4th_order(a, b, het, initial, lower_bound, upper_bound)
+        else:
+            return np.array(Crank_Nikolson_propagator((self.k0 * self.dz_m) ** 2, a, b, het, initial, lower_bound, upper_bound))
         # d_2 = 1/(self.k0*self.dz)**2 * diags([np.ones(self.n_z-1), -2*np.ones(self.n_z), np.ones(self.n_z-1)], [-1, 0, 1])
         # left_matrix = eye(self.n_z) + b*(d_2 + diags([het], [0]))
         # right_matrix = eye(self.n_z) + a*(d_2 + diags([het], [0]))
@@ -296,6 +296,9 @@ class HelmholtzPadeSolver:
         #return np.array(Crank_Nikolson_propagator_4th_order((self.k0 * self.dz) ** 2, a, b, alpha, het, initial, lower_bound, upper_bound))
 
     def _Crank_Nikolson_propagate(self, a, b, m2minus1_func, rho_func, initial, local_z_grid, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
+        if not self.env.use_rho:
+            return self._Crank_Nikolson_propagate_no_rho(a, b, m2minus1_func(local_z_grid), initial, lower_bound, upper_bound)
+
         alpha_m = self.alpha * rho_func(local_z_grid[1:-1:])
 
         c_a_left = 1 / rho_func(local_z_grid[1:-1:] - self.dz_m / 2) * \
