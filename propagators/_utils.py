@@ -111,6 +111,8 @@ def optimal_params(max_angle, threshold, dx=None, dz=None, pade_order=None, z_or
     else:
         dzs = np.concatenate((np.array([0.01, 0.05]), np.linspace(0.1, 2, 20)))
 
+    dxs.sort()
+    dzs.sort()
     for pade_order in pade_orders:
         for dx in dxs:
             if z_order <= 4:

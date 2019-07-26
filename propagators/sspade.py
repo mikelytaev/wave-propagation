@@ -86,7 +86,7 @@ class HelmholtzEnvironment:
     upper_bc: BoundaryCondition = TransparentBC()
     z_min: float = 0
     z_max: float = 300
-    n2minus1: types.FunctionType = lambda x, z, freq_hz: z*0
+    n2minus1: types.FunctionType = lambda x, z, freq_hz: z*0j
     use_n2minus1: bool = True
     rho: types.FunctionType = lambda x, z: z*0+1
     use_rho: bool = True
@@ -157,10 +157,10 @@ class HelmholtzPadeSolver:
         self.dx_m = self.params.dx_wl * wavelength
         self.x_computational_grid = np.arange(0, self.n_x) * self.dx_m
 
-        if self.params.z_order == 2:
-            self.alpha = 0
-        else:
+        if self.params.z_order == 4:
             self.alpha = 1 / 12
+        else:
+            self.alpha = 0
 
         if self.params.terrain_method is None:
             self.params.terrain_method = TerrainMethod.no
@@ -262,7 +262,7 @@ class HelmholtzPadeSolver:
         :return:
         """
         if self.params.z_order == 4:
-            return self._Crank_Nikolson_propagate_4th_order(a, b, het, initial, lower_bound, upper_bound)
+            return self._Crank_Nikolson_propagate_no_rho_4th_order(a, b, het, initial, lower_bound, upper_bound)
         else:
             return np.array(Crank_Nikolson_propagator((self.k0 * self.dz_m) ** 2, a, b, het, initial, lower_bound, upper_bound))
         # d_2 = 1/(self.k0*self.dz)**2 * diags([np.ones(self.n_z-1), -2*np.ones(self.n_z), np.ones(self.n_z-1)], [-1, 0, 1])
@@ -273,7 +273,7 @@ class HelmholtzPadeSolver:
         # left_matrix[-1, -2], left_matrix[-1, -1], rhs[-1] = upper_bound
         # return spsolve(left_matrix, rhs)
 
-    def _Crank_Nikolson_propagate_4th_order(self, a, b, het, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
+    def _Crank_Nikolson_propagate_no_rho_4th_order(self, a, b, het, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
         alpha = 1/12
         c_a = alpha * (self.k0 * self.dz_m) ** 2 + a + alpha * a * (self.k0 * self.dz_m) ** 2 * het
         c_b = alpha * (self.k0 * self.dz_m) ** 2 + b + alpha * b * (self.k0 * self.dz_m) ** 2 * het

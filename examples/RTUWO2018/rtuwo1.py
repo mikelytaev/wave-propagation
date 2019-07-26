@@ -1,5 +1,5 @@
-from rwp.SSPade import *
-from rwp.WPVis import *
+from rwp.sspade import *
+from rwp.vis import *
 from rwp.petool import PETOOLPropagationTask
 from rwp.crank_nicolson import *
 from propagators.sspade import TerrainMethod

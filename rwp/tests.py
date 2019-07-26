@@ -1,6 +1,6 @@
 import unittest
 
-from rwp.SSPade import *
+from rwp.sspade import *
 from rwp.environment import Troposphere
 from rwp.kediffraction import *
 

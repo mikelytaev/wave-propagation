@@ -1,5 +1,5 @@
-from rwp.SSPade import *
-from rwp.WPVis import *
+from rwp.sspade import *
+from rwp.vis import *
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
