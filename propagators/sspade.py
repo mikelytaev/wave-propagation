@@ -551,7 +551,7 @@ class HelmholtzPadeSolver:
 
             if divmod(x_i, self.params.x_output_filter)[1] == 0:
                 field.field[divmod(x_i, self.params.x_output_filter)[0], :] = phi[::self.params.z_output_filter]
-                logging.debug('SSPade propagation x = ' + str(x) + "   " + str(np.linalg.norm(phi[::self.params.z_output_filter])))
+                logging.debug('SSPade propagation x = ' + str(x))
 
         field.field *= np.tile(np.exp(1j * self.k0 * self.x_computational_grid[::self.params.x_output_filter]),
                                (len(self.z_computational_grid[::self.params.z_output_filter]), 1)).T
