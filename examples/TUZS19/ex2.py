@@ -1,5 +1,5 @@
 from rwp.petool import *
-from rwp.WPVis import *
+from rwp.vis import *
 import matplotlib.patches as patches
 
 logging.basicConfig(level=logging.DEBUG)

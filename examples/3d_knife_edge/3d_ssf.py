@@ -1,11 +1,11 @@
 from rwp.ssf import *
 from rwp.antennas import GaussSource3D
-from rwp.WPVis import FieldVisualiser3D
+from rwp.vis import FieldVisualiser3D
 
 logging.basicConfig(level=logging.DEBUG)
 
 env = EMEnvironment3d(x_min=0, x_max=1000, y_min=-100, y_max=100, z_min=0, z_max=210)
-env.knife_edges = [knife_edge3d(x1=500, x2=500, y1=-50, y2=50, height=100)]
+env.knife_edges = [KnifeEdge3d(x1=500, x2=500, y1=-50, y2=50, height=100)]
 ant = GaussSource3D(freq_hz=300E6, height=50, ver_beamwidth=30, hor_beamwidth=30, polarz='H')
 
 comp_params = SSF3DPropagatorComputationParameters(dx_wl=1, dy_wl=1, dz_wl=1)

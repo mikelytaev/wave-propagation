@@ -62,7 +62,7 @@ class TestFCC(unittest.TestCase):
         self.assertTrue(abs(fcc.fw[2, 7] - (-0.000550686115736 - 0.009845952674564j)) < self.tol)
 
         fcc = FCCFourier(3, 7, np.array([1, 10, 100]))
-        tf = fcc.forward(np.sin(cheb_grid(1, 4, 7)**2), 1, 4)
+        tf = fcc.forward(np.sin(chebyshev_grid(1, 4, 7) ** 2), 1, 4)
         tf_true = np.array([0.074342089312286 - 0.241773913413446j,
                             0.202737233915876 - 0.022917127345782j,
                             0.007683316767495 - 0.007264724014208j])

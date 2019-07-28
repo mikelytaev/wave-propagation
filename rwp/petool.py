@@ -27,7 +27,7 @@ class PETOOLPropagator:
         self.dz = dz_wl * wavelength
         self.z_computational_grid = np.linspace(0, self.env.z_max, fm.ceil(self.env.z_max / self.dz) + 1)
 
-    def propagate(self, src: Source, n_x, *, n_dx_out=1, n_dz_out=1, two_way=False):
+    def propagate(self, src: GaussAntenna, n_x, *, n_dx_out=1, n_dz_out=1, two_way=False):
         x_computational_grid = np.arange(0, n_x) * self.dx
         terrain_type = 1
         interp_type = 1
@@ -63,7 +63,7 @@ class PETOOLPropagator:
                           float(src.beam_width),  # thetabw, degrees
                           float(src.eval_angle),  # thetae, degrees
                           polarz_n,  # polrz (1=hor, 2=ver)
-                          float(src.height),  # tx_height, m
+                          float(src.height_m),  # tx_height, m
                           float(self.dx * (n_x - 1) * 1e-3),  # range, km
                           float(self.env.z_max),  # zmax_user, m
                           edge_range,  # edge_range, km

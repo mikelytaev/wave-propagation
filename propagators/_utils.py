@@ -99,7 +99,7 @@ def optimal_params(max_angle, threshold, dx=None, dz=None, pade_order=None, z_or
     if pade_order:
         pade_orders = [pade_order]
     else:
-        pade_orders = [(1, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)]
+        pade_orders = [(7, 8), (6, 7), (5, 6), (4, 5), (3, 4), (2, 3), (1, 2), (1, 1)]
 
     if dx:
         dxs = [dx]
@@ -111,6 +111,8 @@ def optimal_params(max_angle, threshold, dx=None, dz=None, pade_order=None, z_or
     else:
         dzs = np.concatenate((np.array([0.01, 0.05]), np.linspace(0.1, 2, 20)))
 
+    dxs.sort()
+    dzs.sort()
     for pade_order in pade_orders:
         for dx in dxs:
             if z_order <= 4:
@@ -156,7 +158,7 @@ def brewster_angle(eps1, eps2):
     """
     :param eps1: permittivity in medium 1
     :param eps2: permittivity in medium 2
-    :return: brewster angle between incident wave and normal to surface in degrees in degrees
+    :return: brewster angle between incident wave and normal to the surface in degrees
     """
     return 90 - cm.asin(1 / cm.sqrt(eps2 / eps1 + 1)) * 180 / cm.pi
 
@@ -164,7 +166,7 @@ def brewster_angle(eps1, eps2):
 def sqr_eq(a, b, c):
     c1 = (-b + cm.sqrt(b**2 - 4 * a * c)) / (2 * a)
     c2 = (-b - cm.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
-    return [c1, c2][abs(c1) > abs(c2)]
+    return c2 if abs(c1) > abs(c2) else c1
 
 
 def lentz(cont_frac_seq, tol=1e-20):
