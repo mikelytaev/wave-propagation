@@ -1,18 +1,6 @@
 @startuml
 left to right direction
 
-abstract class TroposphericPropagator {
-Field calculate()
-}
-
-class TroposphericPadePropagator {
-
-}
-
-TroposphericPropagator <|- TroposphericPadePropagator
-TroposphericPropagator <|- TroposphericPETOOLPropagator
-TroposphericPropagator <|- KnifeEdgeDiffractionPropagator
-
 TroposphericPadePropagator *--HelmholtzPadeSolver
 
 class HelmholtzPadeSolver {
@@ -20,31 +8,56 @@ class HelmholtzPadeSolver {
     oprimize_params()
 }
 
-class PadeComputationalParams {
+class HelmholtzPropagatorComputationalParams {
 dx
-x_pade_order
+exp_pade_order
 dz
 z_order
 max_angle
 }
 
-HelmholtzPadeSolver *-- PadeComputationalParams
-HelmholtzPadeSolver *-- PropagatorEnvironment
+interface HelmholtzPropagatorStorage {
+DiscreteNonLocalBC get_nlbc()
+set_nlbc(DiscreteNonLocalBC)
+}
 
-BoundaryCondition <|- ImpedanceBC
-BoundaryCondition <|- NonlocalBC
+HelmholtzPadeSolver *-- HelmholtzPropagatorComputationalParams
+HelmholtzPadeSolver *-- PropagatorEnvironment
+HelmholtzPadeSolver *-- HelmholtzPropagatorStorage
+HelmholtzPadeSolver o- DiscreteBC
+
+BoundaryCondition <|- RobinBC
+BoundaryCondition <|- TransparentBC
 
 interface BoundaryCondition {
 
 }
 
-class ImpedanceBC {
+class RobinBC {
+q_1
+q_2
+q_3
+}
+
+class TransparentBC {
+beta
+gamma
+}
+
+interface DiscreteBC {
 
 }
 
-class NonlocalBC {
+class DiscreteLocalBC {
 
 }
+
+class DiscreteNonLocalBC {
+
+}
+
+DiscreteBC <|- DiscreteLocalBC
+DiscreteBC <|- DiscreteNonLocalBC
 
 PropagatorEnvironment o- BoundaryCondition
 
