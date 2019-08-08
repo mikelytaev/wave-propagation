@@ -1,0 +1,72 @@
+@startuml
+left to right direction
+
+Source <|- GaussAntenna
+
+interface Material {
+permittivity(frequency)
+conductivity(frequency)
+}
+
+interface Source {
+frequency
+aperture(z_grid)
+beam_pattern(angle)
+}
+
+class GaussAntenna {
+height
+beam_width
+elevation_angle
+}
+
+class Troposphere {
+M_profile(x, z)
+Terrain terrain
+Obstacle[] vegetation
+Obstacle[] buildings
+knife_edges
+}
+
+Troposphere *-- Terrain
+Troposphere o- Obstacle
+
+class Terrain {
+height(x)
+Material material(x)
+}
+
+class Obstacle {
+shape
+Material material
+}
+
+Obstacle *-- Material
+Terrain o- Material
+
+class Field {
+
+}
+
+class FieldVisualiser {
+Field field
+Troposphere troposphere
+type {pure, pass_loss}
+plot2d()
+plot_vertical(x, *FieldVisualiser)
+plot_horizontal(z, *FieldVisualiser)
+}
+
+abstract class TroposphericPropagator {
+Field calculate()
+}
+
+TroposphericPropagator *-- Source : input
+TroposphericPropagator *-- Troposphere : input
+TroposphericPropagator *-- Field : result
+
+FieldVisualiser *-- Field
+FieldVisualiser *-- Troposphere
+
+
+@enduml

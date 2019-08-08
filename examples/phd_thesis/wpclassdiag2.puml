@@ -1,0 +1,59 @@
+@startuml
+left to right direction
+
+abstract class TroposphericPropagator {
+Field calculate()
+}
+
+class TroposphericPadePropagator {
+
+}
+
+TroposphericPropagator <|- TroposphericPadePropagator
+TroposphericPropagator <|- TroposphericPETOOLPropagator
+TroposphericPropagator <|- KnifeEdgeDiffractionPropagator
+
+TroposphericPadePropagator *--HelmholtzPadeSolver
+
+class HelmholtzPadeSolver {
+    propagate()
+    oprimize_params()
+}
+
+class PadeComputationalParams {
+dx
+x_pade_order
+dz
+z_order
+max_angle
+}
+
+HelmholtzPadeSolver *-- PadeComputationalParams
+HelmholtzPadeSolver *-- PropagatorEnvironment
+
+BoundaryCondition <|- ImpedanceBC
+BoundaryCondition <|- NonlocalBC
+
+interface BoundaryCondition {
+
+}
+
+class ImpedanceBC {
+
+}
+
+class NonlocalBC {
+
+}
+
+PropagatorEnvironment o- BoundaryCondition
+
+class PropagatorEnvironment {
+BoundaryCondition lower_boundary
+BoundaryCondition upper_boundary
+z_min(x)
+z_max(x)
+eps_r(x, z)
+}
+
+@enduml
