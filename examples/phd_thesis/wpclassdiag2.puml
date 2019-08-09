@@ -1,7 +1,7 @@
 @startuml
 left to right direction
 
-TroposphericPadePropagator *--HelmholtzPadeSolver
+'TroposphericPadePropagator *--HelmholtzPadeSolver
 
 class HelmholtzPadeSolver {
     propagate()
@@ -22,7 +22,7 @@ set_nlbc(DiscreteNonLocalBC)
 }
 
 HelmholtzPadeSolver *-- HelmholtzPropagatorComputationalParams
-HelmholtzPadeSolver *-- PropagatorEnvironment
+HelmholtzPadeSolver *-- HelmholtzEnvironment
 HelmholtzPadeSolver *-- HelmholtzPropagatorStorage
 HelmholtzPadeSolver o- DiscreteBC
 
@@ -59,9 +59,9 @@ class DiscreteNonLocalBC {
 DiscreteBC <|- DiscreteLocalBC
 DiscreteBC <|- DiscreteNonLocalBC
 
-PropagatorEnvironment o- BoundaryCondition
+HelmholtzEnvironment o- BoundaryCondition
 
-class PropagatorEnvironment {
+class HelmholtzEnvironment {
 BoundaryCondition lower_boundary
 BoundaryCondition upper_boundary
 z_min(x)

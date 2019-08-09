@@ -58,6 +58,8 @@ plot_horizontal(z, *FieldVisualiser)
 }
 
 abstract class TroposphericPropagator {
+Source
+Troposphere
 Field calculate()
 }
 
