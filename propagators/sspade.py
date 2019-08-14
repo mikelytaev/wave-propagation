@@ -27,6 +27,7 @@ class BoundaryCondition:
 
 class RobinBC(BoundaryCondition):
     """
+    Parameters of the third type (Robin) boundary condition of the following form
     q_{1}u+q_{2}u'=q_3
     """
 
@@ -38,7 +39,8 @@ class RobinBC(BoundaryCondition):
 
 class TransparentBC(BoundaryCondition):
     """
-    Assumes that m^2=\beta+\gamma z outsize the domain
+    Parameters of the transparent boundary condition for the Helmholtz equation
+    Assumes that function m^2=\beta+\gamma z outsize the domain
     """
     def __init__(self, beta=1, gamma=0):
         self.beta = beta
@@ -46,6 +48,10 @@ class TransparentBC(BoundaryCondition):
 
 
 class DiscreteLocalBC(BoundaryCondition):
+    """
+    Coefficients of the discrete local boundary condition of the form
+    q_1*u_1 + q_2*u_2 = q3
+    """
 
     def __init__(self, q1: complex, q2: complex, q3: complex):
         self.q1 = q1
@@ -54,10 +60,12 @@ class DiscreteLocalBC(BoundaryCondition):
 
 
 class DiscreteNonLocalBC(BoundaryCondition):
+    """
+    Coefficients of the discrete nonlocal boundary condition of the form
+    \boldsymbol{u}_{J-1}-\textbf{D}^{0}\boldsymbol{u}_{J}^{n}=\sum_{m=1}^{n-1}\textbf{D}^{m}\boldsymbol{u}_{J}^{n-m}
+    """
 
-    def __init__(self, r0: float, r1: float, coefs: "numpy array"):
-        self.r0 = r0
-        self.r1 = r1
+    def __init__(self, coefs: "numpy array"):
         self.coefs = coefs
 
 
@@ -74,6 +82,9 @@ class TerrainMethod(Enum):
 
 @dataclass
 class Edge:
+    """
+    Infinitely thin impenetrable edge
+    """
     x: float
     z_min: float
     z_max: float
@@ -81,6 +92,9 @@ class Edge:
 
 @dataclass
 class HelmholtzEnvironment:
+    """
+    Mathematical statement of propagation conditions
+    """
     x_max_m: float
     lower_bc: BoundaryCondition = TransparentBC()
     upper_bc: BoundaryCondition = TransparentBC()
@@ -114,6 +128,9 @@ class HelmholtzPropagatorStorage:
 
 @dataclass
 class HelmholtzPropagatorComputationalParams:
+    """
+    Computational parameters for HelmholtzPadeSolver.
+    """
     max_range_m: float = None
     max_height_m: float = None
     dx_wl: float = None
@@ -435,7 +452,7 @@ class HelmholtzPadeSolver:
         coefs = (tau**np.repeat(np.arange(0, self.n_x)[:, np.newaxis], m_size ** 2, axis=1) / (2*fm.pi) *
                 fcca.forward(lambda t: nlbc_transformed(t), 0, 2*fm.pi)).reshape((self.n_x, m_size, m_size))
 
-        return DiscreteNonLocalBC(r0=1, r1=1, coefs=coefs)
+        return DiscreteNonLocalBC(coefs=coefs)
 
     def _calc_lower_nlbc(self, beta):
         logging.debug('Computing lower nonlocal boundary condition...')
