@@ -5,16 +5,17 @@ import matplotlib
 
 
 logging.basicConfig(level=logging.DEBUG)
-profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 50], fill_value="extrapolate")
 environment = Troposphere()
 environment.ground_material = VeryDryGround()
 environment.z_max = 300
+profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 45], fill_value="extrapolate")
 environment.M_profile = lambda x, z: profile1d(z)
 antenna = GaussAntenna(wavelength=0.1, height=30, beam_width=2, eval_angle=0, polarz='H')
-max_range = 100000
-pade78_task = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, two_way=False, max_range_m=max_range,
-                                                    pade_order=(7, 8), z_order=2,
-                                                    dx_wl=400, n_dx_out=1, dz_wl=1, n_dz_out=1)
+max_range = 150000
+
+params = HelmholtzPropagatorComputationalParams()
+pade78_task = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range,
+                                                    comp_params=params)
 pade78_field = pade78_task.calculate()
 
 matplotlib.rcParams.update({'font.size': 10})

@@ -1,0 +1,72 @@
+@startuml
+left to right direction
+
+'TroposphericPadePropagator *--HelmholtzPadeSolver
+
+class HelmholtzPadeSolver {
+    propagate()
+    oprimize_params()
+}
+
+class HelmholtzPropagatorComputationalParams {
+dx
+exp_pade_order
+dz
+z_order
+max_angle
+}
+
+interface HelmholtzPropagatorStorage {
+DiscreteNonLocalBC get_nlbc()
+set_nlbc(DiscreteNonLocalBC)
+}
+
+HelmholtzPadeSolver *-- HelmholtzPropagatorComputationalParams
+HelmholtzPadeSolver *-- HelmholtzEnvironment
+HelmholtzPadeSolver *-- HelmholtzPropagatorStorage
+HelmholtzPadeSolver o- DiscreteBC
+
+BoundaryCondition <|- RobinBC
+BoundaryCondition <|- TransparentBC
+
+interface BoundaryCondition {
+
+}
+
+class RobinBC {
+q_1
+q_2
+q_3
+}
+
+class TransparentBC {
+beta
+gamma
+}
+
+interface DiscreteBC {
+
+}
+
+class DiscreteLocalBC {
+
+}
+
+class DiscreteNonLocalBC {
+
+}
+
+DiscreteBC <|- DiscreteLocalBC
+DiscreteBC <|- DiscreteNonLocalBC
+
+HelmholtzEnvironment o- BoundaryCondition
+
+class HelmholtzEnvironment {
+BoundaryCondition lower_boundary
+BoundaryCondition upper_boundary
+z_min(x)
+z_max(x)
+eps_r(x, z)
+}
+
+@enduml
