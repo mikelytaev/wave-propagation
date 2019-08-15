@@ -1,1 +1,6 @@
 nbsphinx
+numpy
+scipy
+mpmath
+matplotlib
+cython
