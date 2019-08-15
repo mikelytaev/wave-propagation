@@ -1,6 +1,6 @@
+from rwp.environment import *
 from rwp.sspade import *
 from rwp.vis import *
-from rwp.environment import *
 
 
 logging.basicConfig(level=logging.DEBUG)

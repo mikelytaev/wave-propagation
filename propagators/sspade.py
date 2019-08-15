@@ -148,6 +148,7 @@ class HelmholtzPropagatorComputationalParams:
     z_order: int = None
     terrain_method: TerrainMethod = None
     tol: float = None
+    grid_optimizator_threshold: float = 5e-3
     storage: HelmholtzPropagatorStorage = None
     max_abc_permittivity: float = 1
 
@@ -214,7 +215,7 @@ class HelmholtzPadeSolver:
         if self.params.dx_wl is None or self.params.dz_wl is None or self.params.exp_pade_order is None:
             logging.debug("Calculating optimal computational grid parameters")
             (self.params.dx_wl, self.params.dz_wl, self.params.exp_pade_order) = \
-                optimal_params(max_angle=self.params.max_propagation_angle, threshold=5e-3, dx=self.params.dx_wl,
+                optimal_params(max_angle=self.params.max_propagation_angle, threshold=self.params.grid_optimizator_threshold, dx=self.params.dx_wl,
                                dz=self.params.dz_wl, pade_order=self.params.exp_pade_order, z_order=self.params.z_order)
 
             if self.params.dx_wl is None or self.params.dz_wl is None or self.params.exp_pade_order is None:
