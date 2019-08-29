@@ -1,0 +1,21 @@
+@startuml
+left to right direction
+
+abstract class TroposphericPropagator {
+Field calculate()
+}
+
+class TroposphericPadePropagator {
+
+}
+
+TroposphericPropagator <|- TroposphericPadePropagator
+TroposphericPropagator <|- TroposphericPETOOLPropagator
+TroposphericPropagator <|- KnifeEdgeDiffractionPropagator
+TroposphericPropagator <|- CrankNicolsonPropagator
+
+TroposphericPadePropagator *-- HelmholtzPadeSolver
+KnifeEdgeDiffractionPropagator *-- ThinScattering
+TroposphericPETOOLPropagator *-- PETOOL
+
+@enduml
