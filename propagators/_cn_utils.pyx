@@ -61,6 +61,7 @@ def Crank_Nikolson_propagator2(complex k0dz, complex b, complex[:] het, complex[
     v[0] = lb1 / w
     w = 1 + b * (-2.0 / k0dz ** 2 + het[1]) - ci * v[0]
     y[1] = (rhs[1] - ci * y[0]) / w
+    cdef Py_ssize_t i
     for i in range(2, len(y)-1):
         v[i-1] = ci / w
         w = 1 + b * (-2.0 / k0dz ** 2 + het[i]) - ci * v[i-1]

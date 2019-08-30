@@ -2,7 +2,7 @@ from setuptools import setup
 from setuptools.extension import Extension
 import numpy
 
-USE_CYTHON = True
+USE_CYTHON = False
 ext = '.pyx' if USE_CYTHON else '.c'
 
 extensions = [Extension("propagators.contfrac", ["propagators/contfrac"+ext], include_dirs=['.', numpy.get_include()]),
@@ -10,7 +10,7 @@ extensions = [Extension("propagators.contfrac", ["propagators/contfrac"+ext], in
 
 if USE_CYTHON:
     from Cython.Build import cythonize
-    extensions = cythonize(extensions)
+    extensions = cythonize(extensions, language_level="3")
 
 setup(
     name='wpf',
@@ -19,7 +19,7 @@ setup(
     license='MIT',
     author='Mikhail Lytaev',
     author_email='mikelytaev@gmail.com',
-    description='Wave propagation modelling',
+    description='Wave propagation framework',
     setup_requires=[
         'numpy'
     ],
@@ -30,7 +30,10 @@ setup(
         'matplotlib',
         'cython'
     ],
-    ext_modules=extensions,
+    #ext_modules=extensions,
     zip_safe=False,
-    packages=['propagators', 'rwp', 'uwa'],
+    packages=['propagators', 'rwp', 'uwa', 'transforms', 'transforms.fcc_fourier'],
+    package_data={
+        '': ['*.pyx']
+    }
 )
