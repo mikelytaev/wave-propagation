@@ -39,6 +39,26 @@ class Plate(ThinBody2d):
             return []
 
 
+class Ellipse(ThinBody2d):
+
+    def __init__(self, x0, z0, a, b, eps_r):
+        self.x0 = x0
+        self.z0 = z0
+        self.a = a
+        self.b = b
+        self.x1_m = self.x0 - self.a
+        self.x2_m = self.x0 + self.a
+        self.eps_r = eps_r
+
+    def get_intersecting_intervals(self, x_m):
+        if self.x0 - self.a < x_m < self.x0 + self.a:
+            t = cm.acos((x_m - self.x0) / self.a)
+            z = abs(self.b * cm.sin(t))
+            return [(self.z0 - z, self.z0 + z)]
+        else:
+            return []
+
+
 class SpectralIntegrationMethod(Enum):
     fractional_ft = 1,
     fcc = 2
