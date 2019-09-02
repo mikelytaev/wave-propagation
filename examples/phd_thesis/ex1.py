@@ -20,8 +20,8 @@ petool_task = PETOOLPropagationTask(antenna=antenna, env=environment, two_way=Fa
 petool_field = petool_task.calculate()
 
 pade_vis = FieldVisualiser(pade_field, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                           label='Pade-[7/8] + NLBC', x_mult=1E-3)
-petool_vis = FieldVisualiser(petool_field, trans_func=lambda x: x, label='SSF (PETOOL)', x_mult=1E-3)
+                           label='Предложенный метод', x_mult=1E-3)
+petool_vis = FieldVisualiser(petool_field, trans_func=lambda x: x, label='Метод Фурье (PETOOL)', x_mult=1E-3)
 plt = petool_vis.plot_hor(30, pade_vis)
 plt.xlabel('Расстояние, км')
 plt.ylabel('10log|u| (дБ)')

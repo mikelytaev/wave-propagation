@@ -456,7 +456,7 @@ class HelmholtzPadeSolver:
         return DiscreteNonLocalBC(coefs=coefs)
 
     def _calc_lower_nlbc(self, beta):
-        logging.debug('Computing lower nonlocal boundary condition...')
+        logging.info('Computing lower nonlocal boundary condition...')
         alpha = self.alpha
 
         def diff_eq_solution_ratio(s):
@@ -471,7 +471,7 @@ class HelmholtzPadeSolver:
         return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
 
     def _calc_upper_nlbc(self, beta, gamma):
-        logging.debug('Computing upper nonlocal boundary condition...')
+        logging.info('Computing upper nonlocal boundary condition...')
         alpha = self.alpha
         if abs(gamma) < 10 * np.finfo(float).eps:
 

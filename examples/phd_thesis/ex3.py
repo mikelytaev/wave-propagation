@@ -27,9 +27,9 @@ claerbout_task = CrankNicolsonPropagationTask(src=antenna, env=environment, type
 claerbout_field = claerbout_task.calculate()
 
 pade_vis = FieldVisualiser(pade_field, env=environment, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                           label='Pade-[7/8] + NLBC', x_mult=1E-3)
+                           label='Предложенный метод', x_mult=1E-3)
 claerbout_vis = FieldVisualiser(claerbout_field, env=environment, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                                label='Claerbout approx.', x_mult=1E-3)
+                                label='Метод Кранка-Николсон (трансформация координат)', x_mult=1E-3)
 
 plt = claerbout_vis.plot2d(min=-70, max=0)
 plt.xlabel('Расстояние, км')
