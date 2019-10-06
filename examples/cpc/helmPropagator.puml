@@ -41,45 +41,45 @@ DiscreteNonLocalBC get_nlbc()
 set_nlbc(DiscreteNonLocalBC)
 }
 
-HelmholtzPropagatorStorage <|- PickleStorage
+'HelmholtzPropagatorStorage <|- PickleStorage
 
 HelmholtzPadeSolver *-- HelmholtzPropagatorComputationalParams
 HelmholtzPadeSolver *-- HelmholtzEnvironment
 HelmholtzPadeSolver *-- HelmholtzPropagatorStorage
-HelmholtzPadeSolver o- DiscreteBC
+'HelmholtzPadeSolver o- DiscreteBC
 
-BoundaryCondition <|- RobinBC
-BoundaryCondition <|- TransparentBC
+'BoundaryCondition <|- RobinBC
+'BoundaryCondition <|- TransparentBC
 
 interface BoundaryCondition {
 
 }
 
-class RobinBC {
-q_1
-q_2
-q_3
-}
+'class RobinBC {
+'q_1
+'q_2
+'q_3
+'}
+'
+'class TransparentBC {
+'beta
+'gamma
+'}
+'
+'interface DiscreteBC {
+'
+'}
+'
+'class DiscreteLocalBC {
+'
+'}
 
-class TransparentBC {
-beta
-gamma
-}
+'class DiscreteNonLocalBC {
+'
+'}
 
-interface DiscreteBC {
-
-}
-
-class DiscreteLocalBC {
-
-}
-
-class DiscreteNonLocalBC {
-
-}
-
-DiscreteBC <|- DiscreteLocalBC
-DiscreteBC <|- DiscreteNonLocalBC
+'DiscreteBC <|- DiscreteLocalBC
+'DiscreteBC <|- DiscreteNonLocalBC
 
 HelmholtzEnvironment o- BoundaryCondition
 
@@ -97,12 +97,12 @@ class HelmholtzEnvironment {
 '    knife_edges: List[Edge]
 }
 
-class Edge {
-    x: float
-    z_min: float
-    z_max: float
-}
+'class Edge {
+'    x: float
+'    z_min: float
+'    z_max: float
+'}
 
-HelmholtzEnvironment o- Edge
+'HelmholtzEnvironment o- Edge
 
 @enduml

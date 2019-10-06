@@ -18,13 +18,13 @@ package "Domain layer" <<Rectangle>> #EEEEEE {
     }
 
     package quantum {
-      class SchredingerPadePropagator
+      class SchrodingerPadePropagator
     }
 }
 
 SSPade -up-* TroposphericPadePropagator
 SSPade -up-* UnderwaterPadePropagator
-SSPade -up-* SchredingerPadePropagator
+SSPade -up-* SchrodingerPadePropagator
 
 package "User layer" <<Rectangle>> #EEEEEE {
     'class Experiments
@@ -35,6 +35,6 @@ package "User layer" <<Rectangle>> #EEEEEE {
 
 TroposphericPadePropagator -up-* "User layer"
 UnderwaterPadePropagator -up-* "User layer"
-SchredingerPadePropagator -up-* "User layer"
+SchrodingerPadePropagator -up-* "User layer"
 
 @enduml
