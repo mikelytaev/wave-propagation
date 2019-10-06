@@ -4,15 +4,15 @@ from rwp.vis import *
 
 
 logging.basicConfig(level=logging.DEBUG)
-comp_params = ThinScatteringComputationalParams(max_p_k0=1.2,
-                                                p_grid_size=250,
-                                                quadrature_points=40,
-                                                alpha=1e-2,
+comp_params = ThinScatteringComputationalParams(max_p_k0=1.001,
+                                                p_grid_size=1000,
+                                                quadrature_points=10,
+                                                alpha=1e-3,
                                                 spectral_integration_method=SpectralIntegrationMethod.fcc,
-                                                x_grid_m=np.linspace(-5, 5, 500),
-                                                z_grid_m=np.linspace(-5, 5, 500))
+                                                x_grid_m=np.linspace(-5, 200, 500),
+                                                z_grid_m=np.linspace(-10, 10, 500))
 bodies = []
-bodies += [Ellipse(x0=2.5, z0=0, a=0.5, b=4, eps_r=50)]
+bodies += [Ellipse(x0=40, z0=0, a=0.5, b=4, eps_r=5)]
 #bodies += [Plate(x0_m=-2.5, z1_m=-2.5, z2_m=2.5, width_m=0.5, eps_r=50)]
 #bodies += [Plate(x0_m=5, z1_m=-7.5, z2_m=5, width_m=0.1, eps_r=50)]
 ts = ThinScattering(wavelength=1, bodies=bodies, params=comp_params, save_debug=False)

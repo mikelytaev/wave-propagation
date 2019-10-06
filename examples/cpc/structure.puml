@@ -1,0 +1,40 @@
+@startuml
+
+top to bottom direction
+
+package "Equation solution layer" <<Rectangle>> #EEEEEE {
+    package propagators {
+        class SSPade
+    }
+}
+
+package "Domain layer" <<Rectangle>> #EEEEEE {
+    package rwp {
+      class TroposphericPadePropagator
+    }
+
+    package uwa {
+      class UnderwaterPadePropagator
+    }
+
+    package quantum {
+      class SchredingerPadePropagator
+    }
+}
+
+SSPade -up-* TroposphericPadePropagator
+SSPade -up-* UnderwaterPadePropagator
+SSPade -up-* SchredingerPadePropagator
+
+package "User layer" <<Rectangle>> #EEEEEE {
+    'class Experiments
+    'class GUIApp
+    'class Complex
+}
+'note left: On last defined class
+
+TroposphericPadePropagator -up-* "User layer"
+UnderwaterPadePropagator -up-* "User layer"
+SchredingerPadePropagator -up-* "User layer"
+
+@enduml

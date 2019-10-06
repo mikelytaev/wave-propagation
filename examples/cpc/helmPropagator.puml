@@ -9,32 +9,32 @@ class HelmholtzPadeSolver {
 }
 
 class HelmholtzPropagatorComputationalParams {
-    max_range_m: float
-    max_height_m: float
-    dx_wl: float
-    dz_wl: float
-    max_propagation_angle: float
-    max_src_angle: float
-    exp_pade_order: tuple
-    x_output_filter: int
-    z_output_filter: int
-    two_way: bool
-    two_way_iter_num: int
-    two_way_threshold: float
-    standard_pe: bool
-    sqrt_alpha: float
-    z_order: int
-    terrain_method: TerrainMethod
-    tol: float
-    storage: HelmholtzPropagatorStorage
-    max_abc_permittivity: float
+'    max_range_m: float
+'    max_height_m: float
+'    dx_wl: float
+'    dz_wl: float
+'    max_propagation_angle: float
+'    max_src_angle: float
+'    exp_pade_order: tuple
+'    x_output_filter: int
+'    z_output_filter: int
+'    two_way: bool
+'    two_way_iter_num: int
+'    two_way_threshold: float
+'    standard_pe: bool
+'    sqrt_alpha: float
+'    z_order: int
+'    terrain_method: TerrainMethod
+'    tol: float
+'    storage: HelmholtzPropagatorStorage
+'    max_abc_permittivity: float
 }
 
-enum TerrainMethod {
+'enum TerrainMethod {
+'
+'}
 
-}
-
-HelmholtzPropagatorComputationalParams *-- TerrainMethod
+'HelmholtzPropagatorComputationalParams *-- TerrainMethod
 
 interface HelmholtzPropagatorStorage {
 DiscreteNonLocalBC get_nlbc()
@@ -84,17 +84,17 @@ DiscreteBC <|- DiscreteNonLocalBC
 HelmholtzEnvironment o- BoundaryCondition
 
 class HelmholtzEnvironment {
-    x_max_m: float
-    lower_bc: BoundaryCondition
-    upper_bc: BoundaryCondition
-    z_min: float
-    z_max: float
-    n2minus1: types.FunctionType
-    use_n2minus1: bool
-    rho: types.FunctionType
-    use_rho: bool = True
-    terrain: types.FunctionType
-    knife_edges: List[Edge]
+'    x_max_m: float
+'    lower_bc: BoundaryCondition
+'    upper_bc: BoundaryCondition
+'    z_min: float
+'    z_max: float
+'    n2minus1: types.FunctionType
+'    use_n2minus1: bool
+'    rho: types.FunctionType
+'    use_rho: bool = True
+'    terrain: types.FunctionType
+'    knife_edges: List[Edge]
 }
 
 class Edge {
