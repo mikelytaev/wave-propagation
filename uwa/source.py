@@ -7,6 +7,9 @@ class Source:
     def __init__(self, freq_hz):
         self.freq_hz = freq_hz
 
+    def aperture(self, k0, z):
+        pass
+
     def max_angle(self):
         pass
 
