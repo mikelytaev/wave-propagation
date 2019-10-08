@@ -240,7 +240,7 @@ class LinearTerrain(Terrain):
 
     def __init__(self, edge_range, edge_height):
         edge_range, edge_height = zip(*sorted(zip(edge_range, edge_height), key=itemgetter(0)))
-        self._terrain_func = interp1d(edge_range, edge_height, kind='cubic', fill_value="extrapolate")
+        self._terrain_func = interp1d(edge_range, edge_height, kind='linear', fill_value="extrapolate")
 
 
 class InterpTerrain(Terrain):

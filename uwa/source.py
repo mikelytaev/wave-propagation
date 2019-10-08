@@ -4,8 +4,9 @@ import numpy as np
 
 class Source:
 
-    def __init__(self, freq_hz):
+    def __init__(self, freq_hz, depth):
         self.freq_hz = freq_hz
+        self.depth = depth
 
     def aperture(self, k0, z):
         pass
