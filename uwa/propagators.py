@@ -2,9 +2,6 @@ from uwa.field import *
 from uwa.source import *
 from uwa.environment import *
 from propagators.sspade import *
-import matlab.engine
-
-from dataclasses import dataclass
 
 
 class UnderwaterAcousticsSSPadePropagator:
@@ -32,42 +29,3 @@ class UnderwaterAcousticsSSPadePropagator:
         res = AcousticPressureField(x_grid=h_field.x_grid_m, z_grid=h_field.z_grid_m, freq_hz=self.src.freq_hz)
         res.field = h_field.field
         return res
-
-@dataclass
-class RAMComputationalParams:
-    output_ranges: np.ndarray
-    dr: float
-    dz: float
-    dz_decimate: int = 1
-    c0: float = None
-    pade_coefs_num: int = 4
-    ns: int = 1 # # of stability terms
-    rs: float = 10000.0 # stability range
-
-
-class RAMMatlabPropagator:
-
-    def __init__(self, src: Source, env: UnderwaterEnvironment, comp_params: RAMComputationalParams):
-        self.src = src
-        self.env = env
-        self.comp_params = comp_params
-        dim = 2
-        frq = float(src.freq_hz)
-        zsrc = float(src.depth)
-        rg = matlab.double(self.comp_params.output_ranges)
-        dr = float(self.comp_params.dr)
-        zmax = float(self.env.max_depth)
-        dz = float(self.comp_params.dz)
-        dzm = self.comp_params.dz_decimate
-        c0 = float(self.comp_params.c0)
-        np = self.comp_params.pade_coefs_num
-        ns = self.comp_params.ns
-        rs = float(self.comp_params.rs)
-
-        logging.debug('Starting Matlab engine...')
-        eng = matlab.engine.start_matlab()
-        logging.debug('PETOOL propagating...')
-        #ram(frq, zsrc, dim, rg, dr, zmax, dz, dzm, c0, np, ns, rs, ...
-        #rb, zb, rp, zw, cw, zs, cs, zr, rho, za, attn)
-
-        eng.quit()

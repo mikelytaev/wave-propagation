@@ -1,8 +1,7 @@
-import propagators.field
 import numpy as np
 
 
-class AcousticPressureField:
+class Field2d:
 
     def __init__(self, x_grid, z_grid, freq_hz, field=None):
         self.x_grid, self.z_grid = x_grid, z_grid
@@ -11,3 +10,6 @@ class AcousticPressureField:
             self.field = np.zeros((x_grid.size, z_grid.size), dtype=complex)
         else:
             self.field = field
+
+    def value(self, x, z):
+        pass

@@ -24,7 +24,7 @@ class UnderwaterEnvironment:
     def __init__(self):
         self.c0 = 1500
         self.sound_speed_profile_m_s = lambda x, z: self.c0
-        self.density_profile_g_cm = lambda x, z: 1
         self.bottom_profile = Bathymetry(0, 300)
         self.bottom_sound_speed_m_s = self.c0
         self.bottom_density_g_cm = 1
+        self.bottom_attenuation_dm_lambda = 0.0
