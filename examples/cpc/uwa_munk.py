@@ -4,6 +4,8 @@ from uwa.environment import *
 from uwa.ram import *
 from uwa.utils import *
 
+from uwa.vis import AcousticPressureFieldVisualiser2d
+
 
 src = Source(freq_hz=50, depth=100)
 env = UnderwaterEnvironment()
@@ -14,9 +16,12 @@ env.bottom_density_g_cm = 1.5
 env.bottom_attenuation_dm_lambda = 0.5
 
 comp_params = RAMComputationalParams(
-    output_ranges = np.arange(0, 150000, 250),
-    dr = 250,
-    dz = 0.5
+    output_ranges=np.arange(0, 150000, 250),
+    dr=250,
+    dz=0.5
 )
 ram_propagator = RAMMatlabPropagator(src=src, env=env, comp_params=comp_params)
 field = ram_propagator.calculate()
+
+vis = AcousticPressureFieldVisualiser2d(field=field)
+vis.plot2d(-70, 0).show()
