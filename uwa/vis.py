@@ -54,3 +54,12 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
                 ax.set_ylabel('|u| (dB)')
         fig.tight_layout()
         return fig
+
+    def plot_hor(self, z0, *others):
+        fig = plt.figure(figsize=(6, 3.2))
+        ax = fig.add_subplot(1, 1, 1)
+        for a in (self,) + others:
+            ax.plot(a.field.x_grid, self.trans_func(a.field.field[:, abs(a.field.z_grid - z0).argmin()]).real, label=a.label, **next(self.lines_iter))
+        ax.legend()
+        ax.xlim([self.field.x_grid[0], self.field.x_grid[-1]])
+        return fig

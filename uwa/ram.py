@@ -14,6 +14,7 @@ class RAMComputationalParams:
     output_ranges: np.ndarray
     dr: float
     dz: float
+    zmax: float = None
     dz_decimate: int = 1
     c0: float = None
     pade_coefs_num: int = 4
@@ -37,7 +38,10 @@ class RAMMatlabPropagator:
         zsrc = float(self.src.depth)
         rg = matlab.double(self.comp_params.output_ranges.tolist())
         dr = float(self.comp_params.dr)
-        zmax = float(self.env.bottom_profile.max_depth)
+        if self.comp_params.zmax is None:
+            zmax = float(self.env.bottom_profile.max_depth)+1000
+        else:
+            zmax = self.comp_params.zmax
         dz = float(self.comp_params.dz)
         dzm = self.comp_params.dz_decimate
         np_ = float(self.comp_params.pade_coefs_num)

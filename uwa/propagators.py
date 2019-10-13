@@ -10,22 +10,56 @@ class UnderwaterAcousticsSSPadePropagator:
         self.uwa_env = env
         self.comp_params = comp_params
         self.src = src
-        c0 = min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(round(self.helmholtz_env.z_min), round(self.helmholtz_env.z_max, 1))])
+        c0 = min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(0, self.uwa_env.bottom_profile.max_depth, 1)])
+        self.k0 = 2*cm.pi*self.src.freq_hz / c0
 
         # prepare Helmholtz environment
         m2_ground = (c0 / env.bottom_sound_speed_m_s) ** 2
         self.helmholtz_env = HelmholtzEnvironment(x_max_m=max_range_m, lower_bc=TransparentBC(m2_ground), upper_bc=RobinBC(q1=1, q2=0, q3=0))
         self.helmholtz_env.z_max = 0
-        self.helmholtz_env.z_min = min([self.uwa_env.bottom_profile(x) for x in range(0, max_range_m, 1)]) - 1
-        self.helmholtz_env.n2minus1 = lambda x, z: (c0 / self.uwa_env.sound_speed_profile_m_s(x, z))**2 - 1
-        self.helmholtz_env.rho = lambda x, z: self.uwa_env.density_profile_g_cm(x, z) #???
-        self.helmholtz_env.terrain = lambda x: self.uwa_env.bottom_profile
+        self.helmholtz_env.z_min = -(self.uwa_env.bottom_profile.max_depth + 1000)
+
+        eta = 1 / (40*cm.pi*cm.log10(cm.exp(1)))
+        def n2minus1(x, z, freq_hz):
+            depth = -self.uwa_env.bottom_profile(x)
+            if isinstance(z, float):
+                if z > depth:
+                    return (c0 / self.uwa_env.sound_speed_profile_m_s(x, -z))**2 - 1
+                else:
+                    return (c0 / self.uwa_env.bottom_sound_speed_m_s)**2 * (1 + 1j*eta*self.uwa_env.bottom_attenuation_dm_lambda) ** 2 - 1
+            else:
+                res = z * 0j + (c0 / self.uwa_env.sound_speed_profile_m_s(x, -z))**2 - 1
+                ind = z <= depth
+                res[ind] = (c0 / self.uwa_env.bottom_sound_speed_m_s)**2 * (1 + 1j*eta*self.uwa_env.bottom_attenuation_dm_lambda) ** 2 - 1
+                return res
+
+        self.helmholtz_env.n2minus1 = n2minus1
+
+        def rho(x, z):
+            depth = -self.uwa_env.bottom_profile(x)
+            if isinstance(z, float):
+                if z > depth:
+                    return 1.0
+                else:
+                    return self.uwa_env.bottom_density_g_cm
+            else:
+                res = z*0 + 1
+                ind = z <= depth
+                res[ind] = self.uwa_env.bottom_density_g_cm
+                return res
+
+        self.helmholtz_env.rho = rho
+        self.helmholtz_env.use_rho = True
+        self.helmholtz_env.terrain = lambda x: self.uwa_env.bottom_profile(x)
 
         wavelength = c0 / src.freq_hz
+        if self.comp_params.exp_pade_order is None:
+            self.comp_params.exp_pade_order = (4, 4)
+        self.comp_params.terrain_method = TerrainMethod.pass_through
+
         self.propagator = HelmholtzPadeSolver(env=self.helmholtz_env, wavelength=wavelength, freq_hz=src.freq_hz, params=comp_params)
 
     def calculate(self):
-        h_field = self.propagator.calculate(lambda z: self.src.aperture(z))
-        res = AcousticPressureField(x_grid=h_field.x_grid_m, z_grid=h_field.z_grid_m, freq_hz=self.src.freq_hz)
-        res.field = h_field.field
+        h_field = self.propagator.calculate(lambda z: self.src.aperture(self.k0, -z))
+        res = AcousticPressureField(x_grid=h_field.x_grid_m, z_grid=-h_field.z_grid_m[::-1], freq_hz=self.src.freq_hz, field=h_field.field[:,::-1])
         return res

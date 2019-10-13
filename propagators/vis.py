@@ -37,7 +37,7 @@ class FieldVisualiser2d:
         ax.colorbar(fraction=0.046, pad=0.04)
         return fig
 
-    def plot_x(self, z0, *others):
+    def plot_hor(self, z0, *others):
         fig = plt.figure(figsize=(6, 3.2))
         ax = fig.add_subplot(1, 1, 1)
         for a in (self,) + others:
