@@ -2,14 +2,15 @@ from uwa.field import *
 from uwa.source import *
 from uwa.environment import *
 from propagators.sspade import *
+from copy import deepcopy
 
 
 class UnderwaterAcousticsSSPadePropagator:
 
     def __init__(self, src: Source, env: UnderwaterEnvironment, max_range_m, comp_params=HelmholtzPropagatorComputationalParams()):
-        self.uwa_env = env
-        self.comp_params = comp_params
-        self.src = src
+        self.uwa_env = deepcopy(env)
+        self.comp_params = deepcopy(comp_params)
+        self.src = deepcopy(src)
         c0 = min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(0, self.uwa_env.bottom_profile.max_depth, 1)])
         self.k0 = 2*cm.pi*self.src.freq_hz / c0
 
@@ -57,7 +58,7 @@ class UnderwaterAcousticsSSPadePropagator:
             self.comp_params.exp_pade_order = (4, 4)
         self.comp_params.terrain_method = TerrainMethod.pass_through
 
-        self.propagator = HelmholtzPadeSolver(env=self.helmholtz_env, wavelength=wavelength, freq_hz=src.freq_hz, params=comp_params)
+        self.propagator = HelmholtzPadeSolver(env=self.helmholtz_env, wavelength=wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)
 
     def calculate(self):
         h_field = self.propagator.calculate(lambda z: self.src.aperture(self.k0, -z))
