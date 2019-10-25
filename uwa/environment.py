@@ -7,7 +7,7 @@ class Bathymetry:
         if len(ranges_m) == 1:
             self._func = lambda x: depths_m[0]
         else:
-            self._func = interp1d(ranges_m, depths_m, kind='linear', fill_value=(ranges_m[0], ranges_m[-1]))
+            self._func = interp1d(ranges_m, depths_m, kind='linear', bounds_error=False, fill_value=(depths_m[0], depths_m[-1]))
         self.max_depth = max(depths_m)
         self._ranges_m = ranges_m
         self._depth_m = depths_m
