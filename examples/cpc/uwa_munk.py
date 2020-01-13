@@ -10,7 +10,7 @@ from uwa.vis import AcousticPressureFieldVisualiser2d
 
 logging.basicConfig(level=logging.DEBUG)
 
-src = GaussSource(freq_hz=50, depth=100, beam_width=20, eval_angle=0)
+src = GaussSource(freq_hz=50, depth=100, beam_width=60, eval_angle=0)
 env = UnderwaterEnvironment()
 env.sound_speed_profile_m_s = lambda x, z: munk_profile(z)
 env.bottom_profile = Bathymetry(ranges_m=[0], depths_m=[5000])
@@ -18,17 +18,18 @@ env.bottom_sound_speed_m_s = 1700
 env.bottom_density_g_cm = 1.5
 env.bottom_attenuation_dm_lambda = 0.5
 
-max_ramge = 150000
-sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_ramge)
+max_range = 150000
+sspe_comp_params = HelmholtzPropagatorComputationalParams(exp_pade_order=(4, 4), max_propagation_angle=15)
+sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_range, comp_params=sspe_comp_params)
 sspe_field = sspe_propagator.calculate()
 sspe_field.field *= 5.88
 sspe_vis = AcousticPressureFieldVisualiser2d(field=sspe_field, label='WPF')
 sspe_vis.plot2d(-70, 0).show()
 
 comp_params = RAMComputationalParams(
-    output_ranges=np.arange(0, max_ramge, 250),
-    dr=250,
-    dz=0.5
+    output_ranges=np.arange(0, max_range, 250),
+    dr=50,
+    dz=0.25
 )
 ram_propagator = RAMMatlabPropagator(src=src, env=env, comp_params=comp_params)
 ram_field = ram_propagator.calculate()

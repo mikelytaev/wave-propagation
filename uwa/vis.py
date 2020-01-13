@@ -48,10 +48,7 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
                 ax.set_xlabel('Range (km)')
             elif self.x_units.lower() == 'm':
                 ax.set_xlabel('Range (m)')
-            if self.f_units.lower() == 'db':
-                ax.set_ylabel('20log|u| (dB)')
-            elif self.f_units.lower() == 'abs':
-                ax.set_ylabel('|u| (dB)')
+            ax.set_ylabel('Depth (m)')
         fig.tight_layout()
         return fig
 
@@ -59,7 +56,16 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
         fig = plt.figure(figsize=(6, 3.2))
         ax = fig.add_subplot(1, 1, 1)
         for a in (self,) + others:
-            ax.plot(a.field.x_grid, self.trans_func(a.field.field[:, abs(a.field.z_grid - z0).argmin()]).real, label=a.label, **next(self.lines_iter))
-        ax.legend()
-        ax.xlim([self.field.x_grid[0], self.field.x_grid[-1]])
+            ax.plot(a.field.x_grid*self.x_mult, self.trans_func(a.field.field[:, abs(a.field.z_grid - z0).argmin()]).real, label=a.label, **next(self.lines_iter))
+
+        if self.lang == 'en':
+            if self.x_units.lower() == 'km':
+                ax.set_xlabel('Range (km)')
+            elif self.x_units.lower() == 'm':
+                ax.set_xlabel('Range (m)')
+            if self.f_units.lower() == 'db':
+                ax.set_ylabel('20log|u| (dB)')
+            elif self.f_units.lower() == 'abs':
+                ax.set_ylabel('|u| (dB)')
+        fig.tight_layout()
         return fig
