@@ -61,7 +61,8 @@ class Ellipse(ThinBody2d):
 
 class SpectralIntegrationMethod(Enum):
     fractional_ft = 1,
-    fcc = 2
+    fcc = 2,
+    contour = 3
 
 
 @dataclass
@@ -71,6 +72,7 @@ class ThinScatteringComputationalParams:
     quadrature_points: int
     alpha: float
     spectral_integration_method: SpectralIntegrationMethod
+    h_curve: float = 0.0
     use_mean_value_theorem: bool = False
     x_grid_m: np.ndarray = None
     x_min_m: float = None
@@ -109,6 +111,15 @@ class ThinScattering:
             t = -np.concatenate((self.p_computational_grid[1::] - self.p_computational_grid[0:-1:],
                                  [self.p_computational_grid[-1] - self.p_computational_grid[-2]]))
             _, self.d_p = np.meshgrid(self.p_computational_grid, t, indexing='ij')
+        elif self.params.spectral_integration_method == SpectralIntegrationMethod.contour:
+            h = self.params.h_curve
+            p_grid_h_1 = np.linspace(-self.k0 * self.params.max_p_k0, -h, 500) + 1j * h
+            p_grid_h_2 = np.linspace(-h, h, 500) + 1j * np.linspace(-h, h, 500)
+            p_grid_h_3 = np.linspace(h, self.k0 * self.params.max_p_k0, 500) - 1j * h
+            self.p_computational_grid = np.concatenate((p_grid_h_1, p_grid_h_2[1::], p_grid_h_3[1::]))
+            self.p_grid_is_regular = False
+        else:
+            raise Exception("Specified integration method does not supported")
 
         if self.params.x_grid_m is not None:
             self.x_computational_grid = self.params.x_grid_m
@@ -179,7 +190,7 @@ class ThinScattering:
         m = self._body_z_fourier(body_number, self.quad_x_grid[body_number][i], pv - pshv) * \
             self._integral_green_function(self.quad_weights[body_number][i], self.quad_x_grid[body_number][i], 0, pshv) * qshv
 
-        return np.sum(m * self.d_p, axis=1)    #TODO improve integral approximation??
+        return np.sum(m * self.d_p, axis=1)    # TODO improve integral approximation??
 
     def _body_z_fourier(self, body_number, x_m, p):
         intervals = self.bodies[body_number].get_intersecting_intervals(x_m)
@@ -260,6 +271,9 @@ class ThinScattering:
         logging.debug("Calculating inverse Fourier transform")
         if self.params.spectral_integration_method == SpectralIntegrationMethod.fractional_ft:
             res = ifcft(psi, 2 * self.max_p, 2 * self.params.z_max_m)
-        else:
+        elif self.params.spectral_integration_method == SpectralIntegrationMethod.fcc:
             res = 1 / cm.sqrt(2 * cm.pi) * FCCFourier(2 * self.max_p, self.params.p_grid_size, -self.z_computational_grid).forward(psi.T, -self.max_p, self.max_p).T
+        elif self.params.spectral_integration_method == SpectralIntegrationMethod.contour:
+            h = self.params.h_curve
+            pass
         return res

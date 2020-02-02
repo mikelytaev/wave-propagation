@@ -1,7 +1,7 @@
 """
 Implementation of the Fourier transform method from
 Bailey D. H., Swarztrauber P. N. A fast method for the numerical evaluation of continuous Fourier and Laplace
-transforms //SIAM Journal on Scientific Computing. – 1994. – Т. 15. – №. 5. – С. 1105-1110.
+transforms //SIAM Journal on Scientific Computing. – 1994. – Vol. 15. – N. 5. – С. 1105-1110.
 """
 import numpy as np
 import cmath as cm
@@ -30,7 +30,7 @@ def fcft(f_x, a, b):
     """
     computes discrete Fourier Transform for input points f_x
     1/\sqrt{2 \pi} \int\limits_{-a/2}^{a/2} f(t)\exp (-itx_{k})dt
-    :param f_x: input function values in points np.linspace(-a/2, a/2, m)
+    :param f_x: input function values in points get_fcft_grid(m, b)
     """
     m = f_x.shape[-1]
     delta = a * b / (2 * cm.pi * m ** 2)
@@ -39,8 +39,20 @@ def fcft(f_x, a, b):
     return 1 / cm.sqrt(2 * cm.pi) * beta * np.exp(cm.pi * 1j * (np.arange(0, m) - m / 2) * m * delta) * w
 
 
+def fcft(f_x, a1, a2, b):
+    m = f_x.shape[-1]
+    grid = np.tile(get_fcft_grid(m, b), (f_x.shape[0], 1))
+    return fcft(f_x, (a2 - a1) / 2, b) * np.exp(-1j * (a1 + a2) / 2 * grid)
+
+
 def ifcft(f_x, b, a):
     """
     computes inverse discrete Fourier Transform for input points f_x
     """
     return fcft(f_x, b, -a)
+
+
+def ifcft(f_x, b1, b2, a):
+    m = f_x.shape[-1]
+    grid = np.tile(get_fcft_grid(m, a), (f_x.shape[0], 1))
+    return fcft(f_x, (b2 - b1) / 2, a) * np.exp(1j * (b1 + b2) / 2 * grid)
