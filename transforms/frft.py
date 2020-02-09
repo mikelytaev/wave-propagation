@@ -26,7 +26,7 @@ def frft(x, alpha):
     return np.exp(-cm.pi * 1j * np.arange(0, m) ** 2 * alpha) * w[:, 0:m]
 
 
-def fcft(f_x, a, b):
+def _fcft(f_x, a, b):
     """
     computes discrete Fourier Transform for input points f_x
     1/\sqrt{2 \pi} \int\limits_{-a/2}^{a/2} f(t)\exp (-itx_{k})dt
@@ -42,17 +42,17 @@ def fcft(f_x, a, b):
 def fcft(f_x, a1, a2, b):
     m = f_x.shape[-1]
     grid = np.tile(get_fcft_grid(m, b), (f_x.shape[0], 1))
-    return fcft(f_x, (a2 - a1) / 2, b) * np.exp(-1j * (a1 + a2) / 2 * grid)
+    return _fcft(f_x, a2 - a1, b) * np.exp(-1j * (a1 + a2) / 2 * grid)
 
 
-def ifcft(f_x, b, a):
+def _ifcft(f_x, b, a):
     """
     computes inverse discrete Fourier Transform for input points f_x
     """
-    return fcft(f_x, b, -a)
+    return _fcft(f_x, b, -a)
 
 
 def ifcft(f_x, b1, b2, a):
     m = f_x.shape[-1]
     grid = np.tile(get_fcft_grid(m, a), (f_x.shape[0], 1))
-    return fcft(f_x, (b2 - b1) / 2, a) * np.exp(1j * (b1 + b2) / 2 * grid)
+    return _ifcft(f_x, b2 - b1, a) * np.exp(1j * (b1 + b2) / 2 * grid)

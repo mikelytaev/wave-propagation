@@ -113,10 +113,14 @@ class ThinScattering:
             _, self.d_p = np.meshgrid(self.p_computational_grid, t, indexing='ij')
         elif self.params.spectral_integration_method == SpectralIntegrationMethod.contour:
             h = self.params.h_curve
-            p_grid_h_1 = np.linspace(-self.k0 * self.params.max_p_k0, -h, 500) + 1j * h
-            p_grid_h_2 = np.linspace(-h, h, 500) + 1j * np.linspace(-h, h, 500)
-            p_grid_h_3 = np.linspace(h, self.k0 * self.params.max_p_k0, 500) - 1j * h
-            self.p_computational_grid = np.concatenate((p_grid_h_1, p_grid_h_2[1::], p_grid_h_3[1::]))
+            self.p_grid_h_1 = np.linspace(-self.k0 * self.params.max_p_k0, -h, self.params.p_grid_size + 1)[:-1:] + 1j * h
+            self.p_grid_h_2 = np.linspace(-h, h, self.params.p_grid_size) + 1j * np.linspace(h, -h, self.params.p_grid_size)
+            self.p_grid_h_3 = np.linspace(h, self.k0 * self.params.max_p_k0, self.params.p_grid_size + 1)[1::] - 1j * h
+            self.params.p_grid_size = self.params.p_grid_size * 3
+            self.p_computational_grid = np.concatenate((self.p_grid_h_1, self.p_grid_h_2, self.p_grid_h_3))
+            t = -np.concatenate((self.p_computational_grid[1::] - self.p_computational_grid[0:-1:],
+                                 [self.p_computational_grid[-1] - self.p_computational_grid[-2]]))
+            _, self.d_p = np.meshgrid(self.p_computational_grid, t, indexing='ij')
             self.p_grid_is_regular = False
         else:
             raise Exception("Specified integration method does not supported")
@@ -137,8 +141,10 @@ class ThinScattering:
             self.z_computational_grid = self.params.z_grid_m
         elif self.params.spectral_integration_method == SpectralIntegrationMethod.fractional_ft:
             self.z_computational_grid = get_fcft_grid(self.params.p_grid_size, self.params.z_max_m * 2)
-        else:
+        elif self.params.spectral_integration_method == SpectralIntegrationMethod.fcc:
             self.z_computational_grid = np.linspace(self.params.z_min_m, self.params.z_max_m, self.params.z_grid_size)
+        elif self.params.spectral_integration_method == SpectralIntegrationMethod.contour:
+            self.z_computational_grid = get_fcft_grid(len(self.p_grid_h_2), self.params.z_max_m * 2)
 
         if self.params.use_mean_value_theorem and self.params.quadrature_points > 1:
             raise Exception("not supported")
@@ -270,10 +276,15 @@ class ThinScattering:
 
         logging.debug("Calculating inverse Fourier transform")
         if self.params.spectral_integration_method == SpectralIntegrationMethod.fractional_ft:
-            res = ifcft(psi, 2 * self.max_p, 2 * self.params.z_max_m)
+            res = ifcft(psi, 2 * self.max_p, -self.params.z_max_m, self.params.z_max_m)
         elif self.params.spectral_integration_method == SpectralIntegrationMethod.fcc:
             res = 1 / cm.sqrt(2 * cm.pi) * FCCFourier(2 * self.max_p, self.params.p_grid_size, -self.z_computational_grid).forward(psi.T, -self.max_p, self.max_p).T
         elif self.params.spectral_integration_method == SpectralIntegrationMethod.contour:
             h = self.params.h_curve
-            pass
+            _, z_xz = np.meshgrid(self.x_computational_grid, self.z_computational_grid, indexing='ij')
+            x_xp2, p_xp2 = np.meshgrid(self.x_computational_grid, self.p_grid_h_2.real, indexing='ij')
+            i1 = ifcft(psi[:, 0:len(self.p_grid_h_1):], self.p_grid_h_1[0].real, self.p_grid_h_1[-1].real, 2 * self.params.z_max_m) * np.exp(-z_xz * h)
+            i2 = ifcft(psi[:, (len(self.p_grid_h_1)):(len(self.p_grid_h_1)+len(self.p_grid_h_2)):] * np.exp(x_xp2 * p_xp2), self.p_grid_h_2[0].real, self.p_grid_h_2[-1].real, 2 * self.params.z_max_m)
+            i3 = ifcft(psi[:, (len(self.p_grid_h_1) + len(self.p_grid_h_2))::], self.p_grid_h_3[0].real, self.p_grid_h_3[-1].real, 2 * self.params.z_max_m) * np.exp(z_xz * h)
+            res = i1 + i2 + i3
         return res

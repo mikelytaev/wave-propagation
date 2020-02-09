@@ -25,9 +25,9 @@ p_grid_m = p_grid_r_m + 1j * p_grid_c_m
 
 h = 0.1
 p_grid_h_1 = np.linspace(-ts.k0*ts.params.max_p_k0, -h, 500) + 1j*h
-p_grid_h_2 = np.linspace(-h, h, 500) + 1j * np.linspace(-h, h, 500)
+p_grid_h_2 = np.linspace(-h, h, 500) + 1j * np.linspace(h, -h, 500)
 p_grid_h_3 = np.linspace(h, ts.k0*ts.params.max_p_k0, 500) - 1j*h
 p_grid_h = np.concatenate((p_grid_h_1, p_grid_h_2[1::], p_grid_h_3[1::]))
 gf = ts.green_function(0, 100, p_grid_h)
-plt.plot(p_grid_h.real / ts.k0, gf.real)
+plt.plot(p_grid_h.real / ts.k0, abs(gf))
 plt.show()
