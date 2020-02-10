@@ -6,18 +6,18 @@ from rwp.vis import *
 logging.basicConfig(level=logging.DEBUG)
 comp_params = ThinScatteringComputationalParams(max_p_k0=1.001,
                                                 p_grid_size=1000,
-                                                quadrature_points=10,
+                                                quadrature_points=1,
                                                 alpha=1e-5,
                                                 spectral_integration_method=SpectralIntegrationMethod.contour,
                                                 h_curve=0.1,
-                                                x_grid_m=np.linspace(-5, 500, 500),
+                                                x_grid_m=np.linspace(-5, 1000, 500),
                                                 #z_grid_m=np.linspace(-10, 10, 500),
                                                 z_grid_size=600,
                                                 z_min_m=-50,
                                                 z_max_m=50)
 bodies = []
-#bodies += [Ellipse(x0=40, z0=0, a=0.5, b=4, eps_r=5)]
-#bodies += [Plate(x0_m=-2.5, z1_m=-2.5, z2_m=2.5, width_m=0.5, eps_r=50)]
+#bodies += [Ellipse(x0=200, z0=0, a=0.5, b=4, eps_r=5)]
+bodies += [Plate(x0_m=200, z1_m=-2.5, z2_m=2.5, width_m=4e-5, eps_r=1e7)]
 #bodies += [Plate(x0_m=5, z1_m=-7.5, z2_m=5, width_m=0.1, eps_r=50)]
 ts = ThinScattering(wavelength=1, bodies=bodies, params=comp_params, save_debug=False)
 f = ts.calculate()

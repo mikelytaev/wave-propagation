@@ -23,11 +23,11 @@ p_grid_m = p_grid_r_m + 1j * p_grid_c_m
 # plt.colorbar(fraction=0.046, pad=0.04)
 # plt.show()
 
-h = 0.1
+h = 0.0000
 p_grid_h_1 = np.linspace(-ts.k0*ts.params.max_p_k0, -h, 1000) + 1j*h
 p_grid_h_2 = np.linspace(-h, h, 400) + 1j * np.linspace(h, -h, 400)
 p_grid_h_3 = np.linspace(h, ts.k0*ts.params.max_p_k0, 1000) - 1j*h
 p_grid_h = np.concatenate((p_grid_h_1, p_grid_h_2[1::], p_grid_h_3[1::]))
 gf = ts.green_function(0, 1000, p_grid_h)
-plt.plot(p_grid_h.real / ts.k0, (gf.real))
+plt.plot(p_grid_h.real / ts.k0, (gf.imag))
 plt.show()
