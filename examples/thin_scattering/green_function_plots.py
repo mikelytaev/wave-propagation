@@ -4,7 +4,7 @@ from rwp.vis import *
 
 
 logging.basicConfig(level=logging.DEBUG)
-comp_params = ThinScatteringComputationalParams(max_p_k0=1.5,
+comp_params = ThinScatteringComputationalParams(max_p_k0=1.0,
                                                 p_grid_size=1000,
                                                 quadrature_points=10,
                                                 alpha=1e-3,
@@ -24,10 +24,10 @@ p_grid_m = p_grid_r_m + 1j * p_grid_c_m
 # plt.show()
 
 h = 0.1
-p_grid_h_1 = np.linspace(-ts.k0*ts.params.max_p_k0, -h, 500) + 1j*h
-p_grid_h_2 = np.linspace(-h, h, 500) + 1j * np.linspace(h, -h, 500)
-p_grid_h_3 = np.linspace(h, ts.k0*ts.params.max_p_k0, 500) - 1j*h
+p_grid_h_1 = np.linspace(-ts.k0*ts.params.max_p_k0, -h, 1000) + 1j*h
+p_grid_h_2 = np.linspace(-h, h, 400) + 1j * np.linspace(h, -h, 400)
+p_grid_h_3 = np.linspace(h, ts.k0*ts.params.max_p_k0, 1000) - 1j*h
 p_grid_h = np.concatenate((p_grid_h_1, p_grid_h_2[1::], p_grid_h_3[1::]))
-gf = ts.green_function(0, 100, p_grid_h)
-plt.plot(p_grid_h.real / ts.k0, abs(gf))
+gf = ts.green_function(0, 1000, p_grid_h)
+plt.plot(p_grid_h.real / ts.k0, (gf.real))
 plt.show()
