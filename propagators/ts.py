@@ -114,12 +114,14 @@ class ThinScattering:
             _, self.d_p = np.meshgrid(self.p_computational_grid, t, indexing='ij')
         elif self.params.spectral_integration_method == SpectralIntegrationMethod.contour:
             h = self.params.h_curve
-            self.p_grid_h_1 = np.linspace(-self.k0 * self.params.max_p_k0, -h, 500 + 1)[:-1:] + 1j * h
+            #self.p_grid_h_1 = np.linspace(-self.k0 * self.params.max_p_k0, -h, 3000 + 1)[:-1:] + 1j * h
+            self.p_grid_h_1 = chebyshev_grid(-self.k0 * self.params.max_p_k0, -h, 3000)[::-1] + 1j * h
             #self.p_grid_h_2 = (1 - 1j) * chebyshev_grid(-h, 0, 200)[::-1]  # * np.linspace(-h, h, 800)
             #self.p_grid_h_3 = (1 - 1j) * chebyshev_grid(0, h, 200)[1::-1]
-            self.p_grid_h_2 = (1 - 1j) * np.linspace(-h, h, 100)
+            self.p_grid_h_2 = (1 - 1j) * np.linspace(-h, h, 500)[1:-1:]
             self.p_grid_h_3 = np.array([])
-            self.p_grid_h_4 = np.linspace(h, self.k0 * self.params.max_p_k0, 500 + 1)[1::] - 1j * h
+            #self.p_grid_h_4 = np.linspace(h, self.k0 * self.params.max_p_k0, 3000 + 1)[1::] - 1j * h
+            self.p_grid_h_4 = chebyshev_grid(h, self.k0 * self.params.max_p_k0, 3000)[::-1] - 1j * h
             self.p_computational_grid = np.concatenate((self.p_grid_h_1, self.p_grid_h_2, self.p_grid_h_3, self.p_grid_h_4))
             self.params.p_grid_size = len(self.p_computational_grid)
             t = np.concatenate((self.p_computational_grid[1::] - self.p_computational_grid[0:-1:],

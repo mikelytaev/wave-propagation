@@ -229,10 +229,10 @@ class HelmholtzPadeSolver:
         x_approx_sampling = 2000
         z_approx_sampling = 1000
 
-        if self.params.terrain_method == TerrainMethod.pass_through:
-            n_g = self.params.max_abc_permittivity
-            self.params.dx_wl /= round(abs(cm.sqrt(n_g - 0.1)))
-            self.params.dz_wl /= round(abs(cm.sqrt(n_g - 0.1)))
+        # if self.params.terrain_method == TerrainMethod.pass_through:
+        #     n_g = self.params.max_abc_permittivity
+        #     self.params.dx_wl /= round(abs(cm.sqrt(n_g - 0.1)))
+        #     self.params.dz_wl /= round(abs(cm.sqrt(n_g - 0.1)))
 
         self.params.max_range_m = self.params.max_range_m or self.env.x_max_m
 
@@ -432,11 +432,19 @@ class HelmholtzPadeSolver:
         if max(self.params.exp_pade_order) == 1:
             def nlbc_transformed(t):
                 t = tau * cm.exp(1j * t)
-                return diff_eq_solution_ratio(((1 - t) / (-num_roots[0] + den_roots[0] * t)))
+
+                theta = cm.acos(1 + 1 / (1j * self.k0 * self.dx_m) * cm.log(t)) * 180 / cm.pi
+                logging.debug("theta = " + str(theta))
+
+                return diff_eq_solution_ratio(((1 - t) / (-num_roots[0] + den_roots[0] * t)), theta)
         else:
-            def nlbc_transformed(t):
-                ang = t / cm.pi
-                t = tau * cm.exp(1j*t)
+            def nlbc_transformed(f):
+                t = tau * cm.exp(1j*f)
+
+                theta = cm.acos(1 + (f - 1j * cm.log(tau)) / (self.k0 * self.dx_m)) * 180 / cm.pi
+                refl_coef = reflection_coef(1, 2 + 1, 90 - theta, "V")
+                logging.debug("theta = " + str(theta) + " refl = " + str(refl_coef))
+
                 matrix_a = np.diag(den_roots, 0) - np.diag(num_roots[1:], -1)
                 matrix_a[0, -1] = -num_roots[0]
                 matrix_a[0, 0] *= t
@@ -444,28 +452,32 @@ class HelmholtzPadeSolver:
                 matrix_b[0, -1] = 1
                 matrix_b[0, 0] *= t
                 w, vr = la.eig(matrix_b, matrix_a, right=True)
-                r = np.diag([diff_eq_solution_ratio(a) for a in w])
+                r = np.diag([diff_eq_solution_ratio(a, theta) for a in w])
                 res = vr.dot(r).dot(la.inv(vr))
                 return res.reshape(m_size**2)
 
-        fcca = FCCAdaptiveFourier(2 * fm.pi, -np.arange(0, self.n_x), rtol=self.params.tol)
+        fcca = FCCAdaptiveFourier(2*fm.pi, -np.arange(0, self.n_x), rtol=self.params.tol)
 
         coefs = (tau**np.repeat(np.arange(0, self.n_x)[:, np.newaxis], m_size ** 2, axis=1) / (2*fm.pi) *
-                fcca.forward(lambda t: nlbc_transformed(t), 0, 2*fm.pi)).reshape((self.n_x, m_size, m_size))
+                fcca.forward(lambda t: nlbc_transformed(t), -2*cm.pi, 0)).reshape((self.n_x, m_size, m_size))
 
         return DiscreteNonLocalBC(coefs=coefs)
 
     def _calc_lower_nlbc(self, beta):
         logging.info('Computing lower nonlocal boundary condition...')
         alpha = self.alpha
+        #beta = 0
 
-        def diff_eq_solution_ratio(s):
-            refl_coef = 0
-            a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
-            a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
-            c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
+        def diff_eq_solution_ratio(s, theta):
+            a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
+            a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
+            c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - 0)
 
             mu = sqr_eq(a_1, c, a_m1)
+            # theta = cm.asin(1 / (1j * self.k0 * self.dz_m) * cm.log(mu)) * 180 / cm.pi
+            # logging.debug("theta = " + str(theta))
+            refl_coef = reflection_coef(1, 2+1, 90 - theta, "V")
+            #return (1 + refl_coef) / (refl_coef / mu + mu)
             return (1 / mu + refl_coef * mu) / (1 + refl_coef)
 
         return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
@@ -475,7 +487,7 @@ class HelmholtzPadeSolver:
         alpha = self.alpha
         if abs(gamma) < 10 * np.finfo(float).eps:
 
-            def diff_eq_solution_ratio(s):
+            def diff_eq_solution_ratio(s, theta):
                 a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
                 a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
                 c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
@@ -486,7 +498,7 @@ class HelmholtzPadeSolver:
             b = alpha * gamma * self.dz_m * (self.k0 * self.dz_m) ** 2
             d = gamma * self.dz_m * (self.k0 * self.dz_m) ** 2 - 2 * b
 
-            def diff_eq_solution_ratio(s):
+            def diff_eq_solution_ratio(s, theta):
                 a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) - b
                 a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) + b
                 c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
