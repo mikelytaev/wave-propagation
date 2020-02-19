@@ -441,9 +441,9 @@ class HelmholtzPadeSolver:
             def nlbc_transformed(f):
                 t = tau * cm.exp(1j*f)
 
-                theta = cm.acos(1 + (f - 1j * cm.log(tau)) / (self.k0 * self.dx_m)) * 180 / cm.pi
+                theta = cm.acos(1 - (f - 1j*cm.log(tau)) / (self.k0 * self.dx_m)) * 180 / cm.pi
                 refl_coef = reflection_coef(1, 2 + 1, 90 - theta, "V")
-                logging.debug("theta = " + str(theta) + " refl = " + str(refl_coef))
+                #logging.debug("theta = " + str(theta) + " refl = " + str(refl_coef))
 
                 matrix_a = np.diag(den_roots, 0) - np.diag(num_roots[1:], -1)
                 matrix_a[0, -1] = -num_roots[0]
@@ -459,7 +459,7 @@ class HelmholtzPadeSolver:
         fcca = FCCAdaptiveFourier(2*fm.pi, -np.arange(0, self.n_x), rtol=self.params.tol)
 
         coefs = (tau**np.repeat(np.arange(0, self.n_x)[:, np.newaxis], m_size ** 2, axis=1) / (2*fm.pi) *
-                fcca.forward(lambda t: nlbc_transformed(t), -2*cm.pi, 0)).reshape((self.n_x, m_size, m_size))
+                fcca.forward(lambda t: nlbc_transformed(t), 0, 2*cm.pi)).reshape((self.n_x, m_size, m_size))
 
         return DiscreteNonLocalBC(coefs=coefs)
 
@@ -477,6 +477,7 @@ class HelmholtzPadeSolver:
             # theta = cm.asin(1 / (1j * self.k0 * self.dz_m) * cm.log(mu)) * 180 / cm.pi
             # logging.debug("theta = " + str(theta))
             refl_coef = reflection_coef(1, 2+1, 90 - theta, "V")
+            refl_coef = 0.1
             #return (1 + refl_coef) / (refl_coef / mu + mu)
             return (1 / mu + refl_coef * mu) / (1 + refl_coef)
 
@@ -488,10 +489,17 @@ class HelmholtzPadeSolver:
         if abs(gamma) < 10 * np.finfo(float).eps:
 
             def diff_eq_solution_ratio(s, theta):
-                a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
-                a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
-                c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
-                return 1 / sqr_eq(a_1, c, a_m1)
+                a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
+                a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
+                c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - 0)
+                mu = sqr_eq(a_1, c, a_m1)
+                theta = cm.asin(1 / (1j*self.k0*self.dz_m)*cm.log(mu)) / cm.pi * 180
+                logging.debug("theta = " + str(theta))
+                #return 1 / sqr_eq(a_1, c, a_m1)
+                refl_coef = reflection_coef(1, 2 + 1, 90 - theta, "V")
+                #refl_coef = 0.1
+                #refl_coef = 1 / (1 + cm.exp(-(90-theta - 45)))
+                return (1 / mu + refl_coef * mu) / (1 + refl_coef)
 
             return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
         else:
