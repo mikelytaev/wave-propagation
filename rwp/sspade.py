@@ -18,11 +18,12 @@ class TroposphericRadioWaveSSPadePropagator:
             self.comp_params.two_way = False
         k0 = 2*cm.pi / self.src.wavelength
 
-        logging.info("ground refractive index: " + str(self.env.ground_material.complex_permittivity(antenna.freq_hz)))
+        ground_eps_r = self.env.ground_material.complex_permittivity(self.src.freq_hz)
+        logging.info("ground refractive index: " + str(ground_eps_r))
         if self.comp_params.terrain_method is None:
             if self.env.terrain.is_homogeneous:
                 self.comp_params.terrain_method = TerrainMethod.no
-            elif abs(self.env.ground_material.complex_permittivity(antenna.freq_hz)) < 100:
+            elif abs(ground_eps_r) < 100:
                 self.comp_params.terrain_method = TerrainMethod.pass_through
             else:
                 self.comp_params.terrain_method = TerrainMethod.staircase
@@ -30,20 +31,24 @@ class TroposphericRadioWaveSSPadePropagator:
         logging.info("Terrain method: " + self.comp_params.terrain_method.name)
 
         if self.comp_params.terrain_method == TerrainMethod.pass_through:
-            lower_bc = TransparentBC(self.env.ground_material.complex_permittivity(self.src.freq_hz))
-        else:
-            if isinstance(self.env.ground_material, PerfectlyElectricConducting):
-                if self.src.polarz.upper() == 'H':
-                    q1, q2 = 1, 0
-                else:
-                    q1, q2 = 0, 1
+            lower_bc = TransparentBC(ground_eps_r)
+        elif isinstance(self.env.ground_material, PerfectlyElectricConducting):
+            if self.src.polarz.upper() == 'H':
+                q1, q2 = 1, 0
             else:
-                if self.src.polarz.upper() == 'H':
-                    q1, q2 = 1j * k0 * self.env.ground_material.complex_permittivity(self.src.freq_hz) ** (1 / 2), 1
-                else:
-                    q1, q2 = 1j * k0 * self.env.ground_material.complex_permittivity(self.src.freq_hz) ** (-1 / 2), 1
-
+                q1, q2 = 0, 1
+        elif self.comp_params.terrain_method == TerrainMethod.staircase:
+            if self.src.polarz.upper() == 'H':
+                q1, q2 = 1j * k0 * ground_eps_r ** (1 / 2), 1
+            else:
+                q1, q2 = 1j * k0 * ground_eps_r ** (-1 / 2), 1
             lower_bc = RobinBC(q1, q2, 0)
+        elif self.comp_params.terrain_method == TerrainMethod.no:
+            if self.env.rms_m:
+                reflection_coefficient = lambda theta: Miller_Brown_factor(theta, k0, self.env.rms_m) * reflection_coef(1, ground_eps_r, 90-theta, self.src.polarz)
+            else:
+                reflection_coefficient = lambda theta: reflection_coef(1, ground_eps_r, 90 - theta, self.src.polarz)
+            lower_bc = AngleDependentBC(reflection_coefficient)
 
         if self.src.polarz.upper() == 'V':
             rho = lambda x, z: 1 / (self.env.n2m1_profile(x, z, self.src.freq_hz) + 1)
@@ -73,7 +78,7 @@ class TroposphericRadioWaveSSPadePropagator:
             def n2m1(x, z, freq_hz):
                 return self.env.n2m1_profile(x, z, freq_hz)
 
-        self.comp_params.max_abc_permittivity = abs(self.env.ground_material.complex_permittivity(self.src.freq_hz))
+        self.comp_params.max_abc_permittivity = abs(ground_eps_r)
 
         self.helm_env = HelmholtzEnvironment(x_max_m=max_range_m,
                                              lower_bc=lower_bc,

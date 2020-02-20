@@ -47,6 +47,15 @@ class TransparentBC(BoundaryCondition):
         self.gamma = gamma
 
 
+class AngleDependentBC(BoundaryCondition):
+
+    def __init__(self, reflection_coefficient: types.FunctionType):
+        """
+        :param reflection_coefficient: mapping between grazing angle (in degrees) and reflection coefficient
+        """
+        self.reflection_coefficient = reflection_coefficient
+
+
 class DiscreteLocalBC(BoundaryCondition):
     """
     Coefficients of the discrete local boundary condition of the form
@@ -72,6 +81,7 @@ class DiscreteNonLocalBC(BoundaryCondition):
 class TerrainMethod(Enum):
     """
     Terrain accounting method
+    no: flat surface
     pass_through: transparent boundary and varying refractive index
     staircase: impedance boundary and varying lower boundary height
     """
@@ -229,10 +239,10 @@ class HelmholtzPadeSolver:
         x_approx_sampling = 2000
         z_approx_sampling = 1000
 
-        # if self.params.terrain_method == TerrainMethod.pass_through:
-        #     n_g = self.params.max_abc_permittivity
-        #     self.params.dx_wl /= round(abs(cm.sqrt(n_g - 0.1)))
-        #     self.params.dz_wl /= round(abs(cm.sqrt(n_g - 0.1)))
+        if self.params.terrain_method == TerrainMethod.pass_through:
+            n_g = self.params.max_abc_permittivity
+            self.params.dx_wl /= round(abs(cm.sqrt(n_g - 0.1)))
+            self.params.dz_wl /= round(abs(cm.sqrt(n_g - 0.1)))
 
         self.params.max_range_m = self.params.max_range_m or self.env.x_max_m
 
@@ -400,6 +410,8 @@ class HelmholtzPadeSolver:
                                                        gamma=gamma, nlbc=self.lower_bc)
             else:
                 self.lower_bc = self._calc_lower_nlbc(beta)
+        elif isinstance(self.env.lower_bc, AngleDependentBC):
+            self.lower_bc = self._calc_lower_nlbc(0, self.env.lower_bc.reflection_coefficient)
         else:
             self.lower_bc = self.env.lower_bc
 
@@ -440,11 +452,6 @@ class HelmholtzPadeSolver:
         else:
             def nlbc_transformed(f):
                 t = tau * cm.exp(1j*f)
-
-                theta = cm.acos(1 - (f - 1j*cm.log(tau)) / (self.k0 * self.dx_m)) * 180 / cm.pi
-                refl_coef = reflection_coef(1, 2 + 1, 90 - theta, "V")
-                #logging.debug("theta = " + str(theta) + " refl = " + str(refl_coef))
-
                 matrix_a = np.diag(den_roots, 0) - np.diag(num_roots[1:], -1)
                 matrix_a[0, -1] = -num_roots[0]
                 matrix_a[0, 0] *= t
@@ -452,7 +459,7 @@ class HelmholtzPadeSolver:
                 matrix_b[0, -1] = 1
                 matrix_b[0, 0] *= t
                 w, vr = la.eig(matrix_b, matrix_a, right=True)
-                r = np.diag([diff_eq_solution_ratio(a, theta) for a in w])
+                r = np.diag([diff_eq_solution_ratio(a) for a in w])
                 res = vr.dot(r).dot(la.inv(vr))
                 return res.reshape(m_size**2)
 
@@ -463,22 +470,17 @@ class HelmholtzPadeSolver:
 
         return DiscreteNonLocalBC(coefs=coefs)
 
-    def _calc_lower_nlbc(self, beta):
+    def _calc_lower_nlbc(self, beta, refl_coef_func=None):
         logging.info('Computing lower nonlocal boundary condition...')
         alpha = self.alpha
-        #beta = 0
 
-        def diff_eq_solution_ratio(s, theta):
-            a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
-            a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
-            c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - 0)
-
+        def diff_eq_solution_ratio(s):
+            a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
+            a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
+            c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
             mu = sqr_eq(a_1, c, a_m1)
-            # theta = cm.asin(1 / (1j * self.k0 * self.dz_m) * cm.log(mu)) * 180 / cm.pi
-            # logging.debug("theta = " + str(theta))
-            refl_coef = reflection_coef(1, 2+1, 90 - theta, "V")
-            refl_coef = 0.1
-            #return (1 + refl_coef) / (refl_coef / mu + mu)
+            theta = cm.asin(1 / (1j * self.k0 * self.dz_m) * cm.log(mu)) / cm.pi * 180
+            refl_coef = refl_coef_func(theta)
             return (1 / mu + refl_coef * mu) / (1 + refl_coef)
 
         return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
@@ -488,17 +490,14 @@ class HelmholtzPadeSolver:
         alpha = self.alpha
         if abs(gamma) < 10 * np.finfo(float).eps:
 
-            def diff_eq_solution_ratio(s, theta):
-                a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
-                a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - 0)
-                c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - 0)
+            def diff_eq_solution_ratio(s):
+                a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
+                a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta)
+                c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
                 mu = sqr_eq(a_1, c, a_m1)
-                theta = cm.asin(1 / (1j*self.k0*self.dz_m)*cm.log(mu)) / cm.pi * 180
-                logging.debug("theta = " + str(theta))
-                #return 1 / sqr_eq(a_1, c, a_m1)
-                refl_coef = reflection_coef(1, 2 + 1, 90 - theta, "V")
-                #refl_coef = 0.1
-                #refl_coef = 1 / (1 + cm.exp(-(90-theta - 45)))
+                #theta = cm.asin(1 / (1j*self.k0*self.dz_m)*cm.log(mu)) / cm.pi * 180
+                #refl_coef = reflection_coef(1, 2 + 1, 90 - theta, "V")
+                refl_coef = 0
                 return (1 / mu + refl_coef * mu) / (1 + refl_coef)
 
             return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
@@ -506,7 +505,7 @@ class HelmholtzPadeSolver:
             b = alpha * gamma * self.dz_m * (self.k0 * self.dz_m) ** 2
             d = gamma * self.dz_m * (self.k0 * self.dz_m) ** 2 - 2 * b
 
-            def diff_eq_solution_ratio(s, theta):
+            def diff_eq_solution_ratio(s):
                 a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) - b
                 a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) + b
                 c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)

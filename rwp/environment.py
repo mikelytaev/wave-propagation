@@ -276,6 +276,7 @@ class Troposphere:
         self.vegetation = []
         self.knife_edges = []
         self.is_flat = flat
+        self.rms_m = None
         if flat:
             self.Earth_radius = float("Inf")
         else:

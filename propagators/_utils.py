@@ -163,6 +163,12 @@ def brewster_angle(eps1, eps2):
     return 90 - cm.asin(1 / cm.sqrt(eps2 / eps1 + 1)) * 180 / cm.pi
 
 
+def Miller_Brown_factor(theta, k0, rms_m):
+    gamma = 2 * k0 * rms_m * cm.sin(theta)
+    rho = cm.exp(-0.5 * k0 * rms_m * gamma**2) * np.i0(0.5 * gamma**2)
+    return rho
+
+
 def sqr_eq(a, b, c):
     c1 = (-b + cm.sqrt(b**2 - 4 * a * c)) / (2 * a)
     c2 = (-b - cm.sqrt(b ** 2 - 4 * a * c)) / (2 * a)
