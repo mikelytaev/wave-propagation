@@ -1,9 +1,11 @@
 import cmath
 from itertools import zip_longest
 from typing import List, Any
+from scipy.special import i0e
 
 import mpmath
 import cmath as cm
+import math as fm
 import numpy as np
 
 
@@ -164,8 +166,9 @@ def brewster_angle(eps1, eps2):
 
 
 def Miller_Brown_factor(theta, k0, rms_m):
-    gamma = 2 * k0 * rms_m * cm.sin(theta)
-    rho = cm.exp(-0.5 * k0 * rms_m * gamma**2) * np.i0(0.5 * gamma**2)
+    gamma = 2 * k0 * rms_m * cm.sin(theta * cm.pi / 180)
+    rho = i0e(0.5 * abs(gamma)**2)
+    #print("theta = " +str(theta) + " sin(theta) = " + str(cm.sin(theta * cm.pi / 180)) + " rho = " + str(rho))
     return rho
 
 

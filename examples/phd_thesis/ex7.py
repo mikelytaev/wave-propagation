@@ -49,6 +49,8 @@ plt.tight_layout()
 plt.grid(True)
 plt.show()
 
+Miller_Brown_factor(10, 2*cm.pi / 0.03, 0.5)
+
 
 tau = 1.001
 t = np.linspace(-cm.pi, cm.pi, 1000)
@@ -61,5 +63,5 @@ plt.plot(t, theta.real, t, theta.imag)
 refls = np.array([reflection_coef(1, 3, 90-t, "V") for t in theta])
 plt.plot(t, refls.real, t, refls.imag)
 t3 = np.linspace(-90, 90, 1000)
-refls = np.array([reflection_coef(1, 3, t, "V") for t in t3])
-plt.plot(t, refls.real, t, refls.imag)
+refls = np.array([reflection_coef(1, 3, t, "V") for t in t3*1j])
+plt.plot(t3, refls.real, t3, refls.imag)
