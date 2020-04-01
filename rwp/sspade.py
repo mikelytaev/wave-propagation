@@ -37,6 +37,7 @@ class TroposphericRadioWaveSSPadePropagator:
                 q1, q2 = 1, 0
             else:
                 q1, q2 = 0, 1
+            lower_bc = RobinBC(q1, q2, 0)
         elif self.comp_params.terrain_method == TerrainMethod.staircase:
             if self.src.polarz.upper() == 'H':
                 q1, q2 = 1j * k0 * ground_eps_r ** (1 / 2), 1
