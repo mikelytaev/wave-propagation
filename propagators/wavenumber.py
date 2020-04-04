@@ -5,7 +5,7 @@ import numpy as np
 from propagators.math_utils import *
 from transforms.fcc_fourier import FCCAdaptiveFourier
 import types
-from scipy.linalg import sqrtm
+from scipy.linalg import sqrtm, solve
 
 
 @dataclass
@@ -37,7 +37,8 @@ class WaveNumberIntegrator:
             self.q2 = sqrtm(np.diag(np.eye(len(self.params.z_computational_grid_m))) + d2_m / self.k0 ** 2).dot(self.q1)
 
         if self.params.het:
-            assert np.all(self.params.z_computational_grid_m == self.params.z_out_grid_m)
+            #assert np.all(self.params.z_computational_grid_m == self.params.z_out_grid_m)
+            assert len(self.params.z_computational_grid_m) == len(self.params.z_out_grid_m)
             _, self.het_v = np.meshgrid(self.params.z_out_grid_m, self.params.het(self.params.z_computational_grid_m), indexing='ij')
 
     def green_function(self, z, zsh, k_x):
@@ -74,7 +75,7 @@ class WaveNumberIntegrator:
             res = self.green_function(self.params.z_out_grid_m, self.initial_func.x_c, k_x)
             if self.params.het:
                 a = self.green_function(self.params.z_out_grid_m, self.params.z_computational_grid_m, k_x) * self.het_v * self.dz
-                res = solve(np.eye(len(self.params.z_computational_grid_m)) + a, res)
+                res = solve(np.eye(len(self.params.z_computational_grid_m)) + a, res, overwrite_a=True, overwrite_b=True)
 
         elif callable(self.initial_func):
             r = 1j * k_x * self.q1 + self.q2
