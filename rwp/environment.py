@@ -120,7 +120,7 @@ class FreshWater(Material):
         mi = 3 - 1
 
         if freqMHz > 6165.776:
-            epsilon = _MAGIC_A(mi) + _MAGIC_C(mi) * freqMHz + _MAGIC_E[mi] * freqMHz ** 2
+            epsilon = _MAGIC_A[mi] + _MAGIC_C[mi] * freqMHz + _MAGIC_E[mi] * freqMHz ** 2
             epsilon = epsilon / (1.0 + _MAGIC_B[mi] * freqMHz + _MAGIC_D[mi] * freqMHz ** 2 + _MAGIC_F[mi] * freqMHz ** 3)
         return epsilon
 
@@ -151,8 +151,8 @@ class WetGround(Material):
             mi = 7 - 1
 
         if freqMHz > 1312.054:
-            epsilon = _MAGIC_A[mi] + _MAGIC_C[mi] * freqMHz + _MAGIC_E[mi] * freqMHz
-            epsilon = cm.sqrt(epsilon / (1.0 + _MAGIC_B[mi] * freqMHz + _MAGIC_D[mi] * freqMHz))
+            epsilon = _MAGIC_A[mi] + _MAGIC_C[mi] * freqMHz + _MAGIC_E[mi] * freqMHz**2
+            epsilon = cm.sqrt(epsilon / (1.0 + _MAGIC_B[mi] * freqMHz + _MAGIC_D[mi] * freqMHz**2))
 
         return epsilon
 

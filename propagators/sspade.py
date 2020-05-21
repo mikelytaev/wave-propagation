@@ -161,6 +161,7 @@ class HelmholtzPropagatorComputationalParams:
     grid_optimizator_threshold: float = 5e-3
     storage: HelmholtzPropagatorStorage = None
     max_abc_permittivity: float = 1
+    inv_z_transform_tau: float = 1.001
 
 
 class HelmholtzField:
@@ -440,7 +441,7 @@ class HelmholtzPadeSolver:
     def _calc_nlbc(self, diff_eq_solution_ratio):
         num_roots, den_roots = list(zip(*self.pade_coefs))
         m_size = len(self.pade_coefs)
-        tau = 1.001
+        tau = self.params.inv_z_transform_tau
         if max(self.params.exp_pade_order) == 1:
             def nlbc_transformed(t):
                 t = tau * cm.exp(1j * t)
@@ -480,7 +481,7 @@ class HelmholtzPadeSolver:
             c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
             mu = sqr_eq(a_1, c, a_m1)
             theta = cm.asin(1 / (1j * self.k0 * self.dz_m) * cm.log(mu)) / cm.pi * 180
-            refl_coef = refl_coef_func(theta)
+            refl_coef = refl_coef_func(theta, -s*self.k0**2)
             return (1 / mu + refl_coef * mu) / (1 + refl_coef)
 
         return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)

@@ -1,7 +1,7 @@
 import cmath
 from itertools import zip_longest
 from typing import List, Any
-from scipy.special import i0e
+from scipy.special import ive, iv
 
 import mpmath
 import cmath as cm
@@ -167,9 +167,70 @@ def brewster_angle(eps1, eps2):
 
 def Miller_Brown_factor(theta, k0, rms_m):
     gamma = 2 * k0 * rms_m * cm.sin(theta * cm.pi / 180)
-    rho = i0e(0.5 * abs(gamma)**2)
-    #print("theta = " +str(theta) + " sin(theta) = " + str(cm.sin(theta * cm.pi / 180)) + " rho = " + str(rho))
+    #rho = i0e(0.5 * abs(gamma)**2)
+    #print("gamma = " + str(gamma))
+    #rho = cm.exp(-0.5 * gamma**2)
+    #rho = 1 + (-0.5 * gamma**2) + (-0.5 * gamma**2)**2
+    arg = -0.5 * gamma**2
+    rho = ive(0, -arg)
+    #rho = (1 + (1/2)*arg + (1/9)*arg**2 + (1/72)*arg**3) / (1 - (1/2)*arg + (1/9)*arg**2 - (1/72)*arg**3)
+    #print("theta = " + str(theta) + " sin(theta) = " + str(cm.sin(theta * cm.pi / 180)) + " rho = " + str(rho))
     return rho
+
+
+class MillerBrownFactor:
+
+    def __init__(self, n):
+        self.n = n
+        mpmath.mp.dps = 100
+
+        def func(x):
+            return mpmath.exp(-x) * mpmath.besseli(0, x)
+
+        t = mpmath.taylor(func, 0, 2*n+1)
+        self.p, self.q = mpmath.pade(t, n, n)
+        # self.pade_coefs = list(zip_longest([-1 / complex(v) for v in mpmath.polyroots(p[::-1], maxsteps=2000)],
+        #                               [-1 / complex(v) for v in mpmath.polyroots(q[::-1], maxsteps=2000)],
+        #                               fillvalue=0.0j))
+        #self.pade_roots_num = [complex(v) for v in mpmath.polyroots(self.p[::-1], maxsteps=5000)]
+        #self.pade_roots_den = [complex(v) for v in mpmath.polyroots(self.q[::-1], maxsteps=5000)]
+        self.pade_coefs_num = [complex(v) for v in self.p]
+        self.pade_coefs_den = [complex(v) for v in self.q]
+        self.taylor_coefs = [complex(v) for v in t]
+
+        a = [self.q[-1]] + [b + c for b, c in zip(self.q[:-1:], self.p)]
+        self.a_roots = [complex(v) for v in mpmath.polyroots(a[::-1], maxsteps=5000)]
+
+    def roots(self, r):
+        a = [r*p + q for p, q in zip(self.p, self.q)]
+        rootss = [v for v in mpmath.polyroots(a[::-1], maxsteps=5000)]
+        #b =  mpmath.polyval(self.p[::-1], rootss[0]) + mpmath.polyval(self.q[::-1], rootss[0])
+        return [complex(v) for v in rootss]
+
+    def factor(self, theta, k0, rms_m, k_z2=None):
+        #theta = 0.2
+        gamma = 2 * k0 * rms_m * cm.sin(theta * cm.pi / 180)
+        arg = 0.5 * gamma ** 2
+        if k_z2:
+            arg = complex(2 * rms_m**2 * k_z2)
+        #res = 1
+        # for (a, b) in self.pade_coefs:
+        #     res *= (1 + a * arg) / (1 + b * arg)
+        # num = np.prod([1 + a * arg for a in self.pade_coefs_num])
+        # den = np.prod([1 + b * arg for b in self.pade_coefs_den])
+
+        #return np.polyval(self.taylor_coefs[::-1], arg)
+        # if arg.real < 0:
+        #     arg = -arg.real + 1j*arg.imag
+        #res = cm.exp(-arg)
+
+        num = np.polyval(self.pade_coefs_num[::-1], arg)
+        den = np.polyval(self.pade_coefs_den[::-1], arg)
+        res = num / den
+        return complex(res)
+        #return cm.exp(-abs(arg))
+        #return ive(0, arg) * cm.exp(-1j * arg.imag)
+        #return (cm.atan(-cm.log10(-arg + 1e-10) * 3) / (cm.pi / 2) + 1) / 2
 
 
 def sqr_eq(a, b, c):

@@ -10,3 +10,4 @@ Examples
    notebooks/five_knife_edges
    notebooks/std_atmosphere
    notebooks/elevated_duct
+   notebooks/brewster_angle

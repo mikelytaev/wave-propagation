@@ -28,7 +28,7 @@ class KnifeEdgeDiffractionCalculator:
         params = ThinScatteringComputationalParams(max_p_k0=max_p_k0, p_grid_size=p_grid_size, dx_m=dx_m, x_min_m=0,
                                                    x_max_m=max_range_m, z_min_m=0, z_max_m=max_height_m, z_grid_size=1000,
                                                    quadrature_points=1, alpha=alpha, use_mean_value_theorem=False,
-                                                   spectral_integration_method=SpectralIntegrationMethod.contour, h_curve=fm.log(100) / max_height_m,
+                                                   spectral_integration_method=SpectralIntegrationMethod.fcc, h_curve=fm.log(100) / max_height_m,
                                                    x_grid_m=x_grid_m, z_grid_m=z_grid_m)
 
         polarz_sign = -1 if self.src.polarz == 'H' else 1

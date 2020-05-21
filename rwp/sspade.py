@@ -2,16 +2,17 @@ from rwp.antennas import *
 from rwp.environment import *
 from rwp.field import Field
 from propagators.sspade import *
-
+from copy import deepcopy
+import logging
 
 class TroposphericRadioWaveSSPadePropagator:
 
     def __init__(self, *, antenna: Source, env: Troposphere, max_range_m: float,
                  comp_params: HelmholtzPropagatorComputationalParams = None):
-        self.src = antenna
-        self.env = env
+        self.src = deepcopy(antenna)
+        self.env = deepcopy(env)
         if comp_params:
-            self.comp_params = comp_params
+            self.comp_params = deepcopy(comp_params)
         else:
             self.comp_params = HelmholtzPropagatorComputationalParams()
         if len(self.env.knife_edges) == 0:
@@ -46,9 +47,9 @@ class TroposphericRadioWaveSSPadePropagator:
             lower_bc = RobinBC(q1, q2, 0)
         elif self.comp_params.terrain_method == TerrainMethod.no:
             if self.env.rms_m:
-                reflection_coefficient = lambda theta: Miller_Brown_factor(theta, k0, self.env.rms_m) * reflection_coef(1, ground_eps_r, 90-theta, self.src.polarz)
-            else:
-                reflection_coefficient = lambda theta: reflection_coef(1, ground_eps_r, 90 - theta, self.src.polarz)
+                logging.error("rms not yet supported")
+
+            reflection_coefficient = lambda theta, k_z=0: reflection_coef(1, ground_eps_r, 90 - theta, self.src.polarz)
             lower_bc = AngleDependentBC(reflection_coefficient)
 
         if self.src.polarz.upper() == 'V':
@@ -97,6 +98,9 @@ class TroposphericRadioWaveSSPadePropagator:
 
         if self.comp_params.two_way is None:
             self.comp_params.two_way = len(self.helm_env.knife_edges) > 0
+
+        if self.comp_params.two_way and len(self.helm_env.knife_edges) == 1:
+            self.comp_params.two_way_iter_num = 1
 
         self.propagator = HelmholtzPadeSolver(env=self.helm_env, wavelength=self.src.wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)
 

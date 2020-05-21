@@ -9,7 +9,7 @@ environment.z_max = 100
 environment.ground_material = PerfectlyElectricConducting()
 profile1d = interp1d(x=[0, 70, 100], y=[330-330, 320-330, 0], fill_value="extrapolate")
 environment.M_profile = lambda x, z: profile1d(z)
-freq_hz = 3000e6
+freq_hz = 5000e6
 
 antenna = GaussAntenna(freq_hz=freq_hz, height=25, beam_width=2, eval_angle=0, polarz='H')
 max_range = 100000
@@ -27,6 +27,7 @@ wnparams = WaveNumberIntegratorParams(fcc_tol=1e-9,
                                       z_computational_grid_m=np.linspace(0, 100, 201),
                                       z_out_grid_m=np.linspace(0, 100, 201),
                                       alpha=5e-7,
+                                      alpha_compensate=True,
                                       max_p_k0=10,
                                       lower_refl_coef=lambda theta: -1,
                                       het=lambda z: k0**2*profile1d(z)*2e-6)
@@ -43,23 +44,16 @@ plt.tight_layout()
 plt.grid(True)
 plt.show()
 
-# plt = pade_vis.plot_hor(50)
-# plt.xlabel('Range (km)')
-# plt.ylabel('10log|u| (dB)')
-# plt.tight_layout()
-# plt.grid(True)
-# plt.show()
-
 wn_field = Field(x_grid=wnparams.x_grid_m, z_grid=wnparams.z_out_grid_m, freq_hz=300e6)
 wn_field.field[:, :] = res
-wn_vis = FieldVisualiser(wn_field, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)), label='Wavenumber integration')
-plt = wn_vis.plot2d(min=-50, max=0)
+wn_vis = FieldVisualiser(wn_field, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v))+19, label='Wavenumber integration')
+plt = wn_vis.plot2d(min=-30, max=0)
 plt.title('The intensity of the field component 10log10|u|')
 plt.xlabel('Range (m)')
 plt.ylabel('Height (m)')
 plt.show()
 
-plt = wn_vis.plot_hor(50, pade_vis)
+plt = wn_vis.plot_hor(25, pade_vis)
 plt.xlabel('Range (km)')
 plt.ylabel('10log|u| (dB)')
 plt.tight_layout()

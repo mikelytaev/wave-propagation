@@ -17,6 +17,8 @@ class WaveNumberIntegratorParams:
     lower_refl_coef: types.FunctionType = lambda k_x: 0
     upper_refl_coef: types.FunctionType = lambda k_x: 0
     alpha: float = 1e-3
+    alpha_compensate: bool = False
+    min_p_k0: float = None
     max_p_k0: float = 1.1
     het: types.FunctionType = None
     
@@ -73,17 +75,26 @@ class WaveNumberIntegrator:
     def _rhs(self, k_x):
         if isinstance(self.initial_func, DeltaFunction):
             res = self.green_function(self.params.z_out_grid_m, self.initial_func.x_c, k_x)
-            if self.params.het:
-                a = self.green_function(self.params.z_out_grid_m, self.params.z_computational_grid_m, k_x) * self.het_v * self.dz
-                res = solve(np.eye(len(self.params.z_computational_grid_m)) + a, res, overwrite_a=True, overwrite_b=True)
-
         elif callable(self.initial_func):
             r = 1j * k_x * self.q1 + self.q2
             res = self.green_function(self.params.z_out_grid_m, self.params.z_computational_grid_m, k_x).dot(r) * self.dz
+
+        if self.params.het:
+            a = self.green_function(self.params.z_out_grid_m, self.params.z_computational_grid_m,
+                                    k_x) * self.het_v * self.dz
+            res = solve(np.eye(len(self.params.z_computational_grid_m)) + a, res, overwrite_a=True, overwrite_b=True)
+
         return res
 
     def calculate(self):
+        if not self.params.min_p_k0:
+            self.params.min_p_k0 = -self.params.max_p_k0
+        min_int = self.k0 * self.params.min_p_k0
         max_int = self.k0 * self.params.max_p_k0
-        fcca = FCCAdaptiveFourier(2 * max_int, -self.params.x_grid_m, rtol=self.params.fcc_tol, x_n=15)
-        res = 1 / cm.sqrt(2*cm.pi) * fcca.forward(lambda k_x: self._rhs(k_x), -max_int, max_int)
+        fcca = FCCAdaptiveFourier(max_int-min_int, -self.params.x_grid_m, rtol=self.params.fcc_tol, x_n=15)
+        mult = 1 if min_int < 0 else 2
+        res = mult / cm.sqrt(2*cm.pi) * fcca.forward(lambda k_x: self._rhs(k_x), min_int, max_int)
+        if self.params.alpha_compensate:
+            xv, _ = np.meshgrid(self.params.x_grid_m, self.params.z_out_grid_m, indexing='ij')
+            res *= np.exp(self.k0*self.params.alpha/2 * xv)
         return res
