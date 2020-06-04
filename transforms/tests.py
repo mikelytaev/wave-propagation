@@ -1,12 +1,11 @@
 import unittest
 from transforms.frft import *
-
-#import matplotlib.pyplot as plt
+from transforms.z_transform import *
 
 
 class FRFTTest(unittest.TestCase):
 
-    def test_1(self):
+    def xtest_1(self):
         size = 2048
         l = 20
         a = 1/2
@@ -24,7 +23,7 @@ class FRFTTest(unittest.TestCase):
         fff_x = ifcft(ff_x, l, l, l)
         self.assertTrue(np.linalg.norm(f_x - fff_x) < 1e-12)
 
-    def test_2(self):
+    def xtest_2(self):
         size = 2048
         l = 20
         a = 1 / 2
@@ -44,7 +43,7 @@ class FRFTTest(unittest.TestCase):
         fff_x = ifcft(ff_x, l, l, l)
         self.assertTrue(np.linalg.norm(f_x - fff_x) < 1e-12)
 
-    def test_3(self):
+    def xtest_3(self):
         size = 2048
         l = 20
         a = 1 / 2
@@ -60,5 +59,17 @@ class FRFTTest(unittest.TestCase):
         self.assertTrue(np.linalg.norm(f_x - fff_x) < 1e-12)
 
 
+class InvZtrTest(unittest.TestCase):
+
+    def test_1(self):
+        a = 0.5
+        f = lambda z: 1 / (1 - a/z)
+        n = 5
+        expected = a ** np.arange(0, n)
+        res = inv_z_transform(f, n)
+        self.assertTrue(np.linalg.norm(res - expected) < 1e-10)
+
+
 if __name__ == '__main__':
-    FRFTTest.main()
+    #FRFTTest.main()
+    InvZtrTest.main()

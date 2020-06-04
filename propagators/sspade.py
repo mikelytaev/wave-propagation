@@ -445,11 +445,7 @@ class HelmholtzPadeSolver:
         if max(self.params.exp_pade_order) == 1:
             def nlbc_transformed(t):
                 t = tau * cm.exp(1j * t)
-
-                theta = cm.acos(1 + 1 / (1j * self.k0 * self.dx_m) * cm.log(t)) * 180 / cm.pi
-                logging.debug("theta = " + str(theta))
-
-                return diff_eq_solution_ratio(((1 - t) / (-num_roots[0] + den_roots[0] * t)), theta)
+                return diff_eq_solution_ratio(((1 - t) / (-num_roots[0] + den_roots[0] * t)))
         else:
             def nlbc_transformed(f):
                 t = tau * cm.exp(1j*f)

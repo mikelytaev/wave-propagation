@@ -14,6 +14,9 @@ The following methods are implemented:
 
 ### Scattering and diffraction on thin bodies
 
+* [Vavilov S. A., Lytaev M. S. Modeling Equation for Multiple Knife-Edge Diffraction 
+//IEEE Transactions on Antennas and Propagation. – 2020. – Vol. 68. – Iss. 5. – pp. 3869-3877.](https://doi.org/10.1109/TAP.2019.2957085)
+
 * [Vavilov S. A., Lytaev M. S. Modelling Equation of Electromagnetic Scattering on Thin Dielectric Structures 
 //Journal of Mathematical Sciences. – 2019. – Vol. 238. – No. 5. – pp. 621-629.](https://link.springer.com/article/10.1007/s10958-019-04261-6)
 
