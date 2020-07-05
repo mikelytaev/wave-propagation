@@ -41,9 +41,9 @@ class TroposphericRadioWaveSSPadePropagator:
             lower_bc = RobinBC(q1, q2, 0)
         elif self.comp_params.terrain_method == TerrainMethod.staircase:
             if self.src.polarz.upper() == 'H':
-                q1, q2 = 1j * k0 * ground_eps_r ** (1 / 2), 1
+                q1, q2 = 1j * k0 * (ground_eps_r - 1) ** (1 / 2), 1
             else:
-                q1, q2 = 1j * k0 * ground_eps_r ** (-1 / 2), 1
+                q1, q2 = 1j * k0 * (ground_eps_r - 1) ** (1 / 2) / ground_eps_r, 1
             lower_bc = RobinBC(q1, q2, 0)
         elif self.comp_params.terrain_method == TerrainMethod.no:
             if self.env.rms_m:
@@ -90,7 +90,7 @@ class TroposphericRadioWaveSSPadePropagator:
                                              n2minus1=n2m1,
                                              use_n2minus1=not self.env.is_homogeneous(),
                                              rho=rho,
-                                             use_rho=(not self.env.is_homogeneous()) and self.src.polarz.upper() == 'V',
+                                             use_rho=False,#(not self.env.is_homogeneous()) and self.src.polarz.upper() == 'V',
                                              terrain=self.env.terrain)
 
         for kn in self.env.knife_edges:

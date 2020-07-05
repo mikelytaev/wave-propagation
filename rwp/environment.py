@@ -53,7 +53,8 @@ class Material:
     def complex_permittivity(self, freq_hz):
         eps = self.permittivity(freq_hz)
         sigma = self.conductivity_sm_m(freq_hz)
-        return eps + 1j * 60 * sigma * 3e8 / freq_hz
+        wavelength = 3e8 / freq_hz
+        return eps + 1j * 60 * sigma * wavelength
 
 
 class CustomMaterial(Material):

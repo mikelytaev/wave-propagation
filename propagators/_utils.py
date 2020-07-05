@@ -153,7 +153,7 @@ def reflection_coef(eps1, eps2, theta, polarz):
     if polarz.upper() == 'H':
         return (cm.cos(theta) - cm.sqrt(eps_r - cm.sin(theta)**2)) / (cm.cos(theta) + cm.sqrt(eps_r - cm.sin(theta)**2))
     else:
-        return (cm.sqrt(eps_r - cm.sin(theta) ** 2) - eps_r * cm.cos(theta)) / (cm.sqrt(eps_r - cm.sin(theta) ** 2) + eps_r * cm.cos(theta))
+        return -(cm.sqrt(eps_r - cm.sin(theta) ** 2) - eps_r * cm.cos(theta)) / (cm.sqrt(eps_r - cm.sin(theta) ** 2) + eps_r * cm.cos(theta))
 
 
 def brewster_angle(eps1, eps2):
