@@ -5,23 +5,23 @@ from rwp.petool import *
 
 logging.basicConfig(level=logging.DEBUG)
 environment = Troposphere()
-environment.ground_material = CustomMaterial(eps=50, sigma=0)#SaltWater()
+environment.ground_material = CustomMaterial(eps=3, sigma=0)#SaltWater()
 environment.z_max = 300
-max_range = 2e3
+max_range = 200
 
 #profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 45], fill_value="extrapolate")
 profile1d = interp1d(x=[0, 5, 70, 100, 300], y=[0, 0, -30, 0, 0], fill_value="extrapolate")
 environment.M_profile = lambda x, z: profile1d(z)
-antenna = GaussAntenna(freq_hz=10e9, height=30, beam_width=2, eval_angle=8.0, polarz='V')
+antenna = GaussAntenna(freq_hz=10e9, height=30, beam_width=2, eval_angle=30, polarz='V')
 
 propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range,
                                                    comp_params=HelmholtzPropagatorComputationalParams(
-                                                       max_propagation_angle=10
+                                                       max_propagation_angle=35
                                                    ))
 #environment.ground_material = PerfectlyElectricConducting()
 propagator_local_bc = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range,
                                                             comp_params=HelmholtzPropagatorComputationalParams(
-                                                                max_propagation_angle=10,
+                                                                max_propagation_angle=35,
                                                                 terrain_method=TerrainMethod.staircase
                                                             ))
 field = propagator.calculate()

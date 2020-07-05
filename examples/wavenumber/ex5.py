@@ -6,7 +6,7 @@ wl = 0.03
 k0 = 2*cm.pi / wl
 
 thetas = np.linspace(0, 5, 1000)
-mbf = MillerBrownFactor(2)
+mbf = MillerBrownFactor(8)
 
 def test_func(theta, k0, rms_m):
     gamma = 2 * k0 * rms_m * cm.sin(theta * cm.pi / 180)

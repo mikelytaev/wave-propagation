@@ -188,7 +188,7 @@ class MillerBrownFactor:
             return mpmath.exp(-x) * mpmath.besseli(0, x)
 
         t = mpmath.taylor(func, 0, 2*n+1)
-        self.p, self.q = mpmath.pade(t, n, n)
+        self.p, self.q = mpmath.pade(t, n-1, n)
         # self.pade_coefs = list(zip_longest([-1 / complex(v) for v in mpmath.polyroots(p[::-1], maxsteps=2000)],
         #                               [-1 / complex(v) for v in mpmath.polyroots(q[::-1], maxsteps=2000)],
         #                               fillvalue=0.0j))
