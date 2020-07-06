@@ -162,6 +162,7 @@ class HelmholtzPropagatorComputationalParams:
     storage: HelmholtzPropagatorStorage = None
     max_abc_permittivity: float = 1
     inv_z_transform_tau: float = 1.001
+    modify_grid: bool = True
 
 
 class HelmholtzField:
@@ -237,9 +238,6 @@ class HelmholtzPadeSolver:
         else:
             self.params.max_height_m = max(self.params.max_height_m, abs(self.env.z_max - self.env.z_min))
 
-        x_approx_sampling = 2000
-        z_approx_sampling = 1000
-
         if self.params.terrain_method == TerrainMethod.pass_through:
             n_g = self.params.max_abc_permittivity
             self.params.dx_wl /= round(abs(cm.sqrt(n_g - 0.1)))
@@ -247,22 +245,29 @@ class HelmholtzPadeSolver:
 
         self.params.max_range_m = self.params.max_range_m or self.env.x_max_m
 
-        self.params.dx_wl = min(self.params.dx_wl, self.params.max_range_m / self.wavelength / x_approx_sampling)
-        self.params.dz_wl = min(self.params.dz_wl, self.params.max_height_m / self.wavelength / z_approx_sampling)
-        self.n_x = fm.ceil(self.params.max_range_m / self.params.dx_wl / self.wavelength) + 1
-        self.n_z = fm.ceil(self.params.max_height_m / (self.params.dz_wl * self.wavelength)) + 1
+        if self.params.modify_grid:
+            x_approx_sampling = 2000
+            z_approx_sampling = 1000
+            self.params.dx_wl = min(self.params.dx_wl, self.params.max_range_m / self.wavelength / x_approx_sampling)
+            self.params.dz_wl = min(self.params.dz_wl, self.params.max_height_m / self.wavelength / z_approx_sampling)
+            self.n_x = fm.ceil(self.params.max_range_m / self.params.dx_wl / self.wavelength) + 1
+            self.n_z = fm.ceil(self.params.max_height_m / (self.params.dz_wl * self.wavelength)) + 1
+            self.params.x_output_filter = self.params.x_output_filter or fm.ceil(self.n_x / x_approx_sampling)
+            self.params.z_output_filter = self.params.z_output_filter or fm.ceil(self.n_z / z_approx_sampling)
+        else:
+            self.n_x = fm.ceil(self.params.max_range_m / self.params.dx_wl / self.wavelength) + 1
+            self.n_z = fm.ceil(self.params.max_height_m / (self.params.dz_wl * self.wavelength)) + 1
+            self.params.x_output_filter = self.params.x_output_filter or 1
+            self.params.z_output_filter = self.params.z_output_filter or 1
 
         logging.info("dx = " + str(self.params.dx_wl) + " wavelengths")
         logging.info("dz = " + str(self.params.dz_wl) + " wavelengths")
         logging.info("Pade order = " + str(self.params.exp_pade_order))
 
-        self.params.x_output_filter = self.params.x_output_filter or fm.ceil(self.n_x / x_approx_sampling)
-        self.params.z_output_filter = self.params.z_output_filter or fm.ceil(self.n_z / z_approx_sampling)
-
         if not self.params.tol:
             self.params.tol = 1e-11 if (
-                        isinstance(self.env.lower_bc, TransparentBC) and abs(self.env.lower_bc.gamma) > 1e-12 or
-                        isinstance(self.env.upper_bc, TransparentBC) and abs(self.env.upper_bc.gamma) > 1e-12) else 1e-7
+                    isinstance(self.env.lower_bc, TransparentBC) and abs(self.env.lower_bc.gamma) > 1e-12 or
+                    isinstance(self.env.upper_bc, TransparentBC) and abs(self.env.upper_bc.gamma) > 1e-12) else 1e-7
 
         if self.params.two_way is None:
             self.params.two_way = False

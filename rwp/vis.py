@@ -9,7 +9,7 @@ __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 class FieldVisualiser:
     bw_lines = (
-        {'color': 'black', 'dashes': (None,None)},
+        {'color': 'black', 'dashes': (None, None)},
         {'color': 'black', 'dashes': [5, 5]},
         {'color': 'black', 'dashes': [5, 3, 1, 3]},
         {'color': 'black', 'dashes': [1, 3]}
