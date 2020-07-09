@@ -48,8 +48,11 @@ class TroposphericRadioWaveSSPadePropagator:
         elif self.comp_params.terrain_method == TerrainMethod.no:
             if self.env.rms_m:
                 logging.error("rms not yet supported")
-
-            reflection_coefficient = lambda theta, k_z=0: reflection_coef(1, ground_eps_r, 90 - theta, self.src.polarz)
+                mbf = MillerBrownFactor(8)
+                reflection_coefficient = lambda theta, k_z=0: mbf.factor(theta, k0, self.env.rms_m) * reflection_coef(1, ground_eps_r, 90 - theta,
+                                                                              self.src.polarz)
+            else:
+                reflection_coefficient = lambda theta, k_z=0: reflection_coef(1, ground_eps_r, 90 - theta, self.src.polarz)
             lower_bc = AngleDependentBC(reflection_coefficient)
 
         if self.src.polarz.upper() == 'V':
@@ -82,6 +85,17 @@ class TroposphericRadioWaveSSPadePropagator:
 
         self.comp_params.max_abc_permittivity = abs(ground_eps_r)
 
+        if self.comp_params.max_propagation_angle is None:
+            if len(self.env.knife_edges) > 0:
+                max_angle = SSPE_MAX_ANGLE
+            else:
+                max_angle = max(antenna.max_angle(),
+                                terrain_max_propagation_angle(terrain=self.env.terrain, distance_m=max_range_m))
+            self.comp_params.max_propagation_angle = max_angle
+
+            if self.comp_params.exp_pade_order is None:
+                self.comp_params.exp_pade_order = (7, 8)
+
         self.helm_env = HelmholtzEnvironment(x_max_m=max_range_m,
                                              lower_bc=lower_bc,
                                              upper_bc=upper_bc,
@@ -109,6 +123,17 @@ class TroposphericRadioWaveSSPadePropagator:
         res = Field(x_grid=h_field.x_grid_m, z_grid=h_field.z_grid_m, freq_hz=self.src.freq_hz)
         res.field = h_field.field
         return res
+
+
+def terrain_max_propagation_angle(terrain: Terrain, distance_m: float, step_m=10):
+    if terrain.is_homogeneous:
+        return 0
+    res = 0
+    step = 10
+    for x in np.arange(step, distance_m, step):
+        angle = cm.atan((terrain(x) - terrain(x - step)) / step) * 180 / cm.pi
+        res = max(res, abs(angle))
+    return res
 
 
 # def bessel_ratio(c, d, j, tol):

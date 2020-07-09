@@ -20,6 +20,8 @@ pyximport.install(setup_args={"include_dirs": np.get_include()})
 from propagators._cn_utils import *
 from propagators.contfrac import bessel_ratio_4th_order
 
+SSPE_MAX_ANGLE = 85
+
 
 class BoundaryCondition:
     pass
@@ -157,11 +159,11 @@ class HelmholtzPropagatorComputationalParams:
     sqrt_alpha: float = 0
     z_order: int = None
     terrain_method: TerrainMethod = None
-    tol: float = None
-    grid_optimizator_threshold: float = 5e-3
+    inv_z_transform_rtol: float = None
+    grid_optimizator_abs_threshold: float = 5e-3
     storage: HelmholtzPropagatorStorage = None
     max_abc_permittivity: float = 1
-    inv_z_transform_tau: float = 1.001
+    inv_z_transform_tau: float = None
     modify_grid: bool = True
 
 
@@ -181,6 +183,7 @@ class HelmholtzPadeSolver:
         self.wavelength = wavelength
         self.freq_hz = freq_hz
         self.k0 = (2 * cm.pi) / self.wavelength
+        self.params.max_range_m = self.params.max_range_m or self.env.x_max_m
 
         self._optimize_params()
         self.z_computational_grid, self.dz_m = np.linspace(self.env.z_min, self.env.z_max, self.n_z, retstep=True)
@@ -210,7 +213,7 @@ class HelmholtzPadeSolver:
 
     def _optimize_params(self):
         #optimize max angle
-        self.params.max_propagation_angle = self.params.max_propagation_angle or self._optimal_propagation_angle()
+        self.params.max_propagation_angle = self.params.max_propagation_angle or SSPE_MAX_ANGLE
         logging.info("Max propagation angle = " + str(self.params.max_propagation_angle))
 
         if self.params.z_order is None:
@@ -226,9 +229,14 @@ class HelmholtzPadeSolver:
 
         if self.params.dx_wl is None or self.params.dz_wl is None or self.params.exp_pade_order is None:
             logging.debug("Calculating optimal computational grid parameters")
-            (self.params.dx_wl, self.params.dz_wl, self.params.exp_pade_order) = \
-                optimal_params(max_angle=self.params.max_propagation_angle, threshold=self.params.grid_optimizator_threshold, dx=self.params.dx_wl,
-                               dz=self.params.dz_wl, pade_order=self.params.exp_pade_order, z_order=self.params.z_order)
+            self.params.dx_wl, self.params.dz_wl, self.params.exp_pade_order = \
+                optimal_params_m(max_angle_deg=self.params.max_propagation_angle,
+                                 max_distance_wl=self.params.max_range_m / self.wavelength,
+                                 threshold=self.params.grid_optimizator_abs_threshold,
+                                 dx_wl=self.params.dx_wl,
+                                 dz_wl=self.params.dz_wl,
+                                 pade_order=self.params.exp_pade_order,
+                                 z_order=self.params.z_order)
 
             if self.params.dx_wl is None or self.params.dz_wl is None or self.params.exp_pade_order is None:
                 raise Exception("Optimization failed")
@@ -242,8 +250,6 @@ class HelmholtzPadeSolver:
             n_g = self.params.max_abc_permittivity
             self.params.dx_wl /= round(abs(cm.sqrt(n_g - 0.1)))
             self.params.dz_wl /= round(abs(cm.sqrt(n_g - 0.1)))
-
-        self.params.max_range_m = self.params.max_range_m or self.env.x_max_m
 
         if self.params.modify_grid:
             x_approx_sampling = 2000
@@ -264,25 +270,17 @@ class HelmholtzPadeSolver:
         logging.info("dz = " + str(self.params.dz_wl) + " wavelengths")
         logging.info("Pade order = " + str(self.params.exp_pade_order))
 
-        if not self.params.tol:
-            self.params.tol = 1e-11 if (
+        if self.params.inv_z_transform_tau is None:
+            self.params.inv_z_transform_tau = 10 ** (3 / self.n_x)
+        logging.debug("inverse z-transform tau: {0}".format(self.params.inv_z_transform_tau))
+
+        if not self.params.inv_z_transform_rtol:
+            self.params.inv_z_transform_rtol = 1e-11 if (
                     isinstance(self.env.lower_bc, TransparentBC) and abs(self.env.lower_bc.gamma) > 1e-12 or
                     isinstance(self.env.upper_bc, TransparentBC) and abs(self.env.upper_bc.gamma) > 1e-12) else 1e-7
 
         if self.params.two_way is None:
             self.params.two_way = False
-
-    def _optimal_propagation_angle(self):
-        if len(self.env.knife_edges) > 0:
-            return 85
-        else:
-            res = 3
-            step = 10
-            for x in np.arange(step, self.params.max_range_m, step):
-                angle = cm.atan((self.env.terrain(x) - self.env.terrain(x - step)) / step) * 180 / cm.pi
-                res = max(res, abs(angle))
-            res = max(self.params.max_src_angle, fm.ceil(res))
-            return res
 
     def _Crank_Nikolson_propagate_no_rho(self, a, b, het, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
         """
@@ -465,7 +463,7 @@ class HelmholtzPadeSolver:
                 res = vr.dot(r).dot(la.inv(vr))
                 return res.reshape(m_size**2)
 
-        fcca = FCCAdaptiveFourier(2*fm.pi, -np.arange(0, self.n_x), rtol=self.params.tol)
+        fcca = FCCAdaptiveFourier(2 * fm.pi, -np.arange(0, self.n_x), rtol=self.params.inv_z_transform_rtol)
 
         coefs = (tau**np.repeat(np.arange(0, self.n_x)[:, np.newaxis], m_size ** 2, axis=1) / (2*fm.pi) *
                 fcca.forward(lambda t: nlbc_transformed(t), 0, 2*cm.pi)).reshape((self.n_x, m_size, m_size))
@@ -511,7 +509,7 @@ class HelmholtzPadeSolver:
                 a_m1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) - b
                 a_1 = 1 - alpha * (self.k0 * self.dz_m) ** 2 * (s - beta) + b
                 c = -2 + (2 * alpha - 1) * (self.k0 * self.dz_m) ** 2 * (s - beta)
-                return bessel_ratio_4th_order(a_m1, a_1, b, c, d, len(self.z_computational_grid)-1, self.params.tol)
+                return bessel_ratio_4th_order(a_m1, a_1, b, c, d, len(self.z_computational_grid) - 1, self.params.inv_z_transform_rtol)
 
             return self._calc_nlbc(diff_eq_solution_ratio=diff_eq_solution_ratio)
 
