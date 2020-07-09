@@ -160,7 +160,7 @@ class HelmholtzPropagatorComputationalParams:
     z_order: int = None
     terrain_method: TerrainMethod = None
     inv_z_transform_rtol: float = None
-    grid_optimizator_abs_threshold: float = 5e-3
+    grid_optimizator_abs_threshold: float = 1e-3
     storage: HelmholtzPropagatorStorage = None
     max_abc_permittivity: float = 1
     inv_z_transform_tau: float = None
