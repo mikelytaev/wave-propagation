@@ -68,7 +68,8 @@ pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_rang
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=5,
                                                       modify_grid=True,
-                                                      grid_optimizator_abs_threshold=1e-3
+                                                      grid_optimizator_abs_threshold=1e-3,
+                                                      z_order=4
                                                   ))
 pade_field = pade_task.calculate()
 
