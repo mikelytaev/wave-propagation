@@ -312,7 +312,7 @@ class HelmholtzPadeSolver:
         d_a = (self.k0 * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * a + a * (self.k0 * self.dz_m) ** 2 * het - 2 * a * alpha * (self.k0 * self.dz_m) ** 2 * het
         d_b = (self.k0 * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * b + b * (self.k0 * self.dz_m) ** 2 * het - 2 * b * alpha * (self.k0 * self.dz_m) ** 2 * het
 
-        #rhs = tridiag_multiply(c_a[:-1:], d_a, c_a[1::], initial)
+        #rhs = np.array(tridiag_multiply(c_a[:-1:], d_a, c_a[1::], initial))
         rhs = d_a * initial
         rhs[1::] += c_a[:-1:] * initial[:-1:]
         rhs[:-1:] += c_a[1::] * initial[1::]

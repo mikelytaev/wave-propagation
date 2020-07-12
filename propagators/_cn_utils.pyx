@@ -113,15 +113,18 @@ def Crank_Nikolson_propagator2_4th_order(complex k0, complex dz, complex b, comp
 
     return res
 
-
-def tridiag_method(complex[:] a, complex[:] b, complex[:] c, complex[:] rhs):
+#cimport cython
+#@cython.boundscheck(False) # turn off bounds-checking for entire function
+#@cython.wraparound(False)  # turn off negative index wrapping for entire function
+def tridiag_method(np.ndarray[complex, ndim=1] a, np.ndarray[complex, ndim=1] b, np.ndarray[complex, ndim=1] c, np.ndarray[complex, ndim=1] rhs):
+    cdef Py_ssize_t i
     for i in range(1, len(b)):
         w = a[i-1] / b[i-1]
         b[i] = b[i] - w * c[i-1]
         rhs[i] = rhs[i] - w * rhs[i-1]
 
     cdef complex[:] res = np.empty(len(b), dtype=complex)
-    res[-1] = rhs[-1] / b[-1]
+    res[len(res)-1] = rhs[len(rhs)-1] / b[-1]
     for i in range(len(b)-2, -1, -1):
         res[i] = (rhs[i] - c[i] * res[i+1]) / b[i]
 
@@ -131,6 +134,7 @@ def tridiag_method(complex[:] a, complex[:] b, complex[:] c, complex[:] rhs):
 def tridiag_multiply(complex[:] a, complex[:] b, complex[:] c, complex[:] x):
     cdef complex[:] res = np.empty(len(b), dtype=complex)
     res[0] = b[0] * x[0] + c[0] * x[1]
+    cdef Py_ssize_t i
     for i in range(1, len(b)-1):
         res[i] = a[i-1] * x[i-1] + b[i] * x[i] + c[i] * x[i+1]
 
