@@ -40,6 +40,8 @@ lat_grid = np.linspace(north, south, elevation.shape[1])
 elev_int = interp2d(long_grid, lat_grid, elevation.T)
 
 def elev_int_1d(x):
+    if not 0 < x < distance:
+        return 0.0
     v = x / distance
     return max(elev_int(west + (east - west) * v, south + (north - south) * v)[0], 0)
 
@@ -57,7 +59,7 @@ def elev_int_1d(x):
 
 from rwp.sspade import *
 from rwp.vis import *
-from rwp.petool import PETOOLPropagationTask
+#from rwp.petool import PETOOLPropagationTask
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
@@ -68,44 +70,46 @@ profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 50], fill_value="extrap
 #env.vegetation = [Impediment(x1=36e3, x2=101e3, height=18, material=CustomMaterial(eps=1.004, sigma=180e-6))]
 #env.M_profile = lambda x, z: profile1d(z)
 
-ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=4, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=3000e6, height=70, beam_width=4, eval_angle=0, polarz='H')
 
-pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=distance, comp_params=
+pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=150e3, comp_params=
                                                   HelmholtzPropagatorComputationalParams(
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=5,
-                                                      modify_grid=True,
-                                                      grid_optimizator_abs_threshold=1e-3,
-                                                      z_order=2,
-                                                      dx_wl=300,
+                                                      modify_grid=False,
+                                                      grid_optimizator_abs_threshold=5e-3,
+                                                      z_order=4,
+                                                      exp_pade_order=(10, 11),
+                                                      dx_wl=500,
+                                                      #dz_wl=0.1,
                                                       storage=PickleStorage()
                                                   ))
 pade_field = pade_task.calculate()
 
-env.z_max = 2000
-petool_task = PETOOLPropagationTask(antenna=ant, env=env, two_way=False, max_range_m=distance, dx_wl=300, n_dx_out=1, dz_wl=3)
-petool_field = petool_task.calculate()
+#env.z_max = 2000
+# petool_task = PETOOLPropagationTask(antenna=ant, env=env, two_way=False, max_range_m=distance, dx_wl=300, n_dx_out=1, dz_wl=3)
+# petool_field = petool_task.calculate()
 
 pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
                            label='Pade-[7/8] + NLBC', x_mult=1E-3)
-petool_vis = FieldVisualiser(petool_field, trans_func=lambda x: x, label='SSF (PETOOL)', x_mult=1E-3)
+#petool_vis = FieldVisualiser(petool_field, trans_func=lambda x: x, label='SSF (PETOOL)', x_mult=1E-3)
 
-plt = pade_vis.plot2d(min=-70, max=0, show_terrain=True)
+plt = pade_vis.plot2d(min=-100, max=0, show_terrain=True)
 plt.title('10log|u|')
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-plt = pade_vis.plot_hor_over_terrain(2, petool_vis)
+plt = pade_vis.plot_hor_over_terrain(2)
 plt.xlabel('Range (km)')
 plt.ylabel('10log|u| (dB)')
 plt.tight_layout()
 plt.show()
 
-plt = petool_vis.plot2d(min=-70, max=0)
-plt.title('10log|u|')
-plt.xlabel('Range (km)')
-plt.ylabel('Height (m)')
-plt.tight_layout()
-plt.show()
+# plt = petool_vis.plot2d(min=-70, max=0)
+# plt.title('10log|u|')
+# plt.xlabel('Range (km)')
+# plt.ylabel('Height (m)')
+# plt.tight_layout()
+# plt.show()

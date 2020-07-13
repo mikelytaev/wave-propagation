@@ -16,7 +16,7 @@ from scipy import linalg as la
 from propagators._utils import *
 
 import pyximport
-pyximport.install(setup_args={"include_dirs": np.get_include()})
+pyximport.install(setup_args={"include_dirs": np.get_include()}, language_level=3)
 from propagators._cn_utils import *
 from propagators.contfrac import bessel_ratio_4th_order
 
@@ -309,10 +309,9 @@ class HelmholtzPadeSolver:
         alpha = 1/12
         c_a = alpha * (self.k0 * self.dz_m) ** 2 + a + alpha * a * (self.k0 * self.dz_m) ** 2 * het
         c_b = alpha * (self.k0 * self.dz_m) ** 2 + b + alpha * b * (self.k0 * self.dz_m) ** 2 * het
-        d_a = (self.k0 * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * a + a * (self.k0 * self.dz_m) ** 2 * het - 2 * a * alpha * (self.k0 * self.dz_m) ** 2 * het
-        d_b = (self.k0 * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * b + b * (self.k0 * self.dz_m) ** 2 * het - 2 * b * alpha * (self.k0 * self.dz_m) ** 2 * het
+        d_a = (self.k0 * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * a + (a * (self.k0 * self.dz_m) ** 2 - 2 * a * alpha * (self.k0 * self.dz_m) ** 2) * het
+        d_b = (self.k0 * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * b + (b * (self.k0 * self.dz_m) ** 2 - 2 * b * alpha * (self.k0 * self.dz_m) ** 2) * het
 
-        #rhs = np.array(tridiag_multiply(c_a[:-1:], d_a, c_a[1::], initial))
         rhs = d_a * initial
         rhs[1::] += c_a[:-1:] * initial[:-1:]
         rhs[:-1:] += c_a[1::] * initial[1::]
@@ -320,12 +319,12 @@ class HelmholtzPadeSolver:
         d_b[-1] = upper_bound[1]
         diag_1 = np.copy(c_b[1::])
         diag_1[0] = lower_bound[1]
-        diag_m1 = np.copy(c_b[:-1:])
+        diag_m1 = c_b[:-1:]
         diag_m1[-1] = upper_bound[0]
         rhs[0] = lower_bound[2]
         rhs[-1] = upper_bound[2]
-        return np.array(tridiag_method(diag_m1, d_b, diag_1, rhs))
-        #return np.array(Crank_Nikolson_propagator_4th_order((self.k0 * self.dz) ** 2, a, b, alpha, het, initial, lower_bound, upper_bound))
+        tridiag_method(diag_m1, d_b, diag_1, rhs, initial)
+        return initial
 
     def _Crank_Nikolson_propagate(self, a, b, m2minus1_func, rho_func, initial, local_z_grid, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
         if not self.env.use_rho:
