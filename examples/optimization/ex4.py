@@ -59,7 +59,7 @@ def elev_int_1d(x):
 
 from rwp.sspade import *
 from rwp.vis import *
-#from rwp.petool import PETOOLPropagationTask
+from rwp.petool import PETOOLPropagationTask
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
@@ -68,7 +68,7 @@ env.z_max = 300
 env.terrain = Terrain(elev_int_1d)
 profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 50], fill_value="extrapolate")
 #env.vegetation = [Impediment(x1=36e3, x2=101e3, height=18, material=CustomMaterial(eps=1.004, sigma=180e-6))]
-#env.M_profile = lambda x, z: profile1d(z)
+env.M_profile = lambda x, z: profile1d(z)
 
 ant = GaussAntenna(freq_hz=3000e6, height=70, beam_width=4, eval_angle=0, polarz='H')
 
@@ -86,30 +86,44 @@ pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_rang
                                                   ))
 pade_field = pade_task.calculate()
 
-#env.z_max = 2000
-# petool_task = PETOOLPropagationTask(antenna=ant, env=env, two_way=False, max_range_m=distance, dx_wl=300, n_dx_out=1, dz_wl=3)
-# petool_field = petool_task.calculate()
+#env.terrain = Terrain(lambda x: elev_int_1d(x)-0.00001)
+petool_task = PETOOLPropagationTask(antenna=ant, env=env, two_way=False, max_range_m=150e3, dx_wl=500, n_dx_out=1, dz_wl=1)
+petool_field = petool_task.calculate()
+
+env.z_max = 3000
+petool_task_m = PETOOLPropagationTask(antenna=ant, env=env, two_way=False, max_range_m=150e3, dx_wl=500, n_dx_out=1,
+                                      dz_wl=3, n_dz_out=2)
+petool_field_m = petool_task_m.calculate()
 
 pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                           label='Pade-[7/8] + NLBC', x_mult=1E-3)
-#petool_vis = FieldVisualiser(petool_field, trans_func=lambda x: x, label='SSF (PETOOL)', x_mult=1E-3)
+                           label='Pade+NLBC (Proposed)', x_mult=1E-3)
+petool_vis = FieldVisualiser(petool_field, env=env, trans_func=lambda x: x, label='SSF (PETOOL)', x_mult=1E-3)
+petool_vis_m = FieldVisualiser(petool_field_m, env=env, trans_func=lambda x: x, label='SSF (PETOOL) z_max=3000 m', x_mult=1E-3)
 
 plt = pade_vis.plot2d(min=-100, max=0, show_terrain=True)
-plt.title('10log|u|')
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-plt = pade_vis.plot_hor_over_terrain(2)
+plt = petool_vis.plot2d(min=-100, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
-plt.ylabel('10log|u| (dB)')
+plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-# plt = petool_vis.plot2d(min=-70, max=0)
-# plt.title('10log|u|')
-# plt.xlabel('Range (km)')
-# plt.ylabel('Height (m)')
-# plt.tight_layout()
-# plt.show()
+plt = petool_vis_m.plot2d(min=-100, max=0, show_terrain=True)
+plt.xlabel('Range (km)')
+plt.ylabel('Height (m)')
+plt.ylim([0, 300])
+plt.tight_layout()
+plt.show()
+
+plt = petool_vis.plot_hor_over_terrain(10, petool_vis_m, pade_vis)
+plt.xlabel('Range (km)')
+plt.ylabel('10log|u| (dB)')
+plt.xlim([0.5, 150])
+plt.ylim([-100, 0])
+plt.grid(True)
+plt.tight_layout()
+plt.show()

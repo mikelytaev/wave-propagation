@@ -45,8 +45,9 @@ class FieldVisualiser:
         plt.imshow(self.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
         plt.colorbar(fraction=0.046, pad=0.04)
         if show_terrain:
-            terrain_grid = [self.env.terrain(v) for v in self.x_grid / self.x_mult]
+            terrain_grid = np.array([self.env.terrain(v) for v in self.x_grid / self.x_mult])
             plt.plot(self.x_grid, terrain_grid, 'k')
+            plt.fill_between(self.x_grid, terrain_grid*0, terrain_grid, color='black')
         return plt
 
     def plot_hor(self, z0, *others):
