@@ -24,16 +24,18 @@ k0 = 2 * cm.pi
 angle = 5
 k_z = k0 * cm.sin(angle / 180 * cm.pi)
 k_x_r = cm.sqrt(k0**2 - k_z**2)
-dz = 0.4
-dxs = np.linspace(1, 1000, 50)
+dz = 0.8
+dxs = np.linspace(50, 1000, 50)
 k_x_11 = np.array([k_x(k_z=k_z, dx=v, pade_order=(1, 1), dz=[dz], z_order=4, alpha=0)[0] for v in dxs])
 k_x_34 = np.array([k_x(k_z=k_z, dx=v, pade_order=(3, 4), dz=[dz], z_order=4, alpha=0)[0] for v in dxs])
 k_x_78 = np.array([k_x(k_z=k_z, dx=v, pade_order=(7, 8), dz=[dz], z_order=4, alpha=0)[0] for v in dxs])
+k_x_10_11 = np.array([k_x(k_z=k_z, dx=v, pade_order=(10, 11), dz=[dz], z_order=4, alpha=0)[0] for v in dxs])
 
 plt.figure(figsize=(6, 3.2))
 plt.plot(dxs, (np.abs(k_x_11 - k_x_r))/k0, label='[1/1], 4-d order by z')
 plt.plot(dxs, (np.abs(k_x_34 - k_x_r))/k0, label='[3/4], 4-d order by z')
 plt.plot(dxs, (np.abs(k_x_78 - k_x_r))/k0, label='[7/8], 4-d order by z')
+plt.plot(dxs, (np.abs(k_x_10_11 - k_x_r))/k0, label='[10/11], 4-d order by z')
 plt.xlabel('dx, wavelengths')
 plt.xlim([0, 1000])
 #plt.ylim([1e-9, 1e-3])
