@@ -63,9 +63,8 @@ from rwp.petool import PETOOLPropagationTask
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
-env.ground_material = FreshWater()
 env.z_max = 300
-env.terrain = Terrain(elev_int_1d)
+env.terrain = Terrain(elevation=elev_int_1d, ground_material=FreshWater())
 profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 50], fill_value="extrapolate")
 #env.vegetation = [Impediment(x1=36e3, x2=101e3, height=18, material=CustomMaterial(eps=1.004, sigma=180e-6))]
 env.M_profile = lambda x, z: profile1d(z)

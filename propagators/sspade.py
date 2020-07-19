@@ -116,7 +116,7 @@ class HelmholtzEnvironment:
     use_n2minus1: bool = True
     rho: types.FunctionType = lambda x, z: z*0+1
     use_rho: bool = True
-    terrain: types.FunctionType = lambda x: x*0
+    lower_z: types.FunctionType = lambda x: x * 0
     knife_edges: List[Edge] = field(default_factory=list)
 
 
@@ -542,7 +542,7 @@ class HelmholtzPadeSolver:
 
         for x_i, x in iterator:
             if self.params.terrain_method == TerrainMethod.staircase:
-                terr_i = int(round(self.env.terrain(x) / self.dz_m))
+                terr_i = int(round(self.env.lower_z(x) / self.dz_m))
                 phi = phi[terr_i::]
             else:
                 terr_i = 0

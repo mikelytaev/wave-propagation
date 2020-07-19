@@ -20,6 +20,9 @@ class Source:
     def max_angle(self):
         return 90
 
+    def aperture(self, z_grid: np.ndarray):
+        pass
+
 
 class GaussAntenna(Source):
 
@@ -37,11 +40,11 @@ class GaussAntenna(Source):
         return 1 / (cm.sqrt(cm.pi) * self._ww) * np.exp(-1j * self.k0 * np.sin(self.eval_angle * cm.pi / 180) * (-z)) * \
                np.exp(-((-z - self.height_m) / self._ww) ** 2)
 
-    def aperture(self, z):
+    def aperture(self, z_grid: np.ndarray):
         if self.polarz.upper() == 'H':
-            return self._ufsp(z) - self._ufsn(z)
+            return self._ufsp(z_grid) - self._ufsn(z_grid)
         else:
-            return self._ufsp(z) + self._ufsn(z)
+            return self._ufsp(z_grid) + self._ufsn(z_grid)
 
     def max_angle(self):
         return self.beam_width + abs(self.eval_angle)

@@ -225,23 +225,24 @@ class VeryDryGround(Material):
 
 class Terrain:
 
-    def __init__(self, func=None):
-        if func is None:
+    def __init__(self, elevation=None, ground_material=PerfectlyElectricConducting()):
+        """
+        :param elevation: function range (m) -> elevation (m)
+        :param ground_material: Material or function range (m) -> Material
+        """
+        if elevation is None:
             self.is_homogeneous = True
-            self._terrain_func = lambda x: 0.0
+            self.elevation = lambda x: 0.0
         else:
             self.is_homogeneous = False
-            self._terrain_func = func
+            self.elevation = elevation
 
-    def __call__(self, x):
-        return self._terrain_func(x)
-
-
-class LinearTerrain(Terrain):
-
-    def __init__(self, edge_range, edge_height):
-        edge_range, edge_height = zip(*sorted(zip(edge_range, edge_height), key=itemgetter(0)))
-        self._terrain_func = interp1d(edge_range, edge_height, kind='linear', fill_value="extrapolate")
+        if isinstance(ground_material, Material):
+            self.ground_material = lambda x: ground_material
+            self.range_dependent_ground_material = False
+        elif callable(ground_material):
+            self.ground_material = ground_material
+            self.range_dependent_ground_material = True
 
 
 class InterpTerrain(Terrain):
@@ -249,7 +250,7 @@ class InterpTerrain(Terrain):
     def __init__(self, edge_range, edge_height, kind='linear'):
         edge_range, edge_height = zip(*sorted(zip(edge_range, edge_height), key=itemgetter(0)))
         terrain_func = interp1d(edge_range, edge_height, kind=kind, fill_value="extrapolate")
-        super().__init__(func=terrain_func)
+        super().__init__(elevation=terrain_func)
 
 
 class KnifeEdge:
@@ -282,7 +283,6 @@ class Troposphere:
             self.Earth_radius = float("Inf")
         else:
             self.Earth_radius = EARTH_RADIUS
-        self.ground_material = PerfectlyElectricConducting()
 
     def vegetation_profile(self, x: float, z: np.ndarray, freq_hz):
         if hasattr(z, "__len__"):

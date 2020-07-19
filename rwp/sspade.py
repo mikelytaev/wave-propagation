@@ -5,6 +5,7 @@ from propagators.sspade import *
 from copy import deepcopy
 import logging
 
+
 class TroposphericRadioWaveSSPadePropagator:
 
     def __init__(self, *, antenna: Source, env: Troposphere, max_range_m: float,
@@ -19,7 +20,8 @@ class TroposphericRadioWaveSSPadePropagator:
             self.comp_params.two_way = False
         k0 = 2*cm.pi / self.src.wavelength
 
-        ground_eps_r = self.env.ground_material.complex_permittivity(self.src.freq_hz)
+        ground_material = self.env.terrain.ground_material(0)
+        ground_eps_r = ground_material.complex_permittivity(self.src.freq_hz)
         logging.info("ground refractive index: " + str(ground_eps_r))
         if self.comp_params.terrain_method is None:
             if self.env.terrain.is_homogeneous:
@@ -33,7 +35,7 @@ class TroposphericRadioWaveSSPadePropagator:
 
         if self.comp_params.terrain_method == TerrainMethod.pass_through:
             lower_bc = TransparentBC(ground_eps_r)
-        elif isinstance(self.env.ground_material, PerfectlyElectricConducting):
+        elif isinstance(ground_material, PerfectlyElectricConducting):
             if self.src.polarz.upper() == 'H':
                 q1, q2 = 1, 0
             else:
@@ -72,12 +74,12 @@ class TroposphericRadioWaveSSPadePropagator:
             def n2m1(x, z, freq_hz):
                 if isinstance(z, float):
                     if z < self.env.terrain(x):
-                        return self.env.ground_material.complex_permittivity(freq_hz) - 1
+                        return ground_material.complex_permittivity(freq_hz) - 1
                     else:
                         return self.env.n2m1_profile(x, z, freq_hz)
                 res = self.env.n2m1_profile(x, z, freq_hz)
                 ind = z < self.env.terrain(x)
-                res[ind] = self.env.ground_material.complex_permittivity(freq_hz) - 1
+                res[ind] = ground_material.complex_permittivity(freq_hz) - 1
                 return res
         else:
             def n2m1(x, z, freq_hz):
@@ -105,7 +107,7 @@ class TroposphericRadioWaveSSPadePropagator:
                                              use_n2minus1=not self.env.is_homogeneous(),
                                              rho=rho,
                                              use_rho=False,#(not self.env.is_homogeneous()) and self.src.polarz.upper() == 'V',
-                                             terrain=self.env.terrain)
+                                             lower_z=lambda x: self.env.terrain.elevation(x))
 
         for kn in self.env.knife_edges:
             self.helm_env.knife_edges += [Edge(x=kn.range, z_min=0, z_max=kn.height)]
@@ -131,7 +133,7 @@ def terrain_max_propagation_angle(terrain: Terrain, distance_m: float, step_m=10
     res = 0
     step = 10
     for x in np.arange(step, distance_m, step):
-        angle = cm.atan((terrain(x) - terrain(x - step)) / step) * 180 / cm.pi
+        angle = cm.atan((terrain.elevation(x) - terrain.elevation(x - step)) / step) * 180 / cm.pi
         res = max(res, abs(angle))
     return res
 

@@ -40,7 +40,7 @@ class PETOOLPropagator:
             terrain_type = 1 if self.env.terrain.is_homogeneous else 2
             interp_type = 2
             edge_range = matlab.double([a * 1e-3 for a in x_computational_grid], is_complex=True)
-            edge_height = matlab.double([self.env.terrain(a)+0.0 for a in x_computational_grid], is_complex=True)
+            edge_height = matlab.double([self.env.terrain.elevation(a)+0.0 for a in x_computational_grid], is_complex=True)
 
         polarz_n = 1 if src.polarz.upper() == 'H' else 2
         backward_n = 2 if two_way and terrain_type == 2 else 1

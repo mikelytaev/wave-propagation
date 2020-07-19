@@ -51,7 +51,7 @@ class UnderwaterAcousticsSSPadePropagator:
 
         self.helmholtz_env.rho = rho
         self.helmholtz_env.use_rho = True
-        self.helmholtz_env.terrain = lambda x: self.uwa_env.bottom_profile(x)
+        self.helmholtz_env.lower_z = lambda x: self.uwa_env.bottom_profile(x)
 
         wavelength = c0 / src.freq_hz
         if self.comp_params.exp_pade_order is None:

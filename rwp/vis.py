@@ -22,7 +22,7 @@ class FieldVisualiser:
         {'color': 'black'}
     )
 
-    def __init__(self, field: Field, env=None, trans_func=lambda v: v, label='', x_mult=1.0, bw=False):
+    def __init__(self, field: Field, env: Troposphere, trans_func=lambda v: v, label='', x_mult=1.0, bw=False):
         trans_func = np.vectorize(trans_func)
         self.field = trans_func(field.field).real
         self.x_grid, self.z_grid = field.x_grid, field.z_grid
@@ -45,7 +45,7 @@ class FieldVisualiser:
         plt.imshow(self.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
         plt.colorbar(fraction=0.046, pad=0.04)
         if show_terrain:
-            terrain_grid = np.array([self.env.terrain(v) for v in self.x_grid / self.x_mult])
+            terrain_grid = np.array([self.env.terrain.elevation(v) for v in self.x_grid / self.x_mult])
             plt.plot(self.x_grid, terrain_grid, 'k')
             plt.fill_between(self.x_grid, terrain_grid*0, terrain_grid, color='black')
         return plt
@@ -63,7 +63,7 @@ class FieldVisualiser:
         for a in (self,) + others:
             field = np.zeros(len(a.x_grid))
             for i in range(0, len(a.x_grid)):
-                field[i] = a.field[i, abs(a.z_grid - self.env.terrain(a.x_grid[i] / self.x_mult) - z0).argmin()]
+                field[i] = a.field[i, abs(a.z_grid - self.env.terrain.elevation(a.x_grid[i] / self.x_mult) - z0).argmin()]
             plt.plot(a.x_grid, field, label=a.label, **next(self.lines_iter))
         plt.legend()
         plt.xlim([self.x_grid[0], self.x_grid[-1]])
