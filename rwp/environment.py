@@ -289,13 +289,13 @@ class Troposphere:
             res = np.zeros(z.shape)*0j
             for v in self.vegetation:
                 if v.x1 <= x <= v.x2:
-                    res[np.nonzero(np.logical_and(self.terrain(x) <= z, z <= self.terrain(x) + v.height))] = v.material.complex_permittivity(freq_hz) - 1
+                    res[np.nonzero(np.logical_and(self.terrain.elevation(x) <= z, z <= self.terrain.elevation(x) + v.height))] = v.material.complex_permittivity(freq_hz) - 1
                     break
             return res
         else:
             for v in self.vegetation:
                 if v.x1 <= x <= v.x2:
-                    if self.terrain(x) <= z <= self.terrain(x) + v.height:
+                    if self.terrain.elevation(x) <= z <= self.terrain.elevation(x) + v.height:
                         return v.material.complex_permittivity(freq_hz) - 1
                     break
             return 0
