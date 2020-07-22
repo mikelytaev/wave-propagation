@@ -120,12 +120,14 @@ def optimal_params_m(max_angle_deg, max_distance_wl, threshold, dx_wl=None, dz_w
     else:
         dzs = np.concatenate((np.array([0.001, 0.005]),
                               np.array([0.01, 0.05]),
-                              np.linspace(0.1, 9, 90)))
+                             np.linspace(0.1, 9, 90)))
 
     dxs.sort()
     dzs.sort()
     for pade_order in pade_orders:
         for dx_wl in dxs:
+            updated = False
+            print(dx_wl)
             if z_order <= 4:
                 coefs = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_wl, spe=False)
             for dz_wl in dzs:
@@ -147,12 +149,16 @@ def optimal_params_m(max_angle_deg, max_distance_wl, threshold, dx_wl=None, dz_w
                 val = pade_order[1] / (dx_wl * dz_wl)
                 error = max(errors)
 
-                # if error >= threshold * dx / max_distance_wl:
-                #     break
+                if error >= threshold * dx_wl / max_distance_wl:
+                    break
 
                 if error < threshold * dx_wl / max_distance_wl and val < cur_min:
                     res = (dx_wl, dz_wl, pade_order)
                     cur_min = val
+                    updated = True
+
+            if not updated:
+                break
 
     return res
 
