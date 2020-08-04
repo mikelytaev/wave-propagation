@@ -49,7 +49,7 @@ def pade_propagator_coefs(*, pade_order, diff2, k0, dx, spe=False, alpha=0):
     def propagator_func(s):
         return mpmath.mp.exp(1j * k0 * dx * (sqrt_1plus(diff2(s)) - 1))
 
-    t = mpmath.taylor(propagator_func, 0, pade_order[0] + pade_order[1] + 20)
+    t = mpmath.taylor(propagator_func, 0, pade_order[0] + pade_order[1] + 2)
     p, q = mpmath.pade(t, pade_order[0], pade_order[1])
     pade_coefs = list(zip_longest([-1 / complex(v) for v in mpmath.polyroots(p[::-1], maxsteps=2000)],
                                        [-1 / complex(v) for v in mpmath.polyroots(q[::-1], maxsteps=2000)],
@@ -79,6 +79,13 @@ def discrete_k_x2(k, dx, pade_coefs, dz, kz, order=2):
         mult *= (1 - 4 * a_i / (k * dz) ** 2 * d_2) / (1 - 4 * b_i / (k * dz) ** 2 * d_2)
 
     return k - 1j / dx * cm.log(mult)
+
+
+def k_x(k, kz):
+    if abs(kz) < k:
+        return cm.sqrt(k**2 - kz**2)
+    else:
+        return 1j * cm.sqrt(kz**2 - k**2)
 
 
 def discrete_exp(k, dx, pade_coefs, dz, kz, order=2):
