@@ -469,7 +469,7 @@ class HelmholtzPadeSolver:
 
         return DiscreteNonLocalBC(coefs=coefs)
 
-    def _calc_lower_nlbc(self, beta, refl_coef_func=None):
+    def _calc_lower_nlbc(self, beta, refl_coef_func=lambda theta, k0: 0):
         logging.info('Computing lower nonlocal boundary condition...')
         alpha = self.alpha
 

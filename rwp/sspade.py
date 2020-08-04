@@ -73,12 +73,12 @@ class TroposphericRadioWaveSSPadePropagator:
         if self.comp_params.terrain_method == TerrainMethod.pass_through:
             def n2m1(x, z, freq_hz):
                 if isinstance(z, float):
-                    if z < self.env.terrain(x):
+                    if z < self.env.terrain.elevation(x):
                         return ground_material.complex_permittivity(freq_hz) - 1
                     else:
                         return self.env.n2m1_profile(x, z, freq_hz)
                 res = self.env.n2m1_profile(x, z, freq_hz)
-                ind = z < self.env.terrain(x)
+                ind = z < self.env.terrain.elevation(x)
                 res[ind] = ground_material.complex_permittivity(freq_hz) - 1
                 return res
         else:

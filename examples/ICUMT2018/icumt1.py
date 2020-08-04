@@ -3,14 +3,16 @@ from rwp.vis import *
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
-env.ground_material = PerfectlyElectricConducting()
 env.z_max = 200
 
 h = 50
 w = 1000
 x1 = 3000
 
-env.terrain = Terrain(lambda x: h/2*(1 + fm.sin(fm.pi * (x - x1) / (2*w))) if -w <= (x-x1) <= 3*w else 0)
+env.terrain = Terrain(
+    elevation=lambda x: h/2*(1 + fm.sin(fm.pi * (x - x1) / (2*w))) if -w <= (x-x1) <= 3*w else 0,
+    ground_material=PerfectlyElectricConducting()
+)
 ant60 = GaussAntenna(freq_hz=60000e6, height=10, beam_width=5, eval_angle=0, polarz='H')
 ant70 = GaussAntenna(freq_hz=70000e6, height=10, beam_width=5, eval_angle=0, polarz='H')
 max_range = 10000

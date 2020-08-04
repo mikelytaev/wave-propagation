@@ -32,7 +32,7 @@ class Field:
     def horizontal_over_terrain(self, z0, terrain):
         f = np.zeros(len(self.x_grid), dtype=complex)
         for i in range(0, len(self.x_grid)):
-            f[i] = self.field[i, abs(self.z_grid - terrain(self.x_grid[i]) - z0).argmin()]
+            f[i] = self.field[i, abs(self.z_grid - terrain.elevation(self.x_grid[i]) - z0).argmin()]
         return f
 
     def path_loss(self, gamma=0):

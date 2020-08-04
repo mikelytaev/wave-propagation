@@ -6,7 +6,7 @@ from rwp.crank_nicolson import *
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere(flat=True)
 env.z_max = 100
-env.ground_material = PerfectlyElectricConducting()
+env.terrain = Terrain(ground_material=PerfectlyElectricConducting())
 env.knife_edges = [KnifeEdge(100, 10), KnifeEdge(175, 50), KnifeEdge(250, 20)]
 antenna = GaussAntenna(freq_hz=30000e6, height=10, beam_width=20, eval_angle=0, polarz='H')
 max_range = 300

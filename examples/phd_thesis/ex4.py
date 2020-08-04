@@ -5,9 +5,8 @@ from propagators.sspade import TerrainMethod
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
-env.ground_material = CustomMaterial(eps=15, sigma=1e-3)
 terr = np.loadtxt('holm_terrain.txt')
-env.terrain = InterpTerrain(terr[:, 0], terr[:, 1]-320, kind='linear')
+env.terrain = InterpTerrain(terr[:, 0], terr[:, 1]-320, kind='linear', ground_material=CustomMaterial(eps=15, sigma=1e-3))
 vegetation_x = np.loadtxt('vegetation_x.txt')
 env.vegetation = [Impediment(x1=a, x2=b, height=18, material=CustomMaterial(eps=1.004, sigma=180e-6))
                   for a, b in zip(vegetation_x[0::2], vegetation_x[1::2])]

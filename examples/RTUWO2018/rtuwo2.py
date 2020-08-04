@@ -6,7 +6,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 50], fill_value="extrapolate")
 env = Troposphere()
-env.ground_material = VeryDryGround()
 env.z_max = 2000
 env.M_profile = lambda x, z: profile1d(z)
 
@@ -14,7 +13,9 @@ h = 110
 w = 10000
 x1 = 30000
 
-env.terrain = Terrain(lambda x: h/2*(1 + fm.sin(fm.pi * (x - x1) / (2*w))) if -w <= (x-x1) <= 3*w else 0)
+env.terrain = Terrain(elevation=lambda x: h/2*(1 + fm.sin(fm.pi * (x - x1) / (2*w))) if -w <= (x-x1) <= 3*w else 0,
+                      ground_material=VeryDryGround()
+                      )
 
 ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=5, eval_angle=0, polarz='H')
 max_range = 100000

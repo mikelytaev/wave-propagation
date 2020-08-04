@@ -6,14 +6,16 @@ from propagators.sspade import TerrainMethod
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
-env.ground_material = VeryDryGround()
 env.z_max = 300
 
 h = 110
 w = 10000
 x1 = 30000
 
-env.terrain = Terrain(lambda x: h/2*(1 + fm.sin(fm.pi * (x - x1) / (2*w))) if -w <= (x-x1) <= 3*w else 0)
+env.terrain = Terrain(
+    elevation=lambda x: h/2*(1 + fm.sin(fm.pi * (x - x1) / (2*w))) if -w <= (x-x1) <= 3*w else 0,
+    ground_material=VeryDryGround()
+)
 ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=2, eval_angle=0, polarz='H')
 max_range = 100000
 

@@ -239,18 +239,18 @@ class Terrain:
 
         if isinstance(ground_material, Material):
             self.ground_material = lambda x: ground_material
-            self.range_dependent_ground_material = False
+            self.is_range_dependent_ground_material = False
         elif callable(ground_material):
             self.ground_material = ground_material
-            self.range_dependent_ground_material = True
+            self.is_range_dependent_ground_material = True
 
 
 class InterpTerrain(Terrain):
 
-    def __init__(self, edge_range, edge_height, kind='linear'):
+    def __init__(self, edge_range, edge_height, *, kind='linear', ground_material):
         edge_range, edge_height = zip(*sorted(zip(edge_range, edge_height), key=itemgetter(0)))
         terrain_func = interp1d(edge_range, edge_height, kind=kind, fill_value="extrapolate")
-        super().__init__(elevation=terrain_func)
+        super().__init__(elevation=terrain_func, ground_material=ground_material)
 
 
 class KnifeEdge:

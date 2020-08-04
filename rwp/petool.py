@@ -46,14 +46,14 @@ class PETOOLPropagator:
         backward_n = 2 if two_way and terrain_type == 2 else 1
         het = matlab.double([a * 1e6 / 4 for a in self.env.n2m1_profile(0, self.z_computational_grid, self.freq_hz)],
                             is_complex=True)
-        if isinstance(self.env.ground_material, PerfectlyElectricConducting):
+        if isinstance(self.env.terrain.ground_material(0), PerfectlyElectricConducting):
             ground_type = 1
             epsilon = 0
             sigma = 0
         else:
             ground_type = 2
-            epsilon = self.env.ground_material.permittivity(self.freq_hz)
-            sigma = self.env.ground_material.conductivity_sm_m(self.freq_hz)
+            epsilon = self.env.terrain.ground_material(0).permittivity(self.freq_hz)
+            sigma = self.env.terrain.ground_material(0).conductivity_sm_m(self.freq_hz)
 
         logging.debug('Starting Matlab engine...')
         eng = matlab.engine.start_matlab()

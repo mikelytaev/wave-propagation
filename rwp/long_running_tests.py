@@ -10,7 +10,7 @@ __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
 class TestSSPade(unittest.TestCase):
 
-    def test_flat_h(self):
+    def test_flat_terrain__pec__hor_pol(self):
         environment = Troposphere(flat=True)
         environment.ground_material = PerfectlyElectricConducting()
         environment.z_max = 300
@@ -28,7 +28,7 @@ class TestSSPade(unittest.TestCase):
         f2 = 10 * np.log10(1e-16 + np.abs(ke_field.horizontal(50)))
         self.assertTrue(np.linalg.norm(f1 - f2) / np.linalg.norm(f1) < 0.01)
 
-    def test_flat_v(self):
+    def test_flat_terrain__pec__ver_pol(self):
         environment = Troposphere(flat=True)
         environment.ground_material = PerfectlyElectricConducting()
         environment.z_max = 300
@@ -68,8 +68,15 @@ class TestSSPade(unittest.TestCase):
         environment.knife_edges = [KnifeEdge(range=200, height=50)]
         max_range_m = 300
         antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, eval_angle=0, polarz='H')
-        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m,
-                                                           comp_params=HelmholtzPropagatorComputationalParams(z_order=4))
+        params = HelmholtzPropagatorComputationalParams(
+            exp_pade_order=(10, 11),
+            z_order=5,
+            grid_optimizator_abs_threshold=5e-3)
+        propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna,
+                                                           env=environment,
+                                                           max_range_m=max_range_m,
+                                                           comp_params=params
+                                                           )
         sspade_field = propagator.calculate()
 
         kdc = KnifeEdgeDiffractionCalculator(src=antenna, env=environment, max_range_m=max_range_m,
@@ -83,25 +90,28 @@ class TestSSPade(unittest.TestCase):
 
     def test_terrain(self):
         env = Troposphere()
-        env.ground_material = VeryDryGround()
         env.z_max = 300
         max_range = 100000 / 5
 
         h = 110 / 2
         w = 10000 / 5
         x1 = 30000 / 5
+        def elevation_func(x):
+            return h / 2 * (1 + fm.sin(fm.pi * (x - x1) / (2 * w))) if -w <= (x - x1) <= 3 * w else 0
         env.terrain = Terrain(
-            lambda x: h / 2 * (1 + fm.sin(fm.pi * (x - x1) / (2 * w))) if -w <= (x - x1) <= 3 * w else 0)
+            elevation=elevation_func,
+            ground_material=VeryDryGround()
+        )
         ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=2, eval_angle=0, polarz='H')
 
         computational_params_pt = HelmholtzPropagatorComputationalParams(terrain_method=TerrainMethod.pass_through,
-                                                                         z_order=4, storage=PickleStorage())
+                                                                         z_order=4)
         pade_task_pt = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range,
                                                              comp_params=computational_params_pt)
         pade_field_pt = pade_task_pt.calculate()
 
         computational_params_sc = HelmholtzPropagatorComputationalParams(terrain_method=TerrainMethod.staircase,
-                                                                         z_order=4, storage=PickleStorage())
+                                                                         z_order=4)
         pade_task_sc = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range,
                                                              comp_params=computational_params_sc)
         pade_field_sc = pade_task_sc.calculate()

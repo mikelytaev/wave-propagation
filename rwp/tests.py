@@ -33,7 +33,15 @@ class TestSSPade(unittest.TestCase):
         self.assertTrue(isinstance(terrain.ground_material(0), PerfectlyElectricConducting))
         self.assertTrue(isinstance(terrain.ground_material(100), PerfectlyElectricConducting))
 
-    def test_create_terrain__irregular_ground_material(self):
+    def test_create_terrain__constant_ground_material(self):
+
+        terrain = Terrain(ground_material=VeryDryGround())
+
+        self.assertTrue(isinstance(terrain.ground_material(0), VeryDryGround))
+        self.assertTrue(isinstance(terrain.ground_material(0), VeryDryGround))
+        self.assertTrue(not terrain.is_range_dependent_ground_material)
+
+    def test_create_terrain__range_dependent_ground_material(self):
         def irregular_material(x):
             if x < 100:
                 return FreshWater()
@@ -44,6 +52,7 @@ class TestSSPade(unittest.TestCase):
 
         self.assertTrue(isinstance(terrain.ground_material(0), FreshWater))
         self.assertTrue(isinstance(terrain.ground_material(200), VeryDryGround))
+        self.assertTrue(terrain.is_range_dependent_ground_material)
 
 
 if __name__ == '__main__':
