@@ -54,6 +54,13 @@ class TestSSPade(unittest.TestCase):
         self.assertTrue(isinstance(terrain.ground_material(200), VeryDryGround))
         self.assertTrue(terrain.is_range_dependent_ground_material)
 
+    def test_direct_geodesic_problem(self):
+
+        res = geodesic_problem(60, 30, 90, [0, 100])
+
+        self.assertTrue(len(res), 2)
+        self.assertTrue(res[0], (60, 30))
+
 
 if __name__ == '__main__':
     unittest.main()

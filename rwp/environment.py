@@ -6,6 +6,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from operator import itemgetter
 
+from geographiclib.geodesic import *
+
 
 EARTH_RADIUS = 6371000
 
@@ -342,3 +344,17 @@ class StreetCanyon3D:
         self.street_width = street_width
         self.building_height = building_height
         self.x_max = x_max
+
+
+def geodesic_problem(lat, long, azi, x_grid):
+    """
+    solves direct geodesic problem for array of points
+    :param lat: latitude of starting point (deg)
+    :param long: longitude of starting point (deg)
+    :param azi: azimuth (deg)
+    :param x_grid: ranges from starting point (m)
+    :return: list [(lat, long)] of coordinates of points
+    """
+    line = Geodesic.WGS84.Line(lat, long, azi)
+    pozs = [line.Position(v) for v in x_grid]
+    return [(pos['lat2'], pos['lon2']) for pos in pozs]
