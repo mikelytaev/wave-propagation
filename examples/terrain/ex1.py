@@ -8,13 +8,13 @@ from rwp.environment import *
 settings['DEFAULT_CACHE'] = ['disk']
 
 # create terrain tiles node
-node = TerrainTiles(tile_format='geotiff', zoom=10)
+node = TerrainTiles(tile_format='geotiff', zoom=12)
 
 #lat = 60.5
 #lon = 30
-lat, lon = 53.403292, 157.665344
+lat, lon = 53.548254, 157.328588
 dir = 135
-x_grid = np.linspace(0, 100000, 1000)
+x_grid = np.linspace(0, 200000, 10000)
 coords = geodesic_problem(lat, lon, dir, x_grid)
 lats = [c[0] for c in coords]
 lons = [c[1] for c in coords]

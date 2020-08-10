@@ -115,8 +115,8 @@ def optimal_params_m(max_angle_deg, max_distance_wl, threshold, dx_wl=None, dz_w
     else:
         dxs = np.concatenate((#np.linspace(0.001, 0.01, 10),
                               #np.linspace(0.02, 0.1, 9),
-                              np.linspace(0.2, 1, 9),
-                              np.linspace(2, 10, 9),
+                              #np.linspace(0.2, 1, 9),
+                              #np.linspace(2, 10, 9),
                               np.linspace(20, 100, 9),
                               np.linspace(200, 1000, 9),
                               np.linspace(1100, 1900, 9),
