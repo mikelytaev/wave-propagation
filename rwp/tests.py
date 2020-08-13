@@ -61,6 +61,19 @@ class TestSSPade(unittest.TestCase):
         self.assertTrue(len(res), 2)
         self.assertTrue(res[0], (60, 30))
 
+    def test_inverse_geodesic_problem(self):
+        lat1, long1 = 60, 30
+        lat2, long2 = 70, 20
+
+        res, x_grid = inv_geodesic_problem(lat1, long1, lat2, long2, 100)
+
+        self.assertEqual(len(res), 100)
+        self.assertEqual(len(x_grid), 100)
+        self.assertAlmostEqual(res[0][0], lat1)
+        self.assertAlmostEqual(res[0][1], long1)
+        self.assertAlmostEqual(res[-1][0], lat2)
+        self.assertAlmostEqual(res[-1][1], long2)
+
 
 if __name__ == '__main__':
     unittest.main()
