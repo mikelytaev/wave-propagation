@@ -26,13 +26,13 @@ from rwp.vis import *
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
 env.z_max = 300
-env.terrain = Terrain(elevation=lambda x: elev_int_1d(x, 5, 200, 7e3) + elev_int_1d(x, 5, 200, 14e3), ground_material=PerfectlyElectricConducting())
+env.terrain = Terrain(elevation=lambda x: elev_int_1d(x, 5, 70, 7e3) + elev_int_1d(x, 5, 70, 9e3) + elev_int_1d(x, 5, 70, 11e3) + elev_int_1d(x, 5, 70, 13e3), ground_material=PerfectlyElectricConducting())
 #env.knife_edges = [KnifeEdge(80e3, 200)]
 profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 40], fill_value="extrapolate")
 #env.M_profile = lambda x, z: profile1d(z)
 
 ant = GaussAntenna(freq_hz=3000e6, height=70, beam_width=4, eval_angle=0, polarz='H')
-max_range_m = 20000
+max_range_m = 40000
 pade_task_4 = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
                                                   HelmholtzPropagatorComputationalParams(
                                                       terrain_method=TerrainMethod.staircase,
@@ -152,7 +152,7 @@ plt.show()
 plt = pade_vis_4.plot_hor_over_terrain(1, pade_vis_2f)
 plt.xlabel('Range (km)')
 plt.ylabel('10log|u| (dB)')
-plt.xlim([0.5, 20])
+plt.xlim([0.5, 40])
 plt.ylim([-100, 0])
 plt.grid(True)
 plt.tight_layout()

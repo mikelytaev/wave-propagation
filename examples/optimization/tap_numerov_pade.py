@@ -40,15 +40,15 @@ env.z_max = 5000
 env.terrain = Terrain(elevation=elev_int_1d, ground_material=FreshWater())
 #env.knife_edges = [KnifeEdge(80e3, 200)]
 profile1d = interp1d(x=[0, 100, 150, 300], y=[0, 32, 10, 40], fill_value="extrapolate")
-#env.M_profile = lambda x, z: profile1d(z)
+env.M_profile = lambda x, z: profile1d(z)
 
-ant = GaussAntenna(freq_hz=3000e6, height=70, beam_width=4, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=3000e6, height=70, beam_width=15, eval_angle=0, polarz='H')
 
 pade_task_4 = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=150e3, comp_params=
                                                   HelmholtzPropagatorComputationalParams(
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=5,
-                                                      #modify_grid=True,
+                                                      #modify_grid=False,
                                                       grid_optimizator_abs_threshold=5e-3,
                                                       z_order=4,
                                                       exp_pade_order=(10, 11),
@@ -59,20 +59,21 @@ pade_task_4 = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_ra
                                                   ))
 pade_field_4 = pade_task_4.calculate()
 
-pade_task_4f = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=150e3, comp_params=
-                                                  HelmholtzPropagatorComputationalParams(
-                                                      terrain_method=TerrainMethod.staircase,
-                                                      max_propagation_angle=5,
-                                                      #modify_grid=True,
-                                                      grid_optimizator_abs_threshold=5e-3,
-                                                      z_order=4,
-                                                      exp_pade_order=(10, 11),
-                                                      dx_wl=500,
-                                                      dz_wl=0.8*4.5,
-                                                      #two_way=False,
-                                                      storage=PickleStorage()
-                                                  ))
-pade_field_4f = pade_task_4f.calculate()
+
+# pade_task_4f = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=150e3, comp_params=
+#                                                   HelmholtzPropagatorComputationalParams(
+#                                                       terrain_method=TerrainMethod.staircase,
+#                                                       max_propagation_angle=5,
+#                                                       #modify_grid=True,
+#                                                       grid_optimizator_abs_threshold=5e-3,
+#                                                       z_order=4,
+#                                                       exp_pade_order=(10, 11),
+#                                                       dx_wl=500,
+#                                                       dz_wl=0.8,
+#                                                       #two_way=False,
+#                                                       storage=PickleStorage()
+#                                                   ))
+# pade_field_4f = pade_task_4f.calculate()
 
 # pade_task_2 = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=150e3, comp_params=
 #                                                   HelmholtzPropagatorComputationalParams(
@@ -92,12 +93,12 @@ pade_task_2f = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_r
                                                   HelmholtzPropagatorComputationalParams(
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=5,
-                                                      #modify_grid=True,
+                                                      #modify_grid=False,
                                                       grid_optimizator_abs_threshold=5e-3,
                                                       z_order=2,
                                                       exp_pade_order=(10, 11),
                                                       dx_wl=500,
-                                                      dz_wl=0.8*4.5,
+                                                      dz_wl=0.8,
                                                       #two_way=False,
                                                       storage=PickleStorage()
                                                   ))
@@ -114,8 +115,8 @@ pade_field_2f = pade_task_2f.calculate()
 
 pade_vis_4 = FieldVisualiser(pade_field_4, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
                              label='Pade-[10/11], dx=500, dz=0.8 (4th order)', x_mult=1E-3)
-pade_vis_4f = FieldVisualiser(pade_field_4f, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                             label='Pade-[10/11], dx=500, dz=3.6 (4th order)', x_mult=1E-3)
+# pade_vis_4f = FieldVisualiser(pade_field_4f, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
+#                              label='Pade-[10/11], dx=500, dz=3.6 (4th order)', x_mult=1E-3)
 # pade_vis_2 = FieldVisualiser(pade_field_2, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
 #                              label='Pade-[10/11], dx=500, dz=0.1 (2th order)', x_mult=1E-3)
 pade_vis_2f = FieldVisualiser(pade_field_2f, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
@@ -129,11 +130,11 @@ plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-plt = pade_vis_4f.plot2d(min=-100, max=0, show_terrain=True)
-plt.xlabel('Range (km)')
-plt.ylabel('Height (m)')
-plt.tight_layout()
-plt.show()
+# plt = pade_vis_4f.plot2d(min=-100, max=0, show_terrain=True)
+# plt.xlabel('Range (km)')
+# plt.ylabel('Height (m)')
+# plt.tight_layout()
+# plt.show()
 
 # plt = pade_vis_2.plot2d(min=-100, max=0, show_terrain=True)
 # plt.xlabel('Range (km)')
@@ -160,7 +161,7 @@ plt.show()
 # plt.tight_layout()
 # plt.show()
 
-plt = pade_vis_4.plot_hor_over_terrain(10.79913607, pade_vis_2f, pade_vis_4f)
+plt = pade_vis_4.plot_hor_over_terrain(4000, pade_vis_2f)
 plt.xlabel('Range (km)')
 plt.ylabel('10log|u| (dB)')
 plt.xlim([0.5, 150])
@@ -170,7 +171,7 @@ plt.tight_layout()
 plt.show()
 
 f, (ax1) = plt.subplots(1, 1, sharey=True)
-pade_vis_4.plot_ver(5 * 1E3, ax1, pade_vis_2f, pade_vis_4f)
+pade_vis_4.plot_ver(5 * 1E3, ax1, pade_vis_2f)
 ax1.set_ylabel('Height (m)')
 ax1.set_xlabel('10log|u| (dB)')
 ax1.grid()
@@ -178,7 +179,7 @@ f.tight_layout()
 f.show()
 
 f, (ax1) = plt.subplots(1, 1, sharey=True)
-pade_vis_4.plot_ver(150 * 1E3, ax1, pade_vis_2f, pade_vis_4f)
+pade_vis_4.plot_ver(150 * 1E3, ax1, pade_vis_2f)
 ax1.set_ylabel('Height (m)')
 ax1.set_xlabel('10log|u| (dB)')
 ax1.grid()
@@ -204,3 +205,21 @@ f.tight_layout()
 ax1.grid()
 ax2.grid()
 f.show()
+
+norm = Normalize(-100, 0)
+extent = [pade_vis_4.x_grid[0], pade_vis_4.x_grid[-1], pade_vis_4.z_grid[0], pade_vis_4.z_grid[-1]]
+f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+ax1.imshow(pade_vis_4.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
+im = ax2.imshow(pade_vis_2f.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
+f.colorbar(im, fraction=0.046, pad=0.04)
+f.tight_layout()
+plt.show()
+
+plt.figure()
+err = np.abs(10*np.log10(np.abs(pade_field_4.field)+1e-16) - 10*np.log10(np.abs(pade_field_2f.field)+1e-16))
+np.max(err)
+norm = Normalize(0, 5)
+extent = [pade_vis_4.x_grid[0], pade_vis_4.x_grid[-1], pade_vis_4.z_grid[0], pade_vis_4.z_grid[-1]]
+plt.imshow(err.T[::-1, :], extent=extent, aspect='auto', norm=norm)
+plt.colorbar(fraction=0.046, pad=0.04)
+plt.show()
