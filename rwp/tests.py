@@ -2,8 +2,11 @@ import unittest
 
 from rwp.sspade import *
 from rwp.environment import *
+from rwp.terrain import *
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
+
+from rwp.terrain import geodesic_problem
 
 
 class TestSSPade(unittest.TestCase):

@@ -47,7 +47,7 @@ class FieldVisualiser:
         if show_terrain:
             terrain_grid = np.array([self.env.terrain.elevation(v) for v in self.x_grid / self.x_mult])
             plt.plot(self.x_grid, terrain_grid, 'k')
-            plt.fill_between(self.x_grid, terrain_grid*0, terrain_grid, color='black')
+            plt.fill_between(self.x_grid, terrain_grid*0, terrain_grid, color='brown')
         return plt
 
     def plot_hor(self, z0, *others):

@@ -1,13 +1,10 @@
 import cmath as cm
-import abc
+import math as fm
 from enum import Enum
 
 import numpy as np
 from scipy.interpolate import interp1d
 from operator import itemgetter
-
-from geographiclib.geodesic import *
-
 
 EARTH_RADIUS = 6371000
 
@@ -346,23 +343,11 @@ class StreetCanyon3D:
         self.x_max = x_max
 
 
-def geodesic_problem(lat, long, azi, x_grid):
-    """
-    solves direct geodesic problem for array of points
-    :param lat: latitude of starting point (deg)
-    :param long: longitude of starting point (deg)
-    :param azi: azimuth (deg)
-    :param x_grid: ranges from starting point (m)
-    :return: list [(lat, long)] of coordinates of points
-    """
-    line = Geodesic.WGS84.Line(lat, long, azi)
-    pozs = [line.Position(v) for v in x_grid]
-    return [(pos['lat2'], pos['lon2']) for pos in pozs]
-
-
-def inv_geodesic_problem(lat1, long1, lat2, long2, n_points):
-    geo_dic = Geodesic.WGS84.Inverse(lat1, long1, lat2, long2)
-    range = geo_dic['s12']
-    azi = geo_dic['azi1']
-    x_grid = np.linspace(0, range, n_points)
-    return geodesic_problem(lat1, long1, azi, x_grid), x_grid
+def pyramid(x, angle, height, r):
+    length = height / fm.tan(angle * cm.pi / 180)
+    if r <= x <= r + length:
+        return (x - r) * fm.tan(angle * cm.pi / 180)
+    elif r + length < x <= r + 2*length:
+        return (r + 2*length - x) * fm.tan(angle * cm.pi / 180)
+    else:
+        return 0
