@@ -3,6 +3,7 @@ from matplotlib.colors import Normalize
 from itertools import cycle
 from rwp.field import Field, Field3d
 from rwp.environment import *
+import logging
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
@@ -54,6 +55,8 @@ class FieldVisualiser:
         plt.figure(figsize=(6, 3.2))
         for a in (self,) + others:
             plt.plot(a.x_grid, a.field[:, abs(a.z_grid - z0).argmin()], label=a.label, **next(self.lines_iter))
+            if len(self.z_grid) != len(a.z_grid) or not np.all(self.z_grid == a.z_grid):
+                logging.warning("z grid is not equal. It may cause some unexpected differences in the results.")
         plt.legend()
         plt.xlim([self.x_grid[0], self.x_grid[-1]])
         return plt
@@ -64,6 +67,8 @@ class FieldVisualiser:
             field = np.zeros(len(a.x_grid))
             for i in range(0, len(a.x_grid)):
                 field[i] = a.field[i, abs(a.z_grid - self.env.terrain.elevation(a.x_grid[i] / self.x_mult) - z0).argmin()]
+            if len(self.z_grid) != len(a.z_grid) or not np.all(self.z_grid == a.z_grid):
+                logging.warning("z grid is not equal. It may cause some unexpected differences in the results.")
             plt.plot(a.x_grid, field, label=a.label, **next(self.lines_iter))
         plt.legend()
         plt.xlim([self.x_grid[0], self.x_grid[-1]])
@@ -74,6 +79,8 @@ class FieldVisualiser:
         ax.plot(self.field[abs(self.x_grid - x0).argmin(), :], self.z_grid, label=self.label)
         for a in others:
             ax.plot(a.field[abs(a.x_grid - x0).argmin(), :], a.z_grid, label=a.label)
+            if len(self.x_grid) != len(a.x_grid) or not np.all(self.x_grid == a.x_grid):
+                logging.warning("x grid is not equal. It may cause some unexpected differences in the results.")
         ax.legend()
         return ax
 
