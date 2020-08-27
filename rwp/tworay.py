@@ -23,7 +23,13 @@ class TwoRayModel:
         self.fur_q_func = fur_q_func
 
     def _reflection_coefficient(self, theta):
-        return reflection_coef(1, self.env.terrain.ground_material(0).complex_permittivity(self.src.freq_hz), 90 - theta, self.src.polarz)
+        if isinstance(self.env.terrain.ground_material(0), PerfectlyElectricConducting):
+            if self.src.polarz == 'H':
+                return -1
+            else:
+                return 1
+        else:
+            return reflection_coef(1, self.env.terrain.ground_material(0).complex_permittivity(self.src.freq_hz), 90 - theta, self.src.polarz)
 
     def _val(self, x_m, z_m):
         z0 = self.src.height_m
