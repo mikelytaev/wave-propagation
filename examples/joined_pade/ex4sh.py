@@ -1,6 +1,7 @@
 from rwp.sspade import *
 from rwp.vis import *
-#from rwp.petool import PETOOLPropagationTask
+from rwp.petool import PETOOLPropagationTask
+import matplotlib
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -62,12 +63,17 @@ pade_task_joined = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, m
                                                   ))
 pade_field_joined = pade_task_joined.calculate()
 
+petool_task = PETOOLPropagationTask(antenna=ant, env=env, two_way=False, max_range_m=max_range_m, dx_wl=500, n_dx_out=1, dz_wl=3)
+petool_field = petool_task.calculate()
+
 pade_vis_2f = FieldVisualiser(pade_field_2f, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                             label='МКР dz=3.0 (2й порядок)', x_mult=1E-3)
+                             label='dz=3.0 (2й порядок)', x_mult=1E-3)
 pade_vis_2 = FieldVisualiser(pade_field_2, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                             label='МКР dz=0.5 (2й порядок)', x_mult=1E-3)
+                             label='dz=0.5 (2й порядок)', x_mult=1E-3)
 pade_vis_joined = FieldVisualiser(pade_field_joined, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                             label='МКР dz=3.0 (Паде порядок)', x_mult=1E-3)
+                             label='dz=3.0 (Паде порядок)', x_mult=1E-3)
+petool_vis = FieldVisualiser(petool_field, env=env, trans_func=lambda x: x, label='Метод расщепления Фурье', x_mult=1E-3)
+petool_vis.field[0, :] = -160
 
 f, ax = plt.subplots(2, 2, sharey=True, figsize=(6, 2.5*2), constrained_layout=True)
 norm = Normalize(-80, 0)
@@ -100,35 +106,40 @@ ax[1][0].set_ylim([0, 170])
 ax[1][0].set_xlabel('Расстояние, км')
 ax[1][0].set_ylabel('Высота, м')
 
-# im = ax[1][1].imshow(pade_vis_2f.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
-# ax[1][1].plot(utd_vis.x_grid, terrain_grid, 'k')
-# ax[1][1].fill_between(utd_vis.x_grid, terrain_grid*0, terrain_grid, color='brown')
-# ax[1][1].grid()
-# ax[1][1].set_title('(г)')
-# ax[1][1].set_xlabel('Расстояние, км')
-#ax[0][1].set_ylabel('Высота, м')
+ax[1][1].imshow(petool_vis.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
+ax[1][1].plot(pade_vis_joined.x_grid, terrain_grid, 'k')
+ax[1][1].fill_between(pade_vis_joined.x_grid, terrain_grid*0, terrain_grid, color='brown')
+ax[1][1].grid()
+ax[1][1].set_title('(г)')
+ax[1][1].set_xlim([40, 100])
+ax[1][1].set_ylim([0, 170])
+ax[1][1].set_xlabel('Расстояние, км')
 
 f.colorbar(im, ax=ax[1, :], shrink=0.6, location='bottom')
 #f.tight_layout()
 plt.show()
 
-plt = pade_vis_joined.plot_hor_over_terrain(1, pade_vis_2, pade_vis_2f)
+plt = pade_vis_joined.plot_hor_over_terrain(150, petool_vis)
 plt.xlabel('Range (km)')
 plt.ylabel('10log|u| (dB)')
-plt.xlim([0.5, max_range_m*1e-3])
+#plt.xlim([0.5, max_range_m*1e-3])
 plt.ylim([-100, 0])
 plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
-pade_vis_joined.plot_ver(72.5 * 1E3, ax1, pade_vis_2, pade_vis_2f)
-ax1.set_ylabel('Height (m)')
-ax1.set_xlabel('10log|u| (dB)')
+matplotlib.rcParams["legend.loc"] = 'upper left'
+f, (ax1, ax2) = plt.subplots(1, 2, figsize=(5.8, 3.2), sharey=True)
+pade_vis_joined.plot_ver(72.5 * 1E3, ax1, pade_vis_2f)
+ax1.set_xlim([-60, -10])
+ax1.set_ylim([0, 100])
+ax1.set_ylabel('Высота, м')
+ax1.set_xlabel('10log|u| (дБ)')
 ax1.grid()
-pade_vis_joined.plot_ver(100 * 1E3, ax2, pade_vis_2, pade_vis_2f)
-ax2.set_ylabel('Height (m)')
-ax2.set_xlabel('10log|u| (dB)')
+pade_vis_joined.plot_ver(100 * 1E3, ax2, pade_vis_2f)
+ax2.set_xlim([-60, -10])
+ax2.set_ylim([0, 100])
+ax2.set_xlabel('10log|u| (дБ)')
 ax2.grid()
-#f.tight_layout()
+f.tight_layout()
 f.show()
