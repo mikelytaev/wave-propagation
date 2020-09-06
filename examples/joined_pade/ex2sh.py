@@ -23,8 +23,8 @@ pade_task_2 = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_ra
                                                       z_order=2,
                                                       exp_pade_order=(10, 11),
                                                       dx_wl=100,
-                                                      dz_wl=0.05,
-                                                      z_output_filter=40,
+                                                      dz_wl=0.25,
+                                                      z_output_filter=8,
                                                       storage=PickleStorage()
                                                   ))
 pade_field_2 = pade_task_2.calculate()
