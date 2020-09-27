@@ -28,7 +28,7 @@ class FDUrbanPropagatorComputationParameters:
 
 class FDUrbanPropagator:
 
-    def __init__(self, env: StreetCanyon3D, freq_hz, comp_params: FDUrbanPropagatorComputationParameters):
+    def __init__(self, env: Manhattan3D, freq_hz, comp_params: FDUrbanPropagatorComputationParameters):
         self.env = env
         self.freq_hz = freq_hz
         self.comp_params = comp_params
@@ -119,13 +119,14 @@ class FDUrbanPropagator:
             self._transform(phi))
 
     def _intersection_mask(self, x_i):
-        mask = np.full((self.n_y, self.n_z), False, dtype=bool)
-        mg = np.meshgrid(np.logical_or(self.y_computational_grid <= -self.env.street_width / 2,
-                                        self.y_computational_grid >= self.env.street_width / 2),
-                         self.z_computational_grid <= self.env.building_height)
-        mask[mg[0].T * mg[1].T == 1] = True
-
-        return mask
+        # mask = np.full((self.n_y, self.n_z), False, dtype=bool)
+        # mg = np.meshgrid(np.logical_or(self.y_computational_grid <= -self.env.street_width / 2,
+        #                                 self.y_computational_grid >= self.env.street_width / 2),
+        #                  self.z_computational_grid <= self.env.building_height)
+        # mask[mg[0].T * mg[1].T == 1] = True
+        #
+        # return mask
+        return self.env.intersection_mask_x(x_i*self.dx, self.y_computational_grid, self.z_computational_grid)
 
     def _propagate(self, src, polarz, x_max):
         n_x = fm.ceil(x_max / self.dx)

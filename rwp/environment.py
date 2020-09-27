@@ -343,6 +343,34 @@ class StreetCanyon3D:
         self.x_max = x_max
 
 
+class Manhattan3D:
+
+    def __init__(self, *, domain_width, domain_height, x_max):
+        self.domain_width = domain_width
+        self.domain_height = domain_height
+        self.x_max = x_max
+
+        self.centers = []
+        self.sizes = []
+
+    def add_block(self, *, center: '(x, y)', size: '(x_size, y_size, height)'):
+        self.centers += [center]
+        self.sizes += [size]
+
+    def intersection_mask_x(self, x_m, y_grid_m, z_grid_m):
+        res = np.zeros((len(y_grid_m), len(z_grid_m)), dtype=bool)
+        y_mg, z_mg = np.meshgrid(y_grid_m, z_grid_m, indexing='ij')
+        for center, size in zip(self.centers, self.sizes):
+            x_left = center[0] - size[0] / 2
+            x_right = center[0] + size[0] / 2
+            if x_left <= x_m <= x_right:
+                y_left = center[1] - size[1] / 2
+                y_right = center[1] + size[1] / 2
+                height = size[2]
+                res = np.logical_or(res, np.logical_and(z_mg <= height, np.logical_and(y_left <= y_mg, y_mg <= y_right)))
+        return res
+
+
 def pyramid(x, angle, height, r):
     length = height / fm.tan(angle * cm.pi / 180)
     if r <= x <= r + length:
