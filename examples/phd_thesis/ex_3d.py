@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.DEBUG)
 
-env = StreetCanyon3D(domain_width=50, domain_height=100, street_width=30, building_height=50, x_max=1000)
+env = Manhattan3D(domain_width=50, domain_height=100, x_max=1000)
+env.add_block(center=(500, 50), size=(1000, 70, 50))
+env.add_block(center=(500, -50), size=(1000, 70, 50))
 ant = GaussSource3D(freq_hz=900E6, height=50, ver_beamwidth=30, hor_beamwidth=30, polarz='H')
 
 comp_params = FDUrbanPropagatorComputationParameters(dx_wl=5, dy_wl=0.5, dz_wl=0.5,
