@@ -23,14 +23,14 @@ def pade_sqrt(z, a_n, b_n, alpha=0):
 
 def pade_propagator_coefs(*, pade_order, diff2, k0, dx, spe=False, alpha=0):
     """
-
+    Pade approximation of the exponential propagator of the form \prod_{l=1}^{p}\frac{1+a_{l}L}{1+b_{l}L}
     :param pade_order: order of Pade approximation, tuple, for ex (7, 8)
     :param diff2:
-    :param k0:
-    :param dx:
-    :param spe:
+    :param k0: wavenumber
+    :param dx: longitudinal grid step (m)
+    :param spe: use standard narrow angle parabolic equation (Schröder's equation)
     :param alpha: rotation angle, see F. A. Milinazzo et. al. Rational square-root approximations for parabolic equation algorithms. 1997. Acoustical Society of America.
-    :return:
+    :return: [(a_1, b_1), (a_2, b_2),...(a_p, b_p)], if pade_order[0]!=pade_order[1] extra coefs. are filled with 0
     """
 
     mpmath.mp.dps = 63

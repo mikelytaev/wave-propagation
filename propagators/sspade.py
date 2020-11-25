@@ -92,6 +92,11 @@ class TerrainMethod(Enum):
     staircase = 3
 
 
+class TruncationMethod(Enum):
+    transparentBC = 1,
+    absorption_layer = 2
+
+
 @dataclass
 class Edge:
     """
@@ -150,6 +155,7 @@ class HelmholtzPropagatorComputationalParams:
     max_propagation_angle: float = None
     max_src_angle: float = 0
     exp_pade_order: tuple = None
+    exp_pade_coefs: List[tuple] = None
     x_output_filter: int = None
     z_output_filter: int = None
     two_way: bool = None
@@ -185,7 +191,10 @@ class HelmholtzPadeSolver:
         self.k0 = (2 * cm.pi) / self.wavelength
         self.params.max_range_m = self.params.max_range_m or self.env.x_max_m
 
-        self._optimize_params()
+        if self.params.exp_pade_coefs is None:
+            self._optimize_params()
+        elif self.params.dx_wl is None or self.params.dz_wl is None:
+            raise Exception("Computational parameters optimization not supported for custom Pade coefficients. All grid parameters should be specified.")
         self.z_computational_grid, self.dz_m = np.linspace(self.env.z_min, self.env.z_max, self.n_z, retstep=True)
         self.dx_m = self.params.dx_wl * wavelength
         self.x_computational_grid = np.arange(0, self.n_x) * self.dx_m
@@ -205,8 +214,12 @@ class HelmholtzPadeSolver:
             def diff2(s):
                 return s
 
-        self.pade_coefs = pade_propagator_coefs(pade_order=self.params.exp_pade_order, diff2=diff2, k0=self.k0,
-                                                dx=self.dx_m, spe=self.params.standard_pe, alpha=self.params.sqrt_alpha)
+        if self.params.exp_pade_coefs is None:
+            self.params.exp_pade_coefs = pade_propagator_coefs(pade_order=self.params.exp_pade_order, diff2=diff2,
+                                                               k0=self.k0, dx=self.dx_m, spe=self.params.standard_pe,
+                                                               alpha=self.params.sqrt_alpha)
+        else:
+            self.params.exp_pade_order = (len(self.params.exp_pade_coefs), len(self.params.exp_pade_coefs))
 
         self.lower_bc = None
         self.upper_bc = None
@@ -441,8 +454,8 @@ class HelmholtzPadeSolver:
             self.upper_bc = self.env.upper_bc
 
     def _calc_nlbc(self, diff_eq_solution_ratio):
-        num_roots, den_roots = list(zip(*self.pade_coefs))
-        m_size = len(self.pade_coefs)
+        num_roots, den_roots = list(zip(*self.params.exp_pade_coefs))
+        m_size = len(self.params.exp_pade_coefs)
         tau = self.params.inv_z_transform_tau
         if max(self.params.exp_pade_order) == 1:
             def nlbc_transformed(t):
@@ -553,7 +566,7 @@ class HelmholtzPadeSolver:
             if isinstance(self.upper_bc, DiscreteNonLocalBC):
                 upper_convolution = np.einsum('ijk,ik->j', self.upper_bc.coefs[1:x_i], phi_J[x_i-1:0:-1])
 
-            for pc_i, (a, b) in enumerate(self.pade_coefs):
+            for pc_i, (a, b) in enumerate(self.params.exp_pade_coefs):
                 # process boundary conditions
                 lower_bound = None
                 if isinstance(self.lower_bc, DiscreteNonLocalBC):
