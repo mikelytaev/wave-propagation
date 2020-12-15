@@ -62,6 +62,20 @@ class GaussSource3D:
         self.k0 = 2 * cm.pi / self.wavelength
 
     def aperture(self, y_grid, z_grid):
+        # ww_ver = cm.sqrt(2 * cm.log(2)) / (self.k0 * cm.sin(self.ver_beamwidth * cm.pi / 180 / 2))
+        # ww_hor = cm.sqrt(2 * cm.log(2)) / (self.k0 * cm.sin(self.hor_beamwidth * cm.pi / 180 / 2))
+        # ver_ant = 1 / (cm.sqrt(cm.pi) * ww_ver) * np.exp(-((z_grid - self.height) / ww_ver) ** 2)
+        # #ver_ant = z_grid * 0j
+        # #zi_min = np.argmin(np.abs(z_grid - self.height))
+        # #ver_ant[zi_min] = 1 / (cm.sqrt(cm.pi) * ww_ver)
+        # #hor_ant = 1 / (cm.sqrt(cm.pi) * ww_hor) * np.exp(-(y_grid / ww_hor) ** 2)
+        # hor_ant = y_grid * 0j
+        # yi_min = np.argmin(np.abs(y_grid - 0))
+        # hor_ant[yi_min] = 1 / (cm.sqrt(cm.pi) * ww_hor)
+        # hor = np.tile(hor_ant, (len(z_grid), 1)).transpose()
+        # ver = np.tile(ver_ant, (len(y_grid), 1))
+        # return hor * ver
+
         ww_ver = cm.sqrt(2 * cm.log(2)) / (self.k0 * cm.sin(self.ver_beamwidth * cm.pi / 180 / 2))
         ww_hor = cm.sqrt(2 * cm.log(2)) / (self.k0 * cm.sin(self.hor_beamwidth * cm.pi / 180 / 2))
         ver_ant = 1 / (cm.sqrt(cm.pi) * ww_ver) * np.exp(-((z_grid - self.height) / ww_ver) ** 2)

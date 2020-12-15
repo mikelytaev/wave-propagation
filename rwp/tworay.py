@@ -39,8 +39,8 @@ class TwoRayModel:
         k_z_los = self.k0 * fm.sin(theta_los * fm.pi / 180)
         theta_r = fm.atan2(z_m + z0, x_m) * 180 / fm.pi
         k_z_r = self.k0 * fm.sin(theta_r * fm.pi / 180)
-        return self.fur_q_func(k_z_los) * cm.exp(1j*self.k0*r_los) + \
-               self.fur_q_func(-k_z_r) * self._reflection_coefficient(theta_r) * cm.exp(1j*self.k0*r_refl)
+        return self.fur_q_func(k_z_los) * cm.exp(1j*self.k0*r_los) / r_los + \
+               self.fur_q_func(-k_z_r) * self._reflection_coefficient(theta_r) * cm.exp(1j*self.k0*r_refl) / r_refl
 
     def calculate(self, x_grid_m, z_grid_m):
         res = np.empty((len(x_grid_m), len(z_grid_m)), dtype=complex)

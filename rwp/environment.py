@@ -370,6 +370,16 @@ class Manhattan3D:
                 res = np.logical_or(res, np.logical_and(z_mg <= height, np.logical_and(y_left <= y_mg, y_mg <= y_right)))
         return res
 
+    def facets(self, x_grid_m, y_grid_m, z_grid_m, forward=True):
+        res = []
+        sign = 1 if forward else -1
+        for center, size in zip(self.centers, self.sizes):
+            x_pos = center[0] + sign * size[0] / 2
+            x_index = np.abs(x_grid_m - x_pos).argmin()
+            mask = self.intersection_mask_x(x_pos - sign * 1e-10, y_grid_m, z_grid_m)
+            res += [(x_index, mask)]
+        return res
+
 
 def pyramid(x, angle, height, r):
     length = height / fm.tan(angle * cm.pi / 180)

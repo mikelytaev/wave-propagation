@@ -4,8 +4,35 @@ from propagators._utils import *
 import scipy.linalg as la
 from rwp.antennas import *
 import logging
+from scipy import fft
 
 from rwp.field import Field3d
+
+
+class Facets:
+
+    def __init__(self, facets):
+        self.x_indexes = []
+        self.masks = []
+        self.fields = []
+        for facet in facets:
+            self.x_indexes += [facet[0]]
+            self.masks += [facet[1]]
+            self.fields += [np.zeros(facet[1].shape, dtype=complex)]
+
+    def mask(self, x_index):
+        internal_index = self.x_indexes.index(x_index)
+        return self.masks[internal_index]
+
+    def field(self, x_index):
+        internal_index = self.x_indexes.index(x_index)
+        return self.fields[internal_index]
+
+    def add_facet(self, x_index, mask, field):
+        self.x_indexes += [x_index]
+        self.masks += [mask]
+        self.fields += [field]
+
 
 
 class FDUrbanPropagatorComputationParameters:
@@ -95,12 +122,14 @@ class FDUrbanPropagator:
     def _transform(self, phi):
         y_indexes = np.tile(np.arange(0, self.n_y), (self.n_z, 1)).transpose()
         z_indexes = np.tile(np.arange(0, self.n_z), (self.n_y, 1))
+        x = phi * np.power(-1, y_indexes + z_indexes, dtype=float)
+        fx = fft.fftn(x, axes=1, overwrite_x=True, workers=4)
+        ffx = fft.fftn(fx, axes=0, overwrite_x=True, workers=4)
         return self.dy * self.dz / (2 * fm.pi) * \
                np.exp(-1j * (2 * cm.pi * (z_indexes - self.n_z / 2) / (self.n_z * self.dz)) * self.z_computational_grid[
                    0]) * \
                np.exp(-1j * (2 * cm.pi * (y_indexes - self.n_y / 2) / (self.n_y * self.dy)) * self.y_computational_grid[
-                   0]) * \
-               np.fft.fft2(phi * np.power(-1, y_indexes + z_indexes, dtype=float))
+                   0]) * ffx
 
     def _inv_transform(self, phi):
         y_indexes = np.tile(np.arange(0, self.n_y), (self.n_z, 1)).transpose()
@@ -110,8 +139,8 @@ class FDUrbanPropagator:
                        self.z_computational_grid[0] + 2 * cm.pi * z_indexes / (self.n_z * self.dk_z))) * \
                np.exp(1j * self.k_y_grid[0] * (
                            self.y_computational_grid[0] + 2 * cm.pi * y_indexes / (self.n_y * self.dk_y))) * \
-               np.fft.ifft2(phi * np.exp(1j * y_indexes * self.dk_y * self.y_computational_grid[0] +
-                                         1j * z_indexes * self.dk_z * self.z_computational_grid[0])) * self.n_y * self.n_z
+               fft.ifft2(phi * np.exp(1j * y_indexes * self.dk_y * self.y_computational_grid[0] +
+                                         1j * z_indexes * self.dk_z * self.z_computational_grid[0]), overwrite_x=True, workers=4) * self.n_y * self.n_z
 
     def ssf_propagate(self, phi):
         return self.abs_mult * self._inv_transform(
@@ -128,10 +157,7 @@ class FDUrbanPropagator:
         # return mask
         return self.env.intersection_mask_x(x_i*self.dx, self.y_computational_grid, self.z_computational_grid)
 
-    def _propagate(self, src, polarz, x_max):
-        n_x = fm.ceil(x_max / self.dx)
-        x_computational_grid = np.arange(0, n_x) * self.dx
-
+    def _propagate(self, x_computational_grid, fwd_facets: Facets, bwd_facets: Facets, fwd=True):
         y_res_mask = np.full(self.y_computational_grid.size, False, dtype=bool)
         y_res_mask[::self.comp_params.n_dy_out] = True
         y_res_mask = np.logical_and(np.logical_and(self.y_computational_grid >= -self.env.domain_width / 2,
@@ -146,20 +172,47 @@ class FDUrbanPropagator:
                         self.y_computational_grid[y_res_mask],
                         self.z_computational_grid[z_res_mask])
 
-        phi = src
+        if fwd:
+            iterator = enumerate(x_computational_grid[1:], start=1)
+        else:
+            iterator = enumerate(x_computational_grid[-2::-1], start=1)
+
+        phi = np.zeros((len(self.y_computational_grid), len(self.z_computational_grid)), dtype=complex)
+        if fwd:
+            if 0 in fwd_facets.x_indexes:
+                phi_reshaped = phi.reshape(phi.shape[0]*phi.shape[1])
+                phi_reshaped[fwd_facets.mask(0).reshape(phi.shape[0]*phi.shape[1])] = fwd_facets.field(0).reshape(phi.shape[0]*phi.shape[1])
+                phi = phi_reshaped.reshape(phi.shape)
+
+                mask = self._intersection_mask(0)
+                phi[mask] = 0.0
+
         field.field[0, :] = (phi[y_res_mask, :])[:, z_res_mask]
 
-        for x_i, x in enumerate(x_computational_grid[1:], start=1):
+        for x_i, x in iterator:
             phi = self.ssf_propagate(phi)
-            mask = self._intersection_mask(x_i - 1)
+            if fwd:
+                mask = self._intersection_mask(x_i - 1)
+            else:
+                mask = self._intersection_mask(0)#what??
+
             phi[mask] = 0.0
+            phi *= self.abs_mult
+            if x_i in fwd_facets.x_indexes:
+                phi_reshaped = phi.reshape(phi.shape[0] * phi.shape[1])
+                mask = fwd_facets.mask(x_i)
+                f = fwd_facets.field(x_i)
+                phi_reshaped[mask.reshape(mask.shape[0] * mask.shape[1])] = f.reshape(
+                    f.shape[0] * f.shape[1])[mask.reshape(mask.shape[0] * mask.shape[1])]
+                phi = phi_reshaped.reshape(phi.shape)
+            if x_i in bwd_facets.x_indexes:
+                bwd_facets.field(x_i)[:] = -phi
             # for pc_i, (a, b) in enumerate(self.pade_coefs):
             #     mask = self._intersection_mask(x_i - 1)
             #     phi[mask] = 0.0
             #     phi = self.sylvester_propagate(a, b, None, phi,
             #                                    y_left_bound=None, y_right_bound=None,
             #                                    z_left_bound=None, z_right_bound=None)
-            phi *= self.abs_mult
             if divmod(x_i, self.comp_params.n_dx_out)[1] == 0:
                 field.field[divmod(x_i, self.comp_params.n_dx_out)[0], :] = (phi[y_res_mask, :])[:, z_res_mask]
                 logging.debug('Pade 3D propagation x = ' + str(x))
@@ -167,5 +220,19 @@ class FDUrbanPropagator:
         return field
 
     def calculate(self, src, two_way=False):
-        return self._propagate(src=src.aperture(self.y_computational_grid, self.z_computational_grid),
-                               polarz=src.polarz, x_max=self.env.x_max)
+        n_x = fm.ceil(self.env.x_max / self.dx)
+        x_computational_grid = np.arange(0, n_x) * self.dx
+
+        fwd_facets = Facets(self.env.facets(
+            x_computational_grid, self.y_computational_grid, self.z_computational_grid, forward=True))
+        fwd_facets.add_facet(0, np.full((len(self.y_computational_grid), len(self.z_computational_grid)), True, dtype=bool),
+                             src.aperture(self.y_computational_grid, self.z_computational_grid))
+        bwd_facets = Facets(self.env.facets(
+            x_computational_grid, self.y_computational_grid, self.z_computational_grid, forward=False))
+
+        fwd_field = self._propagate(x_computational_grid, fwd_facets, bwd_facets, fwd=True)
+        fwd_facets.x_indexes = [n_x - a - 1 for a in fwd_facets.x_indexes]
+        bwd_facets.x_indexes = [n_x - a - 1 for a in bwd_facets.x_indexes]
+        #bwd_field = self._propagate(x_computational_grid, bwd_facets, fwd_facets, fwd=False)
+        #fwd_field.field += bwd_field.field[::-1, :]
+        return fwd_field

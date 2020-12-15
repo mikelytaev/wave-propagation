@@ -98,11 +98,30 @@ class FieldVisualiser:
 
 
 class FieldVisualiser3D:
+    bw_lines = (
+        {'color': 'black', 'dashes': (None, None)},
+        {'color': 'black', 'dashes': [5, 5]},
+        {'color': 'black', 'dashes': [5, 3, 1, 3]},
+        {'color': 'black', 'dashes': [1, 3]}
+    )
+
+    color_lines = (
+        {'color': 'red'},
+        {'color': 'blue'},
+        {'color': 'green'},
+        {'color': 'black'}
+    )
 
     def __init__(self, field: Field3d, trans_func=lambda v: abs(v), label='', x_mult=1.0, bw=False):
         self.trans_func = np.vectorize(trans_func)
         self.field = field.field
+        self.trans_field = self.trans_func(self.field).real
         self.x_grid, self.y_grid, self.z_grid = field.x_grid, field.y_grid, field.z_grid
+        self.label = label
+        if bw:
+            self.lines_iter = cycle(self.bw_lines)
+        else:
+            self.lines_iter = cycle(self.color_lines)
 
     def _plot2d(self, f, min_val, max_val, x_min, x_max, y_min, y_max):
         norm = Normalize(min_val, max_val)
@@ -123,3 +142,11 @@ class FieldVisualiser3D:
     def plot_xz(self, *, y0, min_val, max_val):
         return self._plot2d(self.field[:, abs(self.y_grid - y0).argmin(), :].T[::-1, :], min_val, max_val,
                             self.x_grid[0], self.x_grid[-1], self.z_grid[0], self.z_grid[-1])
+
+    def plot_x(self, y0, z0, others=[]):
+        plt.figure(figsize=(6, 3.2))
+        for a in [self] + others:
+            plt.plot(a.x_grid, a.trans_field[:, abs(a.y_grid - y0).argmin(), abs(a.z_grid - z0).argmin()], label=a.label, **next(self.lines_iter))
+        plt.legend()
+        plt.xlim([self.x_grid[0], self.x_grid[-1]])
+        return plt

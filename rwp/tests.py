@@ -77,7 +77,7 @@ class TestSSPade(unittest.TestCase):
         self.assertAlmostEqual(res[-1][0], lat2)
         self.assertAlmostEqual(res[-1][1], long2)
 
-    def test_manhattan3d__one_block(self):
+    def test_manhattan3d__mask__one_block(self):
         manhattan = Manhattan3D(domain_height=50, domain_width=50, x_max=100)
         manhattan.add_block(center=(10, 10), size=(5, 5, 5))
 
@@ -86,6 +86,25 @@ class TestSSPade(unittest.TestCase):
 
         self.assertFalse(np.any(mask0))
         self.assertTrue(np.any(mask1))
+
+    def test_manhattan3d__facets(self):
+        manhattan = Manhattan3D(domain_height=50, domain_width=50, x_max=100)
+        manhattan.add_block(center=(10.1, 10), size=(5, 5, 5))
+        x_grid = np.linspace(0, 20, 21)
+        y_grid = np.linspace(-25, 25, 100)
+        z_grid = np.linspace(0, 50, 100)
+
+        fwd_res = manhattan.facets(x_grid, y_grid, z_grid, forward=True)
+
+        self.assertEqual(len(fwd_res), 1)
+        x_index = fwd_res[0][0]
+        self.assertEqual(x_index, 13)
+
+        bwd_res = manhattan.facets(x_grid, y_grid, z_grid, forward=False)
+
+        self.assertEqual(len(bwd_res), 1)
+        x_index = bwd_res[0][0]
+        self.assertEqual(x_index, 8)
 
 
 if __name__ == '__main__':

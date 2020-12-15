@@ -191,10 +191,7 @@ class HelmholtzPadeSolver:
         self.k0 = (2 * cm.pi) / self.wavelength
         self.params.max_range_m = self.params.max_range_m or self.env.x_max_m
 
-        if self.params.exp_pade_coefs is None:
-            self._optimize_params()
-        elif self.params.dx_wl is None or self.params.dz_wl is None:
-            raise Exception("Computational parameters optimization not supported for custom Pade coefficients. All grid parameters should be specified.")
+        self._optimize_params()
         self.z_computational_grid, self.dz_m = np.linspace(self.env.z_min, self.env.z_max, self.n_z, retstep=True)
         self.dx_m = self.params.dx_wl * wavelength
         self.x_computational_grid = np.arange(0, self.n_x) * self.dx_m
@@ -218,13 +215,17 @@ class HelmholtzPadeSolver:
             self.params.exp_pade_coefs = pade_propagator_coefs(pade_order=self.params.exp_pade_order, diff2=diff2,
                                                                k0=self.k0, dx=self.dx_m, spe=self.params.standard_pe,
                                                                alpha=self.params.sqrt_alpha)
-        else:
-            self.params.exp_pade_order = (len(self.params.exp_pade_coefs), len(self.params.exp_pade_coefs))
 
         self.lower_bc = None
         self.upper_bc = None
 
     def _optimize_params(self):
+        if self.params.exp_pade_order is None:
+            self.params.exp_pade_order = (len(self.params.exp_pade_coefs), len(self.params.exp_pade_coefs))
+
+        if self.params.exp_pade_coefs is not None and (self.params.dx_wl is None or self.params.dz_wl is None):
+            raise Exception("Computational parameters optimization not supported for custom Pade coefficients. All grid parameters should be specified.")
+
         #optimize max angle
         self.params.max_propagation_angle = self.params.max_propagation_angle or SSPE_MAX_ANGLE
         logging.info("Max propagation angle = " + str(self.params.max_propagation_angle))
@@ -251,7 +252,7 @@ class HelmholtzPadeSolver:
                                  pade_order=self.params.exp_pade_order,
                                  z_order=self.params.z_order)
 
-            if self.params.dx_wl is None or self.params.dz_wl is None or self.params.exp_pade_order is None:
+            if self.params.dx_wl is None or self.params.dz_wl is None:
                 raise Exception("Optimization failed")
 
         if self.params.max_height_m is None:
