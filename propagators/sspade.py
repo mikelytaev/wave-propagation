@@ -385,7 +385,8 @@ class HelmholtzPadeSolver:
         c_b_left = np.concatenate((c_b_left, [upper_bound[0]]))
         c_b_right = np.concatenate(([lower_bound[1]], c_b_right))
 
-        return np.array(tridiag_method(c_b_left, d_b, c_b_right, rhs))
+        tridiag_method(c_b_left, d_b, c_b_right, rhs, initial)
+        return initial
 
     def _calc_lower_lbc(self, *, local_bc: RobinBC, a, b, x, z_min, phi):
         q1, q2 = local_bc.q1, local_bc.q2
