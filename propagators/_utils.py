@@ -125,8 +125,8 @@ def optimal_params_m(max_angle_deg, max_distance_wl, threshold, dx_wl=None, dz_w
     if dz_wl:
         dzs = [dz_wl]
     else:
-        dzs = np.concatenate((np.array([0.001, 0.005]),
-                              np.array([0.01, 0.05]),
+        dzs = np.concatenate((np.array([0.001, 0.009]),
+                              np.array([0.01, 0.09]),
                              np.linspace(0.1, 9, 90)))
 
     dxs.sort()
@@ -292,3 +292,27 @@ def d2a_n_eq_ba_n(b):
     c1 = (b+2-cm.sqrt(b**2+4*b))/2
     c2 = 1.0 / c1
     return [c1, c2][abs(c1) > abs(c2)]
+
+
+def d_k_x(*, k_z, dx, dz, pade_order, z_order, alpha=0):
+    k0 = 2 * cm.pi
+    if z_order > 4:
+        z_order = 2
+        diff2 = lambda s: mpmath.acosh(1 + (k0 * dz) ** 2 * s / 2) ** 2 / (k0 * dz) ** 2
+    else:
+        diff2 = lambda s: s
+
+    if hasattr(k_z, "__len__") and not hasattr(dx, "__len__") and not hasattr(dz, "__len__"):
+        coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx, alpha=alpha)
+        return np.array([discrete_k_x(k=k0, dx=dx, dz=dz, pade_coefs=coefs, kz=kz, order=z_order) for kz in k_z])
+
+    if not hasattr(k_z, "__len__") and hasattr(dx, "__len__") and not hasattr(dz, "__len__"):
+        res = []
+        for dx_val in dx:
+            coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx_val, alpha=alpha)
+            res += [discrete_k_x(k=k0, dx=dx_val, dz=dz, pade_coefs=coefs, kz=k_z, order=z_order)]
+        return np.array(res)
+
+    if not hasattr(k_z, "__len__") and not hasattr(dx, "__len__") and hasattr(dz, "__len__"):
+        coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx, alpha=alpha)
+        return np.array([discrete_k_x(k=k0, dx=dx, dz=v, pade_coefs=coefs, kz=k_z, order=z_order) for v in dz])

@@ -2,30 +2,7 @@ from propagators._utils import *
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-def d_k_x(*, k_z, dx, dz, pade_order, z_order, alpha=0):
-    k0 = 2 * cm.pi
-    if z_order > 4:
-        z_order = 2
-        diff2 = lambda s: mpmath.acosh(1 + (k0 * dz) ** 2 * s / 2) ** 2 / (k0 * dz) ** 2
-    else:
-        diff2 = lambda s: s
-
-    if hasattr(k_z, "__len__") and not hasattr(dx, "__len__") and not hasattr(dz, "__len__"):
-        coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx, alpha=alpha)
-        return np.array([discrete_k_x(k=k0, dx=dx, dz=dz, pade_coefs=coefs, kz=kz, order=z_order) for kz in k_z])
-
-    if not hasattr(k_z, "__len__") and hasattr(dx, "__len__") and not hasattr(dz, "__len__"):
-        res = []
-        for dx_val in dx:
-            coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx_val, alpha=alpha)
-            res += [discrete_k_x(k=k0, dx=dx_val, dz=dz, pade_coefs=coefs, kz=k_z, order=z_order)]
-        return np.array(res)
-
-    if not hasattr(k_z, "__len__") and not hasattr(dx, "__len__") and hasattr(dz, "__len__"):
-        coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx, alpha=alpha)
-        return np.array([discrete_k_x(k=k0, dx=dx, dz=v, pade_coefs=coefs, kz=k_z, order=z_order) for v in dz])
-
+from propagators._utils import d_k_x
 
 k0 = 2*cm.pi
 k_z = np.linspace(0, k0/2, 300)

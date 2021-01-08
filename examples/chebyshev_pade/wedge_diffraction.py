@@ -22,30 +22,27 @@ pade_task_f = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_ra
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=max_propagation_angle,
                                                       modify_grid=False,
-                                                      grid_optimizator_abs_threshold=5e-3,
                                                       z_order=4,
                                                       exp_pade_order=(4, 5),
-                                                      dx_wl=100 / 4,
+                                                      dx_wl=25,
                                                       x_output_filter=4,
                                                       dz_wl=0.25,
-                                                      z_output_filter=8,
-                                                      #storage=PickleStorage()
+                                                      z_output_filter=8
                                                   ))
 pade_field_f = pade_task_f.calculate()
+
 
 pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
                                                   HelmholtzPropagatorComputationalParams(
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=max_propagation_angle,
                                                       modify_grid=False,
-                                                      grid_optimizator_abs_threshold=5e-3,
                                                       z_order=4,
                                                       exp_pade_order=(10, 11),
                                                       dx_wl=100/4,
                                                       x_output_filter=4,
                                                       dz_wl=0.25,
-                                                      z_output_filter=8,
-                                                      #storage=PickleStorage()
+                                                      z_output_filter=8
                                                   ))
 pade_field = pade_task.calculate()
 
@@ -54,64 +51,35 @@ cheb_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=max_propagation_angle,
                                                       modify_grid=False,
-                                                      grid_optimizator_abs_threshold=5e-3,
                                                       z_order=4,
                                                       exp_pade_coefs=coefs,
-                                                      dx_wl=100 / 4,
+                                                      dx_wl=25,
                                                       x_output_filter=4,
                                                       dz_wl=0.25,
-                                                      z_output_filter=8,
-                                                      #storage=PickleStorage()
+                                                      z_output_filter=8
                                                   ))
 cheb_pade_field = cheb_pade_task.calculate()
 
-pade_vis_f = FieldVisualiser(pade_field_f, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
+pade_vis_f = FieldVisualiser(pade_field_f, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)),
                              label='Pade-[4/5]', x_mult=1E-3)
 
-pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
+pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)),
                              label='Pade-[10/11]', x_mult=1E-3)
 
-cheb_pade_vis = FieldVisualiser(cheb_pade_field, env=env, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)),
-                                label='Chebyshev-[4/5]', x_mult=1E-3)
-
-# plt = pade_vis_f.plot2d(min=-70, max=0, show_terrain=True)
-# plt.xlim([2.5, 4.5])
-# plt.ylim([0, 200])
-# plt.xlabel('Range (km)')
-# plt.ylabel('Height (m)')
-# plt.grid(True)
-# plt.tight_layout()
-# plt.show()
-#
-# plt = pade_vis.plot2d(min=-70, max=0, show_terrain=True)
-# plt.xlim([2.5, 4.5])
-# plt.ylim([0, 200])
-# plt.xlabel('Range (km)')
-# plt.ylabel('Height (m)')
-# plt.grid(True)
-# plt.tight_layout()
-# plt.show()
-#
-# plt = cheb_pade_vis.plot2d(min=-70, max=0, show_terrain=True)
-# plt.xlim([2.5, 4.5])
-# plt.ylim([0, 200])
-# plt.xlabel('Range (km)')
-# plt.ylabel('Height (m)')
-# plt.grid(True)
-# plt.tight_layout()
-# plt.show()
+cheb_pade_vis = FieldVisualiser(cheb_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)),
+                                label='Rational interpolation-[4/5]', x_mult=1E-3)
 
 plt = cheb_pade_vis.plot_hor_over_terrain(5, pade_vis_f, pade_vis)
 plt.xlabel('Range (km)')
-plt.ylabel('10log|u| (dB)')
+plt.ylabel('20log|u| (dB)')
 plt.xlim([2, 8])
-plt.ylim([-60, -10])
+plt.ylim([-120, -20])
 plt.grid(True)
 plt.tight_layout()
 plt.show()
 
 f, ax = plt.subplots(1, 3, sharey=True, figsize=(6, 3.2), constrained_layout=True)
-norm = Normalize(-70, 0)
+norm = Normalize(-120, -20)
 extent = [pade_vis.x_grid[0], pade_vis.x_grid[-1], pade_vis.z_grid[0], pade_vis.z_grid[-1]]
 
 im = ax[0].imshow(pade_vis_f.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
@@ -119,7 +87,7 @@ terrain_grid = np.array([pade_vis_f.env.terrain.elevation(v) for v in pade_vis_f
 ax[0].plot(pade_vis_f.x_grid, terrain_grid, 'k')
 ax[0].fill_between(pade_vis_f.x_grid, terrain_grid*0, terrain_grid, color='brown')
 ax[0].grid()
-ax[0].set_title('(a)')
+ax[0].set_title(pade_vis_f.label)
 ax[0].set_xlabel('Range (km)')
 ax[0].set_ylabel('Height (m)')
 ax[0].set_xlim([2.5, 4.5])
@@ -130,7 +98,7 @@ terrain_grid = np.array([pade_vis.env.terrain.elevation(v) for v in pade_vis.x_g
 ax[1].plot(pade_vis.x_grid, terrain_grid, 'k')
 ax[1].fill_between(pade_vis.x_grid, terrain_grid*0, terrain_grid, color='brown')
 ax[1].grid()
-ax[1].set_title('(b)')
+ax[1].set_title(pade_vis.label)
 ax[1].set_xlabel('Range (km)')
 ax[1].set_xlim([2.5, 4.5])
 ax[1].set_ylim([0, 200])
@@ -140,7 +108,7 @@ terrain_grid = np.array([cheb_pade_vis.env.terrain.elevation(v) for v in cheb_pa
 ax[2].plot(cheb_pade_vis.x_grid, terrain_grid, 'k')
 ax[2].fill_between(cheb_pade_vis.x_grid, terrain_grid*0, terrain_grid, color='brown')
 ax[2].grid()
-ax[2].set_title('(c)')
+ax[2].set_title('Rat. interp.- [4/5]')
 ax[2].set_xlabel('Range (km)')
 ax[2].set_xlim([2.5, 4.5])
 ax[2].set_ylim([0, 200])

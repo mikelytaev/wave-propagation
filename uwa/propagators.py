@@ -18,7 +18,7 @@ class UnderwaterAcousticsSSPadePropagator:
         m2_ground = (c0 / env.bottom_sound_speed_m_s) ** 2
         self.helmholtz_env = HelmholtzEnvironment(x_max_m=max_range_m, lower_bc=TransparentBC(m2_ground), upper_bc=RobinBC(q1=1, q2=0, q3=0))
         self.helmholtz_env.z_max = 0
-        self.helmholtz_env.z_min = -(self.uwa_env.bottom_profile.max_depth + 1000)
+        self.helmholtz_env.z_min = -(self.uwa_env.bottom_profile.max_depth + 300)
 
         eta = 1 / (40*cm.pi*cm.log10(cm.exp(1)))
         def n2minus1(x, z, freq_hz):
@@ -54,8 +54,6 @@ class UnderwaterAcousticsSSPadePropagator:
         self.helmholtz_env.lower_z = lambda x: self.uwa_env.bottom_profile(x)
 
         wavelength = c0 / src.freq_hz
-        if self.comp_params.exp_pade_order is None:
-            self.comp_params.exp_pade_order = (4, 4)
         self.comp_params.terrain_method = TerrainMethod.pass_through
 
         self.propagator = HelmholtzPadeSolver(env=self.helmholtz_env, wavelength=wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)

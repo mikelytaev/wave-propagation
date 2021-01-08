@@ -68,4 +68,7 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
             elif self.f_units.lower() == 'abs':
                 ax.set_ylabel('|u| (dB)')
         fig.tight_layout()
+        ax.legend()
+        ax.grid()
+        ax.set_xlim([self.field.x_grid[0]*self.x_mult, self.field.x_grid[-1]*self.x_mult])
         return fig

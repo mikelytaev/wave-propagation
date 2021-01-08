@@ -389,3 +389,8 @@ def pyramid(x, angle, height, r):
         return (r + 2*length - x) * fm.tan(angle * cm.pi / 180)
     else:
         return 0
+
+
+def evaporation_duct(height, z_grid_m, m_0=320, z_0=1.5e4):
+    z_grid_m = z_grid_m + 0.001
+    return m_0 + 0.125*(z_grid_m - height*np.log10(z_grid_m / z_0))
