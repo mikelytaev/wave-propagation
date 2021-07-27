@@ -2,11 +2,13 @@ from setuptools import setup
 from setuptools.extension import Extension
 import numpy
 
-USE_CYTHON = False
+USE_CYTHON = True
 ext = '.pyx' if USE_CYTHON else '.c'
 
 extensions = [Extension("propagators.contfrac", ["propagators/contfrac"+ext], include_dirs=['.', numpy.get_include()]),
-              Extension("propagators._cn_utils", ["propagators/_cn_utils"+ext], include_dirs=['.', numpy.get_include()])]
+              Extension("propagators._cn_utils", ["propagators/_cn_utils"+ext], include_dirs=['.', numpy.get_include()]),
+              Extension("propagators.dispersion_relations", ["propagators/dispersion_relations"+ext], include_dirs=['.'])
+              ]
 
 if USE_CYTHON:
     from Cython.Build import cythonize
@@ -30,7 +32,7 @@ setup(
         'matplotlib',
         'cython'
     ],
-    #ext_modules=extensions,
+    ext_modules=extensions,
     zip_safe=False,
     packages=['propagators', 'rwp', 'uwa', 'transforms', 'transforms.fcc_fourier'],
     package_data={

@@ -1,5 +1,7 @@
+import numpy as np
+
 from propagators._utils import *
-from scipy.optimize import differential_evolution
+from scipy.optimize import differential_evolution, minimize, basinhopping
 import matplotlib.pyplot as plt
 
 
@@ -33,19 +35,32 @@ def coefs_to_opt_coefs(coefs):
     return co
 
 
+dx = 100
+
+
 def fit_func(coefs_arr):
     coefs = opt_coefs_to_coefs(coefs_arr)
-    err = k_x_abs_error_range(100, 0.00000001, 2*cm.pi, coefs, 5)
+    err = k_x_abs_error_range(dx, 0.00000001, 2*cm.pi, coefs, 10)
     #print(err)
     return err
 
 
-pade_coefs = pade_propagator_coefs(pade_order=(3, 3), diff2=lambda x: x, k0=2*cm.pi, dx=100)
+order = (4, 4)
+pade_coefs = pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx)
 co = coefs_to_opt_coefs(pade_coefs)
 print(fit_func(co))
 
-bounds = [(-1, 1)] * 12
-result = differential_evolution(fit_func, bounds, popsize=40, disp=True, strategy='rand2exp', tol=1e-5)
+bounds = [(-100, 100)] * (order[0] + order[1]) * 2
+
+
+def print_fun(x, f, accepted):
+    print("at minimum %.4f accepted %d" % (f, int(accepted)))
+
+
+result = differential_evolution(fit_func, bounds, popsize=10, disp=True, strategy='currenttobest1bin', tol=1e-3, maxiter=100000)
+#result = minimize(fun=fit_func, x0=np.zeros(12), bounds=bounds, tol=1e-11, method="CG")
+#result = minimize(fun=fit_func, x0=np.zeros(12), bounds=bounds, tol=1e-17, method="COBYLA", options={"maxiter": 10000000})
+#result = basinhopping(func=fit_func, x0=np.zeros(12), disp=True)
 print(result)
 coefs = opt_coefs_to_coefs(result.x)
 
@@ -69,14 +84,14 @@ k0 = 2*cm.pi
 k_z = np.linspace(0, k0/2, 300)
 angles = np.linspace(0, cm.asin(k_z[-1] / k0)*180/cm.pi, 300)
 k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in k_z])
-k_x_1 = k_x_angle(k_z=k_z, dx=100, coefs=coefs, dz=0.00000001, z_order=2, alpha=0)
-k_x_2 = k_x_angle(k_z=k_z, dx=100, coefs=pade_coefs, dz=0.00000001, z_order=2, alpha=0)
+k_x_1 = k_x_angle(k_z=k_z, dx=dx, coefs=coefs, dz=0.00000001, z_order=2, alpha=0)
+k_x_2 = k_x_angle(k_z=k_z, dx=dx, coefs=pade_coefs, dz=0.00000001, z_order=2, alpha=0)
 
 plt.figure(figsize=(6, 3.2))
 plt.plot(angles, (np.abs(k_x_1 - k_x_r)), label='opt')
 plt.plot(angles, (np.abs(k_x_2 - k_x_r)), label='Pade')
 plt.xlabel('Propagation angle, degrees')
-plt.ylabel('k_x relative error')
+plt.ylabel('k_x abs. error')
 plt.xlim([0, 15])
 #plt.ylim([1e-10, 1e-1])
 plt.yscale("log")
