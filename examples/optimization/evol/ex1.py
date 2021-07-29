@@ -27,8 +27,8 @@ def coefs_to_opt_coefs(coefs):
     return co
 
 
-dx = 10
-theta_max_degrees = 30
+dx = 1
+theta_max_degrees = 85
 order = (6, 7)
 
 
@@ -43,7 +43,7 @@ x0 = coefs_to_opt_coefs(pade_coefs)
 
 bounds = [(-5, 5)] * (order[0] + order[1]) * 2
 
-result = differential_evolution(fit_func, bounds, popsize=15, disp=True, recombination=0.9, strategy='currenttobest1bin', tol=1e-5, maxiter=10000)
+result = differential_evolution(fit_func, bounds, popsize=15, disp=True, recombination=0.9, strategy='currenttobest1bin', tol=1e-9, maxiter=50000)
 print(result)
 
 num_coefs, den_coefs = opt_coefs_to_coefs(result.x, order)
@@ -54,7 +54,7 @@ def k_x_angle(dx, num_coefs, den_coefs, thetas):
 
 
 k0 = 2*cm.pi
-angles = np.linspace(0, theta_max_degrees, 1000)
+angles = np.linspace(0, 90, 1000)
 k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in k0*np.sin(angles*fm.pi/180)])
 k_x_1 = k_x_angle(dx, num_coefs, den_coefs, angles)
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
@@ -66,7 +66,7 @@ plt.plot(angles, (np.abs(k_x_1 - k_x_r)), label='opt')
 plt.plot(angles, (np.abs(k_x_2 - k_x_r)), label='Pade')
 plt.xlabel('Propagation angle, degrees')
 plt.ylabel('k_x abs. error')
-plt.xlim([0, theta_max_degrees])
+plt.xlim([0, 90])
 #plt.ylim([1e-10, 1e-1])
 plt.yscale("log")
 plt.legend()
@@ -89,7 +89,6 @@ ant = GaussAntenna(freq_hz=300e6, height=100, beam_width=3, eval_angle=0, polarz
 
 max_propagation_angle = 10
 max_range_m = 3.0e3
-dx_wl = 1
 
 
 pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
@@ -101,7 +100,7 @@ pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_rang
                                                       exp_pade_order=order,
                                                       dx_wl=dx,
                                                       x_output_filter=4,
-                                                      dz_wl=0.25,
+                                                      dz_wl=0.1,
                                                       z_output_filter=8,
                                                       two_way=False
                                                   ))
@@ -116,7 +115,7 @@ opt_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_
                                                       exp_pade_coefs=list(zip_longest(num_coefs, den_coefs, fillvalue=0.0j)),
                                                       dx_wl=dx,
                                                       x_output_filter=4,
-                                                      dz_wl=0.25,
+                                                      dz_wl=0.1,
                                                       z_output_filter=8,
                                                       two_way=False
                                                   ))
