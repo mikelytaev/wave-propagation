@@ -33,7 +33,7 @@ def coefs_to_opt_coefs(coefs):
     return co
 
 
-theta_max_degrees = 5
+theta_max_degrees = 10
 order = (6, 7)
 
 
@@ -43,24 +43,41 @@ def fit_func(coefs_arr):
 
 
 eps = 1e-3
+eps_x_max = 200
 
-def constraint(coefs_arr):
+def constraint_ga(coefs_arr):
     dx, dz = opt_coefs_to_grids(coefs_arr)
     num_coefs, den_coefs = opt_coefs_to_coefs(coefs_arr, order)
     err = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs, theta_max_degrees,
-                                        round(theta_max_degrees) * 2)
+                                        round(theta_max_degrees) * 3) / dx
     return err
 
 
-bounds = [(10, 1000), (0, 5)] + [(-100, 100)] * (order[0] + order[1]) * 2
+def constraint_pade_2nd_order(coefs_arr):
+    dx, dz = opt_coefs_to_grids(coefs_arr)
+    pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx)
+    num_coefs = np.array([a[0] for a in pade_coefs])
+    den_coefs = np.array([a[1] for a in pade_coefs])
+    err = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs, theta_max_degrees,
+                                        round(theta_max_degrees) * 3) / dx
+    return err
 
-result = differential_evolution(fit_func, bounds, constraints=(NonlinearConstraint(constraint, 0, eps)), popsize=15, disp=True, recombination=0.9, strategy='currenttobest1bin', tol=1e-9, maxiter=1000)
-print(result)
 
-num_coefs, den_coefs = opt_coefs_to_coefs(result.x, order)
-dx, dz = opt_coefs_to_grids(result.x)
+bounds_ga = [(10, 1000), (0, 5)] + [(-100, 100)] * (order[0] + order[1]) * 2
+bounds_pade = [(10, 1000), (0, 5)]
 
-pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx)
+result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max)), popsize=30, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=2000)
+print(result_ga)
+
+num_coefs_ga, den_coefs_ga = opt_coefs_to_coefs(result_ga.x, order)
+dx_ga, dz_ga = opt_coefs_to_grids(result_ga.x)
+
+result_pade = differential_evolution(fit_func, bounds_pade, constraints=(NonlinearConstraint(constraint_pade_2nd_order, 0, eps/eps_x_max)), popsize=15, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=2000)
+print(result_pade)
+
+dx_pade, dz_pade = opt_coefs_to_grids(result_pade.x)
+
+pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx_pade)
 
 
 def k_x_angle(dx, dz, num_coefs, den_coefs, thetas):
@@ -70,10 +87,10 @@ def k_x_angle(dx, dz, num_coefs, den_coefs, thetas):
 k0 = 2*cm.pi
 angles = np.linspace(0, 90, 1000)
 k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in k0*np.sin(angles*fm.pi/180)])
-k_x_1 = k_x_angle(dx, dz, num_coefs, den_coefs, angles)
+k_x_1 = k_x_angle(dx_ga, dz_ga, num_coefs_ga, den_coefs_ga, angles)
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
-k_x_2 = k_x_angle(dx, dz, pade_coefs_num, pade_coefs_den, angles)
+k_x_2 = k_x_angle(dx_pade, dz_pade, pade_coefs_num, pade_coefs_den, angles)
 
 plt.figure(figsize=(6, 3.2))
 plt.plot(angles, (np.abs(k_x_1 - k_x_r)), label='opt')
