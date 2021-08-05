@@ -33,7 +33,7 @@ def coefs_to_opt_coefs(coefs):
     return co
 
 
-theta_max_degrees = 10
+theta_max_degrees = 15
 order = (6, 7)
 
 
@@ -63,8 +63,8 @@ def constraint_pade_2nd_order(coefs_arr):
     return err
 
 
-bounds_ga = [(10, 1000), (0, 5)] + [(-100, 100)] * (order[0] + order[1]) * 2
-bounds_pade = [(10, 1000), (0, 5)]
+bounds_ga = [(10, 500), (0, 1)] + [(-200, 200)] * (order[0] + order[1]) * 2
+bounds_pade = [(10, 500), (0, 1)]
 
 result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max)), popsize=30, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=2000)
 print(result_ga)
@@ -85,7 +85,7 @@ def k_x_angle(dx, dz, num_coefs, den_coefs, thetas):
 
 
 k0 = 2*cm.pi
-angles = np.linspace(0, 90, 1000)
+angles = np.linspace(0, 90, 10000)
 k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in k0*np.sin(angles*fm.pi/180)])
 k_x_1 = k_x_angle(dx_ga, dz_ga, num_coefs_ga, den_coefs_ga, angles)
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
@@ -112,14 +112,14 @@ import matplotlib as mpl
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere(flat=True)
-env.z_max = 300
+env.z_max = 3000
 env.terrain = Terrain(ground_material=PerfectlyElectricConducting())
-env.knife_edges = [KnifeEdge(range=1.5e3, height=100)]
+#env.knife_edges = [KnifeEdge(range=1.5e3, height=100)]
 
-ant = GaussAntenna(freq_hz=300e6, height=100, beam_width=3, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=300e6, height=1500, beam_width=3, eval_angle=0, polarz='H')
 
-max_propagation_angle = 10
-max_range_m = 3.0e3
+max_propagation_angle = theta_max_degrees
+max_range_m = 50e3
 
 
 pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
@@ -127,11 +127,11 @@ pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_rang
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=max_propagation_angle,
                                                       modify_grid=False,
-                                                      z_order=4,
+                                                      z_order=2,
                                                       exp_pade_order=order,
-                                                      dx_wl=dx,
+                                                      dx_wl=dx_pade,
                                                       x_output_filter=4,
-                                                      dz_wl=0.1,
+                                                      dz_wl=dz_pade,
                                                       z_output_filter=8,
                                                       two_way=False
                                                   ))
@@ -142,25 +142,26 @@ opt_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_
                                                       terrain_method=TerrainMethod.staircase,
                                                       max_propagation_angle=max_propagation_angle,
                                                       modify_grid=False,
-                                                      z_order=4,
-                                                      exp_pade_coefs=list(zip_longest(num_coefs, den_coefs, fillvalue=0.0j)),
-                                                      dx_wl=dx,
+                                                      z_order=2,
+                                                      exp_pade_coefs=list(zip_longest(num_coefs_ga, den_coefs_ga, fillvalue=0.0j)),
+                                                      dx_wl=dx_ga,
                                                       x_output_filter=4,
-                                                      dz_wl=0.1,
+                                                      dz_wl=dz_ga,
                                                       z_output_filter=8,
-                                                      two_way=False
+                                                      two_way=False,
+                                                      inv_z_transform_rtol=1e-5
                                                   ))
 opt_pade_field = opt_pade_task.calculate()
 
 pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3)
-plt = pade_vis.plot2d(min=-120, max=0)
+plt = pade_vis.plot2d(min=-70, max=0)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
 opt_vis = FieldVisualiser(opt_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3)
-plt = opt_vis.plot2d(min=-120, max=0)
+plt = opt_vis.plot2d(min=-70, max=0)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
