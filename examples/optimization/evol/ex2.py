@@ -33,7 +33,8 @@ def coefs_to_opt_coefs(coefs):
     return co
 
 
-theta_max_degrees = 15
+k0 = 2*cm.pi
+theta_max_degrees = 10
 order = (6, 7)
 
 
@@ -48,7 +49,7 @@ eps_x_max = 200
 def constraint_ga(coefs_arr):
     dx, dz = opt_coefs_to_grids(coefs_arr)
     num_coefs, den_coefs = opt_coefs_to_coefs(coefs_arr, order)
-    err = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs, theta_max_degrees,
+    err = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs, k0 * fm.sin(theta_max_degrees * fm.pi / 180),
                                         round(theta_max_degrees) * 3) / dx
     return err
 
@@ -58,12 +59,12 @@ def constraint_pade_2nd_order(coefs_arr):
     pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx)
     num_coefs = np.array([a[0] for a in pade_coefs])
     den_coefs = np.array([a[1] for a in pade_coefs])
-    err = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs, theta_max_degrees,
+    err = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs, k0 * fm.sin(theta_max_degrees * fm.pi / 180),
                                         round(theta_max_degrees) * 3) / dx
     return err
 
 
-bounds_ga = [(10, 500), (0, 1)] + [(-200, 200)] * (order[0] + order[1]) * 2
+bounds_ga = [(10, 100), (0, 1)] + [(-20, 20)] * (order[0] + order[1]) * 2
 bounds_pade = [(10, 500), (0, 1)]
 
 result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max)), popsize=30, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=2000)
@@ -81,10 +82,9 @@ pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0
 
 
 def k_x_angle(dx, dz, num_coefs, den_coefs, thetas):
-    return np.array([disp_rels.discrete_k_x(k0, dx, dz, num_coefs, den_coefs, theta) for theta in thetas])
+    return np.array([disp_rels.discrete_k_x(k0, dx, dz, num_coefs, den_coefs, k0 * fm.sin(theta * fm.pi / 180)) for theta in thetas])
 
 
-k0 = 2*cm.pi
 angles = np.linspace(0, 90, 10000)
 k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in k0*np.sin(angles*fm.pi/180)])
 k_x_1 = k_x_angle(dx_ga, dz_ga, num_coefs_ga, den_coefs_ga, angles)
@@ -105,6 +105,25 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
+
+
+plt.figure(figsize=(6, 3.2))
+# plt.plot(angles, (np.real(k_x_1)), label='opt real')
+# plt.plot(angles, (np.real(k_x_2)), label='Pade real')
+plt.plot(angles, (np.imag(k_x_1)), label='opt imag')
+plt.plot(angles, (np.imag(k_x_2)), label='Pade imag')
+plt.xlabel('Propagation angle, degrees')
+plt.ylabel('k_x abs. error')
+plt.xlim([0, 90])
+#plt.ylim([1e-10, 1e-1])
+#plt.yscale("log")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+
+foo
 from rwp.sspade import *
 from rwp.vis import *
 import matplotlib as mpl
@@ -149,7 +168,7 @@ opt_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_
                                                       dz_wl=dz_ga,
                                                       z_output_filter=8,
                                                       two_way=False,
-                                                      inv_z_transform_rtol=1e-5
+                                                      inv_z_transform_rtol=1e-7
                                                   ))
 opt_pade_field = opt_pade_task.calculate()
 
