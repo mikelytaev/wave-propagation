@@ -46,7 +46,7 @@ def fit_func(coefs_arr):
 
 
 eps = 1e-3
-eps_x_max = 200
+eps_x_max = 50e3
 
 def constraint_ga(coefs_arr):
     dx, dz = opt_coefs_to_grids(coefs_arr)
@@ -74,10 +74,10 @@ def constraint_pade_2nd_order(coefs_arr):
     return err
 
 
-bounds_ga = [(10, 500), (0, 2)] + [(-200, 200)] * (order[0] + order[1]) * 2
+bounds_ga = [(10, 500), (0, 2)] + [(-1000, 1000)] * (order[0] + order[1]) * 2
 bounds_pade = [(10, 500), (0, 1)]
 
-result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max), NonlinearConstraint(constraint_ga2, 0, np.inf)), popsize=30, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=1000)
+result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max), NonlinearConstraint(constraint_ga2, 0, np.inf)), popsize=30, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=5000)
 print(result_ga)
 
 num_coefs_ga, den_coefs_ga = opt_coefs_to_coefs(result_ga.x, order)
@@ -182,15 +182,28 @@ opt_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_
                                                   ))
 opt_pade_field = opt_pade_task.calculate()
 
-pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3)
+pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Pade")
 plt = pade_vis.plot2d(min=-70, max=0)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-opt_vis = FieldVisualiser(opt_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3)
+opt_vis = FieldVisualiser(opt_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Opt")
 plt = opt_vis.plot2d(min=-70, max=0)
+plt.xlabel('Range (km)')
+plt.ylabel('Height (m)')
+plt.tight_layout()
+plt.show()
+
+opt_vis.plot_hor(300, pade_vis)
+plt.xlabel('Range (km)')
+plt.ylabel('Height (m)')
+plt.tight_layout()
+plt.show()
+
+f, ax1 = plt.subplots(1, 1, sharey=True)
+opt_vis.plot_ver(max_range_m, ax1, pade_vis)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
