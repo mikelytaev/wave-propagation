@@ -81,3 +81,16 @@ def k_x_abs_error_range(double k0, double dx, double dz, np.ndarray[complex, ndi
         if t > error:
             error = t
     return error
+
+
+def k_x_min_im(double k0, double dx, double dz, np.ndarray[complex, ndim=1] pade_coefs_num, np.ndarray[complex, ndim=1] pade_coefs_den, double kz, int iters):
+    cdef double min_im = 100000000
+    cdef Py_ssize_t i
+    cdef double kz_i
+    cdef double t
+    for i in range(0, iters):
+        kz_i = kz * i / (iters - 1)
+        t = discrete_k_x(k0, dx, dz, pade_coefs_num, pade_coefs_den, kz_i).imag
+        if t < min_im:
+            min_im = t
+    return min_im

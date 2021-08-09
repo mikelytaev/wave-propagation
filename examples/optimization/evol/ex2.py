@@ -37,6 +37,8 @@ k0 = 2*cm.pi
 theta_max_degrees = 10
 order = (6, 7)
 
+print(k0*fm.sin(theta_max_degrees * fm.pi / 180))
+
 
 def fit_func(coefs_arr):
     dx, dz = opt_coefs_to_grids(coefs_arr)
@@ -54,20 +56,28 @@ def constraint_ga(coefs_arr):
     return err
 
 
+def constraint_ga2(coefs_arr):
+    dx, dz = opt_coefs_to_grids(coefs_arr)
+    num_coefs, den_coefs = opt_coefs_to_coefs(coefs_arr, order)
+    min_im = disp_rels.k_x_min_im(2 * cm.pi, dx, dz, num_coefs, den_coefs, k0 * fm.sin(theta_max_degrees * fm.pi / 180),
+                                        round(theta_max_degrees) * 5)
+    return min_im
+
+
 def constraint_pade_2nd_order(coefs_arr):
     dx, dz = opt_coefs_to_grids(coefs_arr)
     pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx)
     num_coefs = np.array([a[0] for a in pade_coefs])
     den_coefs = np.array([a[1] for a in pade_coefs])
     err = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs, k0 * fm.sin(theta_max_degrees * fm.pi / 180),
-                                        round(theta_max_degrees) * 3) / dx
+                                        round(theta_max_degrees) * 5) / dx
     return err
 
 
-bounds_ga = [(10, 100), (0, 1)] + [(-20, 20)] * (order[0] + order[1]) * 2
+bounds_ga = [(10, 500), (0, 2)] + [(-200, 200)] * (order[0] + order[1]) * 2
 bounds_pade = [(10, 500), (0, 1)]
 
-result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max)), popsize=30, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=2000)
+result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max), NonlinearConstraint(constraint_ga2, 0, np.inf)), popsize=30, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=1000)
 print(result_ga)
 
 num_coefs_ga, den_coefs_ga = opt_coefs_to_coefs(result_ga.x, order)
@@ -81,23 +91,23 @@ dx_pade, dz_pade = opt_coefs_to_grids(result_pade.x)
 pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx_pade)
 
 
-def k_x_angle(dx, dz, num_coefs, den_coefs, thetas):
-    return np.array([disp_rels.discrete_k_x(k0, dx, dz, num_coefs, den_coefs, k0 * fm.sin(theta * fm.pi / 180)) for theta in thetas])
+def k_x_angle(dx, dz, num_coefs, den_coefs, kz_arr):
+    return np.array([disp_rels.discrete_k_x(k0, dx, dz, num_coefs, den_coefs, kz) for kz in kz_arr])
 
 
-angles = np.linspace(0, 90, 10000)
-k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in k0*np.sin(angles*fm.pi/180)])
-k_x_1 = k_x_angle(dx_ga, dz_ga, num_coefs_ga, den_coefs_ga, angles)
+kz_arr = np.linspace(0, 2*k0, 10000)
+k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in kz_arr])
+k_x_1 = k_x_angle(dx_ga, dz_ga, num_coefs_ga, den_coefs_ga, kz_arr)
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
-k_x_2 = k_x_angle(dx_pade, dz_pade, pade_coefs_num, pade_coefs_den, angles)
+k_x_2 = k_x_angle(dx_pade, dz_pade, pade_coefs_num, pade_coefs_den, kz_arr)
 
 plt.figure(figsize=(6, 3.2))
-plt.plot(angles, (np.abs(k_x_1 - k_x_r)), label='opt')
-plt.plot(angles, (np.abs(k_x_2 - k_x_r)), label='Pade')
-plt.xlabel('Propagation angle, degrees')
+plt.plot(kz_arr, (np.abs(k_x_1 - k_x_r)), label='opt')
+plt.plot(kz_arr, (np.abs(k_x_2 - k_x_r)), label='Pade')
+plt.xlabel('k_z')
 plt.ylabel('k_x abs. error')
-plt.xlim([0, 90])
+plt.xlim([kz_arr[0], kz_arr[-1]])
 #plt.ylim([1e-10, 1e-1])
 plt.yscale("log")
 plt.legend()
@@ -110,11 +120,11 @@ plt.show()
 plt.figure(figsize=(6, 3.2))
 # plt.plot(angles, (np.real(k_x_1)), label='opt real')
 # plt.plot(angles, (np.real(k_x_2)), label='Pade real')
-plt.plot(angles, (np.imag(k_x_1)), label='opt imag')
-plt.plot(angles, (np.imag(k_x_2)), label='Pade imag')
-plt.xlabel('Propagation angle, degrees')
+plt.plot(kz_arr, (np.imag(k_x_1)), label='opt imag')
+plt.plot(kz_arr, (np.imag(k_x_2)), label='Pade imag')
+plt.xlabel('k_z')
 plt.ylabel('k_x abs. error')
-plt.xlim([0, 90])
+plt.xlim([kz_arr[0], kz_arr[-1]])
 #plt.ylim([1e-10, 1e-1])
 #plt.yscale("log")
 plt.legend()
@@ -123,7 +133,7 @@ plt.tight_layout()
 plt.show()
 
 
-foo
+
 from rwp.sspade import *
 from rwp.vis import *
 import matplotlib as mpl
