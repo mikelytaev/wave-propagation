@@ -96,7 +96,7 @@ dx_joined_pade, dz_joined_pade = opt_coefs_to_grids(result_joined_pade.x)
 
 bounds_ga = [(dx_joined_pade, 500), (dz_joined_pade, 3)] + [(-1000, 1000)] * (order[0] + order[1]) * 2
 
-result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max)), popsize=30, disp=True, recombination=1, strategy='randtobest1bin', tol=1e-9, maxiter=10000, polish=False)
+result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max)), popsize=30, disp=True, recombination=1, strategy='randtobest1exp', tol=1e-9, maxiter=50000, polish=False)
 print(result_ga)
 
 num_coefs_ga, den_coefs_ga = opt_coefs_to_coefs(result_ga.x, order)
