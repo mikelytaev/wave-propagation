@@ -90,13 +90,13 @@ def constraint_pade_joined_order(coefs_arr):
 
 bounds_pade = [(10, 500), (0, 2)]
 
-result_joined_pade = differential_evolution(fit_func, bounds_pade, constraints=(NonlinearConstraint(constraint_pade_joined_order, 0, eps/eps_x_max)), popsize=15, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=2000)
+result_joined_pade = differential_evolution(fit_func, bounds_pade, constraints=(NonlinearConstraint(constraint_pade_joined_order, 0, eps/eps_x_max)), popsize=15, disp=True, recombination=0.7, strategy='best1bin', tol=1e-9, maxiter=2000)
 print(result_joined_pade)
 dx_joined_pade, dz_joined_pade = opt_coefs_to_grids(result_joined_pade.x)
 
-bounds_ga = [(dx_joined_pade, 500), (dz_joined_pade, 2)] + [(-100, 100)] * (order[0] + order[1]) * 2
+bounds_ga = [(dx_joined_pade, 500), (dz_joined_pade, 3)] + [(-1000, 1000)] * (order[0] + order[1]) * 2
 
-result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max), NonlinearConstraint(constraint_ga2, 0, np.inf)), popsize=30, disp=True, recombination=0.99, strategy='currenttobest1bin', tol=1e-9, maxiter=3000)
+result_ga = differential_evolution(fit_func, bounds_ga, constraints=(NonlinearConstraint(constraint_ga, 0, eps/eps_x_max)), popsize=30, disp=True, recombination=1, strategy='randtobest1bin', tol=1e-9, maxiter=10000, polish=False)
 print(result_ga)
 
 num_coefs_ga, den_coefs_ga = opt_coefs_to_coefs(result_ga.x, order)
