@@ -13,7 +13,7 @@ import opt_utils
 
 
 k0 = 2*cm.pi
-theta_max_degrees = 45
+theta_max_degrees = 30
 order = (7, 8)
 
 print(k0*fm.sin(theta_max_degrees * fm.pi / 180))
@@ -23,7 +23,7 @@ eps = 1e-3
 eps_x_max = 1000
 
 
-bounds_pade = [(0.1, 1), (0.1, 0.5)]
+bounds_pade = [(0.1, 5), (0.1, 2)]
 
 result_joined_pade = differential_evolution(
     func=opt_utils.fit_func,
@@ -33,14 +33,14 @@ result_joined_pade = differential_evolution(
     disp=True,
     recombination=0.7,
     strategy='best1bin',
-    tol=1e-9,
+    tol=1e-5,
     maxiter=2000,
     polish=False
 )
 print(result_joined_pade)
 dx_joined_pade, dz_joined_pade = opt_utils.opt_coefs_to_grids(result_joined_pade.x)
 
-bounds_ga = [(dx_joined_pade, 500), (dz_joined_pade, 3)] + [(-1000, 1000)] * (order[0] + order[1]) * 2
+bounds_ga = [(dx_joined_pade, 10), (dz_joined_pade, 3)] + [(-100, 100)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
     func=opt_utils.fit_func,
@@ -50,7 +50,7 @@ result_ga = differential_evolution(
     disp=True,
     recombination=1,
     strategy='randtobest1exp',
-    tol=1e-9,
+    tol=1e-5,
     maxiter=10000,
     polish=False
 )
