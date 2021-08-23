@@ -43,8 +43,8 @@ def coefs_to_opt_coefs(coefs):
 
 
 k0 = 2*cm.pi
-theta_max_degrees = 30
-order = (6, 7)
+theta_max_degrees = 45
+order = (7, 8)
 
 print(k0*fm.sin(theta_max_degrees * fm.pi / 180))
 
@@ -62,7 +62,7 @@ def fit_func_ga(coefs_arr, dx, dz):
 
 
 eps = 1e-3
-eps_x_max = 50e3
+eps_x_max = 1e3
 
 
 def constraint_ga(coefs_arr):
@@ -104,9 +104,19 @@ def constraint_pade_joined_order(coefs_arr):
     return err
 
 
-bounds_pade = [(0, 50), (0, 2)]
+bounds_pade = [(0.1, 3.0), (0.1, 1.0)]
 
-result_joined_pade = differential_evolution(fit_func, bounds_pade, constraints=(NonlinearConstraint(constraint_pade_joined_order, 0, eps/eps_x_max)), popsize=15, disp=True, recombination=0.7, strategy='best1bin', tol=1e-9, maxiter=2000)
+result_joined_pade = differential_evolution(
+    fit_func,
+    bounds_pade,
+    constraints=(NonlinearConstraint(constraint_pade_joined_order, 0, eps/eps_x_max)),
+    popsize=15,
+    disp=True,
+    recombination=0.7,
+    strategy='best1bin',
+    tol=1e-9,
+    polish=False,
+    maxiter=2000)
 print(result_joined_pade)
 dx_joined_pade, dz_joined_pade = opt_coefs_to_grids(result_joined_pade.x)
 dx_ga, dz_ga = dx_joined_pade, dz_joined_pade
@@ -197,7 +207,7 @@ env.terrain = Terrain(ground_material=PerfectlyElectricConducting())
 ant = GaussAntenna(freq_hz=300e6, height=1500, beam_width=3, eval_angle=0, polarz='H')
 
 max_propagation_angle = theta_max_degrees
-max_range_m = 50e3
+max_range_m = eps_x_max
 
 
 pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
