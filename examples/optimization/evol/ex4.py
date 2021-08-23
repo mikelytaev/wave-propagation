@@ -113,7 +113,7 @@ dx_ga, dz_ga = dx_joined_pade, dz_joined_pade
 
 bounds_ga = [(-100, 100)] * (order[0] + order[1]) * 2
 
-result_ga = differential_evolution(lambda x: fit_func_ga(x, dx_ga, dz_ga), bounds_ga, popsize=30, disp=True, recombination=1, strategy='randtobest1exp', tol=1e-9, maxiter=10000, polish=False)
+result_ga = differential_evolution(lambda x: fit_func_ga(x, dx_ga, dz_ga), bounds_ga, popsize=30, disp=True, recombination=1, strategy='randtobest1exp', tol=1e-9, maxiter=50000, polish=False)
 print(result_ga)
 
 num_coefs_ga, den_coefs_ga = opt_coefs_to_coefs_ga(result_ga.x, order)
