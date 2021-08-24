@@ -9,7 +9,7 @@ import propagators.dispersion_relations as disp_rels
 from scipy.optimize import differential_evolution, NonlinearConstraint
 import matplotlib.pyplot as plt
 import mpmath
-import opt_utils
+import pyswarms as ps
 
 
 def opt_coefs_to_coefs(coefs_arr, order):
@@ -19,6 +19,13 @@ def opt_coefs_to_coefs(coefs_arr, order):
     den_coefs = np.array([coefs_arr[2+ 2 * n + 2 * i] + 1j * coefs_arr[2 + 2 * n + 2 * i + 1] for i in range(0, m)])
     return num_coefs, den_coefs
 
+
+def opt_coefs_to_coefs_ga(coefs_arr, order):
+    n = order[0]
+    m = order[1]
+    num_coefs = np.array([coefs_arr[2 * i] + 1j * coefs_arr[2 * i + 1] for i in range(0, n)])
+    den_coefs = np.array([coefs_arr[2 * n + 2 * i] + 1j * coefs_arr[2 * n + 2 * i + 1] for i in range(0, m)])
+    return num_coefs, den_coefs
 
 
 def opt_coefs_to_grids(coefs_arr):
@@ -46,6 +53,17 @@ print(k0*fm.sin(theta_max_degrees * fm.pi / 180))
 def fit_func(coefs_arr):
     dx, dz = opt_coefs_to_grids(coefs_arr)
     return 1 / (dx * dz)
+
+
+def fit_func_ga(coefs_arr_: np.ndarray, dx, dz):
+    res = np.empty(coefs_arr_.shape[0])
+    for i in range(0, coefs_arr_.shape[0]):
+        coefs_arr = coefs_arr_[i]
+        num_coefs, den_coefs = opt_coefs_to_coefs_ga(coefs_arr, order)
+        res[i] = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs,
+                                            k0 * fm.sin(theta_max_degrees * fm.pi / 180),
+                                            round(theta_max_degrees) * 5)
+    return res
 
 
 eps = 1e-3
@@ -91,39 +109,24 @@ def constraint_pade_joined_order(coefs_arr):
     return err
 
 
-bounds_pade = [(0.1, 10.0), (0.01, 1.0)]
+bounds_pade = [(0.1, 3.0), (0.1, 1.0)]
 
-# result_joined_pade = differential_evolution(
-#     fit_func,
-#     bounds_pade,
-#     constraints=(NonlinearConstraint(constraint_pade_joined_order, 0, eps/eps_x_max)),
-#     popsize=15,
-#     disp=True,
-#     recombination=0.7,
-#     strategy='best1bin',
-#     tol=1e-9,
-#     polish=False,
-#     maxiter=2000)
-# print(result_joined_pade)
-dx_joined_pade, dz_joined_pade = 2.30754416, 0.37060961#opt_coefs_to_grids(result_joined_pade.x)
-dx_ga, dz_ga = dx_joined_pade * 4, dz_joined_pade * 1
+dx_joined_pade, dz_joined_pade = 2.30753176, 0.3706116
+dx_ga, dz_ga = dx_joined_pade, dz_joined_pade
 
-bounds_ga = [(-200, 200)] * (order[0] + order[1]) * 2
+dims = (order[0] + order[1]) * 2
+bounds_ga = [(-100, 100)] * dims
+bounds_swarm = (-100*np.ones(dims), 100*np.ones(dims))
 
-result_ga = differential_evolution(
-    func=opt_utils.fit_func_ga,
-    args=(dx_ga, dz_ga, order, theta_max_degrees),
-    bounds=bounds_ga,
-    popsize=30,
-    disp=True,
-    recombination=1,
-    strategy='randtobest1exp',
-    tol=1e-9,
-    maxiter=50000,
-    polish=False,
-    workers=4
-)
-print(result_ga)
+#result_ga = differential_evolution(lambda x: fit_func_ga(x, dx_ga, dz_ga), bounds_ga, popsize=30, disp=True, recombination=1, strategy='randtobest1exp', tol=1e-9, maxiter=50000, polish=False)
+#print(result_ga)
+
+# Set-up hyperparameters
+options = {'c1': 0.5, 'c2': 0.3, 'w':0.0}
+# Call instance of PSO
+optimizer = ps.single.GlobalBestPSO(n_particles=100, dimensions=dims, options=options, bounds=bounds_swarm)
+# Perform optimization
+best_cost, best_pos = optimizer.optimize(lambda x: fit_func_ga(x, dx_ga, dz_ga), iters=100000)
 
 num_coefs_ga, den_coefs_ga = opt_coefs_to_coefs_ga(result_ga.x, order)
 
@@ -203,7 +206,7 @@ env.z_max = 3000
 env.terrain = Terrain(ground_material=PerfectlyElectricConducting())
 #env.knife_edges = [KnifeEdge(range=1.5e3, height=100)]
 
-ant = GaussAntenna(freq_hz=300e6, height=1500, beam_width=30, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=300e6, height=1500, beam_width=3, eval_angle=0, polarz='H')
 
 max_propagation_angle = theta_max_degrees
 max_range_m = eps_x_max

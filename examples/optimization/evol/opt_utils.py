@@ -20,6 +20,14 @@ def opt_coefs_to_coefs(coefs_arr, order):
     return num_coefs, den_coefs
 
 
+def opt_coefs_to_coefs_ga(coefs_arr, order):
+    n = order[0]
+    m = order[1]
+    num_coefs = np.array([coefs_arr[2 * i] + 1j * coefs_arr[2 * i + 1] for i in range(0, n)])
+    den_coefs = np.array([coefs_arr[2 * n + 2 * i] + 1j * coefs_arr[2 * n + 2 * i + 1] for i in range(0, m)])
+    return num_coefs, den_coefs
+
+
 def fit_func(coefs_arr):
     dx, dz = opt_coefs_to_grids(coefs_arr)
     return 1 / (dx * dz)
@@ -57,3 +65,11 @@ def constraint_pade_2nd_order(coefs_arr, order, theta_max_degrees):
     err = disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs, k0 * fm.sin(theta_max_degrees * fm.pi / 180),
                                         round(theta_max_degrees) * 5) / dx
     return err
+
+
+def fit_func_ga(coefs_arr, dx, dz, order, theta_max_degrees):
+    k0 = 2 * fm.pi
+    num_coefs, den_coefs = opt_coefs_to_coefs_ga(coefs_arr, order)
+    return disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs,
+                                         k0 * fm.sin(theta_max_degrees * fm.pi / 180),
+                                         round(theta_max_degrees) * 5)
