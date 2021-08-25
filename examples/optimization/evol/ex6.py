@@ -37,7 +37,7 @@ def coefs_to_opt_coefs(coefs):
 
 
 k0 = 2*cm.pi
-theta_max_degrees = 70
+theta_max_degrees = 85
 order = (7, 8)
 
 print(k0*fm.sin(theta_max_degrees * fm.pi / 180))
@@ -107,22 +107,22 @@ bounds_pade = [(0.1, 0.1), (0.00001, 0.0001)]
 # print(result_joined_pade)
 # dx_joined_pade, dz_joined_pade = opt_coefs_to_grids(result_joined_pade.x)
 dx_joined_pade, dz_joined_pade = 0.5, 0.5
-dx_ga, dz_ga = dx_joined_pade * 4, dz_joined_pade * 1
+dx_ga, dz_ga = dx_joined_pade, dz_joined_pade * 1
 
-bounds_ga = [(-200, 200)] * (order[0] + order[1]) * 2
+bounds_ga = [(-1000, 1000)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
     func=opt_utils.fit_func_ga,
     args=(dx_ga, dz_ga, order, theta_max_degrees),
     bounds=bounds_ga,
-    popsize=30,
+    popsize=100,
     disp=True,
     recombination=1,
     strategy='randtobest1exp',
     tol=1e-9,
     maxiter=50000,
     polish=False,
-    workers=1
+    workers=4
 )
 print(result_ga)
 
