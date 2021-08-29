@@ -13,7 +13,7 @@ import opt_utils
 
 
 k0 = 2*cm.pi
-theta_max_degrees = 90
+theta_max_degrees = 85
 order = (7, 8)
 
 print(k0*fm.sin(theta_max_degrees * fm.pi / 180))
@@ -22,32 +22,28 @@ eps = 1e-3
 eps_x_max = 1e3
 
 
-dx_joined_pade, dz_joined_pade = 0.2, 0.2
+dx_joined_pade, dz_joined_pade = 2, 0.5
 dx_ga, dz_ga = dx_joined_pade, dz_joined_pade * 1
 
-bounds_ga = [(-3, 3)] * (order[0] + order[1]) * 2
+bounds_ga = [(-10, 10)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
     func=opt_utils.fit_func_ga,
     args=(dx_ga, dz_ga, order, theta_max_degrees),
     bounds=bounds_ga,
-    popsize=100,
+    popsize=50,
     disp=True,
     recombination=1,
     strategy='randtobest1exp',
     tol=1e-9,
-    maxiter=5000,
+    maxiter=30000,
     polish=False,
-    workers=4
+    workers=-1,
+    #callback=lambda xk, convergence: print(xk)
 )
 print(result_ga)
 
 num_coefs_ga, den_coefs_ga = opt_utils.opt_coefs_to_coefs_ga(result_ga.x, order)
-
-
-
-pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx_pade)
-
 
 def diff2(s):
     return mpmath.acosh(1 + (k0 * dz_joined_pade) ** 2 * s / 2) ** 2 / (k0 * dz_joined_pade) ** 2
@@ -106,14 +102,14 @@ import matplotlib as mpl
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere(flat=True)
-env.z_max = 3000
+env.z_max = 500
 env.terrain = Terrain(ground_material=PerfectlyElectricConducting())
-env.knife_edges = [KnifeEdge(range=1.5e3, height=1500)]
+env.knife_edges = [KnifeEdge(range=0.5e3, height=env.z_max/2)]
 
-ant = GaussAntenna(freq_hz=300e6, height=1500, beam_width=45, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=300e6, height=env.z_max/2, beam_width=theta_max_degrees/2, eval_angle=0, polarz='H')
 
 max_propagation_angle = theta_max_degrees
-max_range_m = eps_x_max*3
+max_range_m = eps_x_max
 
 joined_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
                                                   HelmholtzPropagatorComputationalParams(
@@ -123,9 +119,9 @@ joined_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, m
                                                       z_order=5,
                                                       exp_pade_order=order,
                                                       dx_wl=dx_joined_pade,
-                                                      x_output_filter=4,
+                                                      x_output_filter=1,
                                                       dz_wl=dz_joined_pade,
-                                                      z_output_filter=8,
+                                                      z_output_filter=1,
                                                       two_way=False
                                                   ))
 joined_pade_field = joined_pade_task.calculate()
@@ -138,16 +134,16 @@ opt_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_
                                                       z_order=2,
                                                       exp_pade_coefs=list(zip_longest(num_coefs_ga, den_coefs_ga, fillvalue=0.0j)),
                                                       dx_wl=dx_ga,
-                                                      x_output_filter=4,
+                                                      x_output_filter=1,
                                                       dz_wl=dz_ga,
-                                                      z_output_filter=8,
+                                                      z_output_filter=1,
                                                       two_way=False,
-                                                      inv_z_transform_rtol=1e-7
+                                                      inv_z_transform_rtol=1e-4
                                                   ))
 opt_pade_field = opt_pade_task.calculate()
 
 joined_pade_vis = FieldVisualiser(joined_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Joined Pade")
-plt = joined_pade_vis.plot2d(min=-70, max=0)
+plt = joined_pade_vis.plot2d(min=-160, max=0)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
@@ -160,7 +156,7 @@ plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-opt_vis.plot_hor(300, joined_pade_vis)
+opt_vis.plot_hor(250, joined_pade_vis)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
