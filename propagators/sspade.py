@@ -156,6 +156,7 @@ class HelmholtzPropagatorComputationalParams:
     max_src_angle: float = 0
     exp_pade_order: tuple = None
     exp_pade_coefs: List[tuple] = None
+    exp_pade_a0_coef: complex = 1.0
     x_output_filter: int = None
     z_output_filter: int = None
     two_way: bool = None
@@ -584,6 +585,8 @@ class HelmholtzPadeSolver:
                     ubc = self._calc_upper_lbc(local_bc=self.upper_bc, a=a, b=b, x=x, z_max=self.z_computational_grid[-1], phi=phi)
                     upper_bound = ubc.q1, ubc.q2, ubc.q3
 
+                if pc_i == len(self.params.exp_pade_coefs):
+                    phi *= self.params.exp_pade_a0_coef
                 phi = self._Crank_Nikolson_propagate(a, b, lambda z: self.env.n2minus1(x, z, self.freq_hz),
                                                          lambda z: self.env.rho(x, z), phi, local_z_grid=self.z_computational_grid[terr_i::],
                                                          lower_bound=lower_bound, upper_bound=upper_bound)

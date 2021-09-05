@@ -7,7 +7,7 @@ from cheb_pade_coefs import *
 logging.basicConfig(level=logging.DEBUG)
 
 dx_wl = 2
-coefs = cheb_pade_coefs(dx_wl, (7, 8), fm.sin(85*fm.pi/180)**2, 'ratinterp')
+coefs, a0 = cheb_pade_coefs(dx_wl, (7, 8), fm.sin(85*fm.pi/180)**2, 'aaa')
 
 env = Troposphere(flat=True)
 env.z_max = 300
