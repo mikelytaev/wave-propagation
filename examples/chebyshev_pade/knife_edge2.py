@@ -6,10 +6,10 @@ from cheb_pade_coefs import *
 
 logging.basicConfig(level=logging.DEBUG)
 
-dx_wl = 5
-max_propagation_angle = 85
+dx_wl = 4
+max_propagation_angle = 88
 print(max_propagation_angle)
-coefs, a0 = cheb_pade_coefs(dx_wl, (10, 10), fm.sin(max_propagation_angle*fm.pi/180)**2, 'ratinterp')
+coefs, a0 = cheb_pade_coefs(dx_wl, (9, 10), fm.sin(max_propagation_angle*fm.pi/180)**2, 'ratinterp')
 
 env = Troposphere(flat=True)
 env.z_max = 100
@@ -28,9 +28,9 @@ cheb_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max
                                                       two_way=False,
                                                       max_propagation_angle=max_propagation_angle,
                                                       z_order=4,
-                                                      exp_pade_coefs=coefs,
-                                                      exp_pade_a0_coef=a0,
-                                                      #exp_pade_order=(10, 10),
+                                                      #exp_pade_coefs=coefs,
+                                                      #exp_pade_a0_coef=a0,
+                                                      exp_pade_order=(10, 10),
                                                       dx_wl=dx_wl,
                                                       x_output_filter=1,
                                                       dz_wl=0.25,
