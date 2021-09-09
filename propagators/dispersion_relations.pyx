@@ -39,6 +39,21 @@ def discrete_k_x(double k, double dx, double dz, np.ndarray[complex, ndim=1] pad
     return k - 1j / dx * sum
 
 
+def discrete_k_x_4th_order(double k, double dx, double dz, np.ndarray[complex, ndim=1] pade_coefs_num, np.ndarray[complex, ndim=1] pade_coefs_den, double kz):
+    cdef double v = (2 / (k*dz) * sin(kz * dz / 2))**2 + (2 / (k*dz))**2 * (1/3) * sin(kz * dz / 2)**4
+    cdef complex sum = 0
+    cdef complex a_i = 0
+    cdef Py_ssize_t i
+    for i in range(0, len(pade_coefs_den)):
+        if i < len(pade_coefs_num):
+            a_i = pade_coefs_num[i]
+        else:
+            a_i = 0
+        sum += log(1 - a_i * v) - log(1 - pade_coefs_den[i] * v)
+
+    return k - 1j / dx * sum
+
+
 def k_x(double k, double kz):
     if abs(kz) < k:
         return sqrt(k**2 - kz**2)

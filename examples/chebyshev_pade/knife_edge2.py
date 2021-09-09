@@ -30,7 +30,7 @@ cheb_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max
                                                       z_order=4,
                                                       #exp_pade_coefs=coefs,
                                                       #exp_pade_a0_coef=a0,
-                                                      exp_pade_order=(10, 10),
+                                                      exp_pade_order=(9, 10),
                                                       dx_wl=dx_wl,
                                                       x_output_filter=1,
                                                       dz_wl=0.25,
