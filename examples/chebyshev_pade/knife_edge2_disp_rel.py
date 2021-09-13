@@ -15,16 +15,16 @@ def k_x_angle(dx, dz, num_coefs, den_coefs, k0, kz_arr):
 freq = 3000e6
 wl = 3e8 / freq
 k0 = 2*fm.pi / wl
-dx_wl = 1
-dz_wl = 0.25
+dx_wl = 25
+dz_wl = 0.1
 max_angle_degrees = 20
-coefs, a0 = cheb_pade_coefs(dx_wl, (9, 10), fm.sin(max_angle_degrees*fm.pi/180)**2, 'ratinterp')
+coefs, a0 = cheb_pade_coefs(dx_wl, (4, 5), fm.sin(max_angle_degrees*fm.pi/180)**2, 'ratinterp')
 coefs_num_ratinterp = np.array([a[0] for a in coefs])
 coefs_den_ratinterp = np.array([b[1] for b in coefs])
-coefs, a0 = cheb_pade_coefs(dx_wl, (10, 10), fm.sin(max_angle_degrees*fm.pi/180)**2, 'aaa')
+coefs, a0 = cheb_pade_coefs(dx_wl, (4, 5), fm.sin(max_angle_degrees*fm.pi/180)**2, 'aaa')
 coefs_num_aaa = np.array([a[0] for a in coefs])
 coefs_den_aaa = np.array([b[1] for b in coefs])
-pade_coefs = utils.pade_propagator_coefs(pade_order=(9, 10), diff2=lambda x: x, k0=2*cm.pi, dx=dx_wl)
+pade_coefs = utils.pade_propagator_coefs(pade_order=(4, 5), diff2=lambda x: x, k0=2*cm.pi, dx=dx_wl)
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
 kz_arr = np.linspace(0, 1*k0, 10000)
