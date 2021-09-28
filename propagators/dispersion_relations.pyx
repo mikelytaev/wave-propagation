@@ -2,7 +2,7 @@ import numpy as np
 cimport numpy as np
 
 from math import sin, pi
-from cmath import log, sqrt
+from cmath import log, sqrt, exp
 
 
 
@@ -109,3 +109,36 @@ def k_x_min_im(double k0, double dx, double dz, np.ndarray[complex, ndim=1] pade
         if t < min_im:
             min_im = t
     return min_im
+
+
+def rational_approx(np.ndarray[complex, ndim=1] pade_coefs_num, np.ndarray[complex, ndim=1] pade_coefs_den, double xi):
+    cdef complex product = 1
+    cdef complex a_i = 0
+    cdef Py_ssize_t i
+    for i in range(0, len(pade_coefs_den)):
+        if i < len(pade_coefs_num):
+            a_i = pade_coefs_num[i]
+        else:
+            a_i = 0
+        product *= (1 + a_i * xi) - (1 + pade_coefs_den[i] * xi)
+
+    return product
+
+
+def exp_rational_approx_abs_error_point(double k0, double dx, np.ndarray[complex, ndim=1] pade_coefs_num, np.ndarray[complex, ndim=1] pade_coefs_den, double xi):
+    cdef complex rat_approx = rational_approx(pade_coefs_num, pade_coefs_den, xi)
+    ex = exp(1j*k0*dx*(sqrt(1+xi)-1))
+    return abs(ex - rat_approx).real
+
+
+def exp_rational_approx_abs_error_range(double k0, double dx, np.ndarray[complex, ndim=1] pade_coefs_num, np.ndarray[complex, ndim=1] pade_coefs_den, double xi0, double xi1, int iters):
+    cdef double error = 0
+    cdef Py_ssize_t i
+    cdef double kz_i
+    cdef double t
+    for i in range(0, iters):
+        xi = xi0 + (xi1 - xi0) * i / (iters - 1)
+        t = exp_rational_approx_abs_error_point(k0, dx, pade_coefs_num, pade_coefs_den, xi)
+        if t > error:
+            error = t
+    return error
