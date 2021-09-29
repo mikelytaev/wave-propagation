@@ -24,7 +24,7 @@ eps_x_max = 1e3
 
 dx_wl = 200
 
-bounds_ga = [(-110, 110)] * (order[0] + order[1]) * 2
+bounds_ga = [(-100, 100)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
     func=opt_utils.fit_func_exp_rational_approx_ga,
@@ -32,12 +32,12 @@ result_ga = differential_evolution(
     bounds=bounds_ga,
     popsize=15,
     disp=True,
-    recombination=1,
-    strategy='currenttobest1bin',
+    recombination=1.0,
+    strategy='currenttobest1exp',
     tol=1e-9,
-    maxiter=30000,
+    maxiter=100000,
     polish=False,
-    workers=1,
+    workers=-1,
     #callback=lambda xk, convergence: print(xk)
 )
 print(result_ga)
