@@ -73,3 +73,10 @@ def fit_func_ga(coefs_arr, dx, dz, order, theta_max_degrees):
     return disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs,
                                          k0 * fm.sin(theta_max_degrees * fm.pi / 180),
                                          round(theta_max_degrees) * 5)
+
+
+def fit_func_exp_rational_approx_ga(coefs_arr, dx, order, theta_max_degrees):
+    num_coefs, den_coefs = opt_coefs_to_coefs_ga(coefs_arr, order)
+    return disp_rels.exp_rational_approx_abs_error_range(2 * cm.pi, dx, num_coefs, den_coefs,
+                                                         -fm.sin(theta_max_degrees * fm.pi / 180)**2, 0,
+                                                         round(theta_max_degrees) * 5)

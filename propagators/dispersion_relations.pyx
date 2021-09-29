@@ -120,7 +120,7 @@ def rational_approx(np.ndarray[complex, ndim=1] pade_coefs_num, np.ndarray[compl
             a_i = pade_coefs_num[i]
         else:
             a_i = 0
-        product *= (1 + a_i * xi) - (1 + pade_coefs_den[i] * xi)
+        product *= (1 + a_i * xi) / (1 + pade_coefs_den[i] * xi)
 
     return product
 
