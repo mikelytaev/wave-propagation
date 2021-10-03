@@ -15,16 +15,17 @@ def k_x_angle(dx, dz, num_coefs, den_coefs, k0, kz_arr):
 freq = 3000e6
 wl = 3e8 / freq
 k0 = 2*fm.pi / wl
-dx_wl = 25
+dx_wl = 200
 dz_wl = 0.1
-max_angle_degrees = 20
-coefs, a0 = cheb_pade_coefs(dx_wl, (4, 5), fm.sin(max_angle_degrees*fm.pi/180)**2, 'ratinterp')
+pade_order = (6, 7)
+max_angle_degrees = 10
+coefs, a0 = cheb_pade_coefs(dx_wl, pade_order, fm.sin(max_angle_degrees*fm.pi/180)**2, 'ratinterp')
 coefs_num_ratinterp = np.array([a[0] for a in coefs])
 coefs_den_ratinterp = np.array([b[1] for b in coefs])
-coefs, a0 = cheb_pade_coefs(dx_wl, (4, 5), fm.sin(max_angle_degrees*fm.pi/180)**2, 'aaa')
+coefs, a0 = cheb_pade_coefs(dx_wl, pade_order, fm.sin(max_angle_degrees*fm.pi/180)**2, 'aaa')
 coefs_num_aaa = np.array([a[0] for a in coefs])
 coefs_den_aaa = np.array([b[1] for b in coefs])
-pade_coefs = utils.pade_propagator_coefs(pade_order=(4, 5), diff2=lambda x: x, k0=2*cm.pi, dx=dx_wl)
+pade_coefs = utils.pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=2*cm.pi, dx=dx_wl)
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
 kz_arr = np.linspace(0, 1*k0, 10000)
@@ -49,17 +50,17 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-stop
 
 kz_arr = np.linspace(0, 2*k0, 10000)
 k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in kz_arr])
 k_x_ratinterp = k_x_angle(dx_wl * wl, dz_wl * wl, coefs_num_ratinterp, coefs_den_ratinterp, k0, kz_arr)
 k_x_aaa = k_x_angle(dx_wl * wl, dz_wl * wl, coefs_num_aaa, coefs_den_aaa, k0, kz_arr)
+k_x_pade = k_x_angle(dx_wl * wl, dz_wl * wl, pade_coefs_num, pade_coefs_den, k0, kz_arr)
 
 plt.figure(figsize=(6, 3.2))
-# plt.plot(angles, (np.real(k_x_1)), label='opt real')
-#plt.plot(kz_arr, (np.imag(k_x_r)), label='Pade real')
-plt.plot(kz_arr, (np.imag(k_x_ratinterp)), label='opt imag')
+plt.plot(kz_arr, (np.imag(k_x_pade)), label='Pade')
+plt.plot(kz_arr, (np.imag(k_x_aaa)), label='AAA')
+plt.plot(kz_arr, (np.imag(k_x_ratinterp)), label='ratinterp')
 plt.xlabel('k_z')
 plt.ylabel('k_x abs. error')
 plt.xlim([kz_arr[0], kz_arr[-1]])
