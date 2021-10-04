@@ -3,7 +3,33 @@ from rwp.environment import *
 from rwp.antennas import *
 import math as fm
 
-from rwp.field import Field3d
+from rwp.field import Field3d, Field
+
+from dataclasses import dataclass, field
+
+
+@dataclass
+class SSF2DComputationalParams:
+    max_range_m: float = None
+    max_height_m: float = None
+    dx_wl: float = None
+    dz_wl: float = 0.5
+    abs_layer_scale: float = 0.5
+
+
+class SSF2DPropagator:
+
+    def __init__(self, *, antenna: Source, env: Troposphere, max_range_m: float, comp_params: SSF2DComputationalParams):
+        self.antenna = antenna
+        self.env = env
+        self.max_range_m = max_range_m
+        self.comp_params = comp_params
+
+    def calculate(self):
+        h_field = self.propagator.calculate(lambda z: self.src.aperture(z))
+        res = Field(x_grid=h_field.x_grid_m, z_grid=h_field.z_grid_m, freq_hz=self.src.freq_hz)
+        res.field = h_field.field
+        return res
 
 
 class SSF3DPropagatorComputationParameters:

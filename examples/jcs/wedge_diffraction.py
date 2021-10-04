@@ -7,19 +7,19 @@ from examples.chebyshev_pade.cheb_pade_coefs import *
 logging.basicConfig(level=logging.DEBUG)
 
 max_propagation_angle = 20
-dx_wl = 25
+dx_wl = 50
 wl = 0.1
 max_range_m = 10e3
 coefs, a0 = cheb_pade_coefs(dx_wl, (6, 7), fm.sin(max_propagation_angle*fm.pi/180)**2, 'ratinterp')
 
 env = Troposphere(flat=True)
 env.z_max = 300
-p = lambda x: pyramid(x, 10, 150, 3e3)
+p = lambda x: pyramid2(x, 5, 150, 4e3)
 x_grid = np.arange(0, max_range_m, dx_wl * wl*10)
 p_grid = [p(x) for x in x_grid]
 interp_f = interp1d(x_grid, p_grid, kind='previous', fill_value='extrapolate')
 interp_ff = lambda x : interp_f([x])[0]
-env.terrain = Terrain(elevation=lambda x: pyramid2(x, 5, 150, 4e3), ground_material=PerfectlyElectricConducting())
+env.terrain = Terrain(elevation=interp_ff, ground_material=PerfectlyElectricConducting())
 #env.knife_edges = [KnifeEdge(range=3e3, height=150)]
 
 ant = GaussAntenna(wavelength=wl, height=150, beam_width=4, eval_angle=0, polarz='H')
@@ -32,10 +32,10 @@ etalon_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_ra
                                                       modify_grid=False,
                                                       z_order=5,
                                                       exp_pade_order=(9, 10),
-                                                      dx_wl=dx_wl,
-                                                      x_output_filter=1,
-                                                      dz_wl=0.1,
-                                                      z_output_filter=20,
+                                                      dx_wl=dx_wl/2,
+                                                      x_output_filter=2,
+                                                      dz_wl=0.25,
+                                                      z_output_filter=8,
                                                       two_way=False
                                                   ))
 etalon_field = etalon_task.calculate()
@@ -82,8 +82,8 @@ cheb_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max
                                                       exp_pade_a0_coef=a0,
                                                       dx_wl=dx_wl,
                                                       x_output_filter=1,
-                                                      dz_wl=0.1,
-                                                      z_output_filter=20,
+                                                      dz_wl=0.25,
+                                                      z_output_filter=8,
                                                       two_way=False
                                                   ))
 cheb_pade_field = cheb_pade_task.calculate()
