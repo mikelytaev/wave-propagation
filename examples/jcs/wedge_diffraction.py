@@ -7,7 +7,7 @@ from examples.chebyshev_pade.cheb_pade_coefs import *
 logging.basicConfig(level=logging.DEBUG)
 
 max_propagation_angle = 20
-dx_wl = 50
+dx_wl = 25
 wl = 0.1
 max_range_m = 10e3
 coefs, a0 = cheb_pade_coefs(dx_wl, (6, 7), fm.sin(max_propagation_angle*fm.pi/180)**2, 'ratinterp')
@@ -152,7 +152,7 @@ cheb_pade_vis = FieldVisualiser(cheb_pade_field, env=env, trans_func=lambda v: 2
 import matplotlib as mpl
 mpl.rcParams['axes.titlesize'] = 'medium'
 f, ax = plt.subplots(1, 1, sharey=True, figsize=(8, 6), constrained_layout=True)
-norm = Normalize(0, 5)
+norm = Normalize(0, 10)
 extent = [etalon_field.x_grid[0]*1e-3, etalon_field.x_grid[-1]*1e-3, etalon_field.z_grid[0], etalon_field.z_grid[-1]]
 
 err = np.abs(20*np.log10(np.abs(etalon_field.field[:,:])+1e-16) - 20*np.log10(np.abs(cheb_pade_field.field[:,:])+1e-16))
