@@ -13,22 +13,26 @@ def k_x_angle(dx, dz, num_coefs, den_coefs, k0, kz_arr):
     return np.array([disp_rels.discrete_k_x_4th_order(k0, dx, dz, num_coefs, den_coefs, kz) for kz in kz_arr])
 
 
+logging.basicConfig(level=logging.DEBUG)
+
 order = (6, 7)
-dx_wl = 50
-dz_wl = 0.25
+dx_wl = 200
+dz_wl = 0.5
 method = "ratinterp"
-max_propagation_angle = 20
-max_range = 4e3
-pyramid_angle = 20
+max_propagation_angle = 5
+max_range = 100e3
+pyramid_angle = 2.5
 
 
 wl = 0.1
 max_range_m = max_range
 coefs, a0 = cheb_pade_coefs(dx_wl, order, fm.sin(max_propagation_angle*fm.pi/180)**2, method)
 
-env = Troposphere(flat=True)
-env.z_max = 300
+env = Troposphere()
+env.z_max = 1000
 env.terrain = Terrain(elevation=lambda x: pyramid2(x, pyramid_angle, 150, max_range_m/2), ground_material=PerfectlyElectricConducting())
+elevated_duct = interp1d(x=[0, 100, 170, 300], y=[0, 32, 10, 50], fill_value="extrapolate")
+env.M_profile = lambda x, z: elevated_duct(z)
 
 ant = GaussAntenna(wavelength=wl, height=150, beam_width=4, eval_angle=0, polarz='H')
 

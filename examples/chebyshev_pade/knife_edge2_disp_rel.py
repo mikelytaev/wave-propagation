@@ -15,10 +15,10 @@ def k_x_angle(dx, dz, num_coefs, den_coefs, k0, kz_arr):
 freq = 3000e6
 wl = 3e8 / freq
 k0 = 2*fm.pi / wl
-dx_wl = 50
-dz_wl = 0.1
+dx_wl = 200
+dz_wl = 0.5
 pade_order = (6, 7)
-max_angle_degrees = 20
+max_angle_degrees = 5
 coefs, a0 = cheb_pade_coefs(dx_wl, pade_order, fm.sin(max_angle_degrees*fm.pi/180)**2, 'ratinterp')
 coefs_num_ratinterp = np.array([a[0] for a in coefs])
 coefs_den_ratinterp = np.array([b[1] for b in coefs])
