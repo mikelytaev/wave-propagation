@@ -28,9 +28,9 @@ wl = 0.1
 max_range_m = max_range
 coefs, a0 = cheb_pade_coefs(dx_wl, order, fm.sin(max_propagation_angle*fm.pi/180)**2, method)
 
-env = Troposphere()
+env = Troposphere(flat=True)
 env.z_max = 1000
-env.terrain = Terrain(elevation=lambda x: pyramid2(x, pyramid_angle, 150, max_range_m/2), ground_material=PerfectlyElectricConducting())
+#env.terrain = Terrain(elevation=lambda x: pyramid2(x, pyramid_angle, 150, max_range_m/2), ground_material=PerfectlyElectricConducting())
 elevated_duct = interp1d(x=[0, 100, 170, 300], y=[0, 32, 10, 50], fill_value="extrapolate")
 env.M_profile = lambda x, z: elevated_duct(z)
 
