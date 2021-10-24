@@ -1,3 +1,5 @@
+import numpy as np
+
 from joined_cheb_pade_coefs import *
 import math as fm
 import cmath as cm
@@ -85,6 +87,29 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+
+angles = np.linspace(0, theta_max, 10000)
+xis = -np.sin(fm.pi * dz_wl * np.sin(np.array(angles) * fm.pi/180))**2 / ((2*fm.pi * dz_wl)**2)*4
+vals_joined_pade = np.array([disp_rels.rational_approx(joined_pade_coefs_num, joined_pade_coefs_den, xi) for xi in xis])
+vals_joined_ratinterp = np.array([disp_rels.rational_approx(joined_ratinterp_num, joined_ratinterp_den, xi) for xi in xis])
+t = 1+(2*fm.pi*dz_wl)**2 * xis/2
+t2 = np.array([cm.acosh(z) for z in t])
+vals = np.exp(1j * 2 * fm.pi * dx_wl * (np.sqrt(1+(1/(2*fm.pi*dz_wl)**2 * t2**2))-1))
+
+plt.figure(figsize=(6, 3.2))
+plt.plot(xis, (np.abs(vals_joined_ratinterp - vals)), label='Joined ratinterp')
+plt.plot(xis, (np.abs(vals_joined_pade - vals)), label='Joined Pade')
+plt.xlabel('xi')
+plt.ylabel('Abs. error')
+plt.xlim([xis[0], xis[-1]])
+#plt.ylim([1e-10, 1e0])
+plt.yscale("log")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+stop
 
 from rwp.sspade import *
 from rwp.vis import *
