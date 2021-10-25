@@ -18,7 +18,7 @@ def k_x_angle(dx, dz, order, num_coefs, den_coefs, k0, kz_arr):
 
 
 dx_wl = 300
-theta_max = 5
+theta_max = 4
 dz_wl = 1 / (2 * fm.sin(theta_max*fm.pi/180))*0.8
 dz_wl = 1
 print("dz_wl = " + str(dz_wl))
@@ -71,6 +71,7 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
+
 plt.figure(figsize=(6, 3.2))
 plt.plot(kz_arr/k0, (np.imag(k_x_joined_ratinterp)), label='Joined ratinterp')
 plt.plot(kz_arr/k0, (np.imag(k_x_joined_pade)), label='Joined Pade')
@@ -117,10 +118,10 @@ logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
 env.z_max = 400
 #env.terrain = Terrain(elevation=lambda x: pyramid2(x, 20, 100, 1.5e3), ground_material=PerfectlyElectricConducting())
-#elevated_duct = interp1d(x=[0, 150, 170, 300], y=[0, 3, 0, 10], fill_value="extrapolate")
-#env.M_profile = lambda x, z: elevated_duct(z)
+elevated_duct = interp1d(x=[0, 150, 155, 300], y=[0, 10, 0, 10], fill_value="extrapolate")
+env.M_profile = lambda x, z: elevated_duct(z)
 
-ant = GaussAntenna(freq_hz=1500e6, height=25, beam_width=3, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=3000e6, height=25, beam_width=3, eval_angle=0, polarz='H')
 
 max_propagation_angle = theta_max
 max_range_m = 500e3
@@ -170,7 +171,7 @@ petool_field = petool_task.calculate()
 
 petool_vis = FieldVisualiser(petool_field, env=env, trans_func=lambda x: 2 * x, label='Метод расщ. Фурье',
                              x_mult=1E-3)
-plt = petool_vis.plot2d(min=-80, max=0, show_terrain=True)
+plt = petool_vis.plot2d(min=-100, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
@@ -178,14 +179,14 @@ plt.show()
 
 
 pade_4th_vis = FieldVisualiser(pade_4th_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Pade 4th")
-plt = pade_4th_vis.plot2d(min=-80, max=0, show_terrain=True)
+plt = pade_4th_vis.plot2d(min=-180, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
 joined_cheb_pade_vis = FieldVisualiser(joined_cheb_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Opt")
-plt = joined_cheb_pade_vis.plot2d(min=-80, max=0, show_terrain=True)
+plt = joined_cheb_pade_vis.plot2d(min=-180, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
@@ -199,38 +200,37 @@ f, ax = plt.subplots(1, 1, sharey=True, figsize=(6, 3.2), constrained_layout=Tru
 norm = Normalize(0, 10)
 extent = [joined_cheb_pade_field.x_grid[0]*1e-3, joined_cheb_pade_field.x_grid[-1]*1e-3, joined_cheb_pade_field.z_grid[0], joined_cheb_pade_field.z_grid[-1]]
 
-err = np.abs(20*np.log10(np.abs(joined_cheb_pade_field.field[1:,:-1])+1e-16) - 20*np.log10(np.abs(pade_4th_field.field[1:,:-1])+1e-16))
+err = np.abs(20*np.log10(np.abs(joined_cheb_pade_field.field)+1e-16) - 20*np.log10(np.abs(pade_4th_field.field)+1e-16))
 im = ax.imshow(err.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
 ax.grid()
 #ax.set_title('Δz=2.0λ, 2nd order')
 ax.set_xlabel('Range (km)')
 ax.set_ylabel('Height (m)')
 
-terrain_grid = np.array([joined_cheb_pade_field.env.terrain.elevation(v) for v in joined_cheb_pade_field.x_grid / joined_cheb_pade_field.x_mult])
-ax.plot(joined_cheb_pade_field.x_grid, terrain_grid, 'k')
-ax.fill_between(joined_cheb_pade_field.x_grid, terrain_grid*0, terrain_grid, color='brown')
+# terrain_grid = np.array([joined_cheb_pade_vis.env.terrain.elevation(v) for v in joined_cheb_pade_vis.x_grid / joined_cheb_pade_vis.x_mult])
+# ax.plot(joined_cheb_pade_field.x_grid, terrain_grid, 'k')
+# ax.fill_between(joined_cheb_pade_field.x_grid, terrain_grid*0, terrain_grid, color='brown')
 
 f.colorbar(im, shrink=0.6, location='right', fraction=0.046, pad=0.04)
 #f.tight_layout()
 plt.show()
 
-stop
 
 
 f, ax = plt.subplots(1, 1, sharey=True, figsize=(6, 3.2), constrained_layout=True)
 norm = Normalize(0, 10)
 extent = [joined_cheb_pade_field.x_grid[0]*1e-3, joined_cheb_pade_field.x_grid[-1]*1e-3, joined_cheb_pade_field.z_grid[0], joined_cheb_pade_field.z_grid[-1]]
 
-err = np.abs(2*petool_field.field - 20*np.log10(np.abs(joined_cheb_pade_field.field[1:,:-1])+1e-16))
+err = np.abs(2*petool_field.field - 20*np.log10(np.abs(joined_cheb_pade_field.field[:,:])+1e-16))
 im = ax.imshow(err.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
 ax.grid()
 #ax.set_title('Δz=2.0λ, 2nd order')
 ax.set_xlabel('Range (km)')
 ax.set_ylabel('Height (m)')
 
-terrain_grid = np.array([joined_cheb_pade_field.env.terrain.elevation(v) for v in joined_cheb_pade_field.x_grid / joined_cheb_pade_field.x_mult])
-ax.plot(joined_cheb_pade_field.x_grid, terrain_grid, 'k')
-ax.fill_between(joined_cheb_pade_field.x_grid, terrain_grid*0, terrain_grid, color='brown')
+# terrain_grid = np.array([joined_cheb_pade_vis.env.terrain.elevation(v) for v in joined_cheb_pade_vis.x_grid / joined_cheb_pade_vis.x_mult])
+# ax.plot(joined_cheb_pade_field.x_grid, terrain_grid, 'k')
+# ax.fill_between(joined_cheb_pade_field.x_grid, terrain_grid*0, terrain_grid, color='brown')
 
 f.colorbar(im, shrink=0.6, location='right', fraction=0.046, pad=0.04)
 #f.tight_layout()
