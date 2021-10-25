@@ -17,9 +17,10 @@ def k_x_angle(dx, dz, order, num_coefs, den_coefs, k0, kz_arr):
     return None
 
 
-dx_wl = 50
-theta_max = 22
+dx_wl = 300
+theta_max = 5
 dz_wl = 1 / (2 * fm.sin(theta_max*fm.pi/180))*0.8
+dz_wl = 1
 print("dz_wl = " + str(dz_wl))
 k0 = 2*fm.pi
 order = (7, 8)
@@ -113,44 +114,17 @@ from rwp.vis import *
 
 
 logging.basicConfig(level=logging.DEBUG)
-env = Troposphere(flat=True)
-env.z_max = 200
-env.terrain = Terrain(elevation=lambda x: pyramid2(x, 20, 100, 1.5e3), ground_material=PerfectlyElectricConducting())
+env = Troposphere()
+env.z_max = 400
+#env.terrain = Terrain(elevation=lambda x: pyramid2(x, 20, 100, 1.5e3), ground_material=PerfectlyElectricConducting())
+#elevated_duct = interp1d(x=[0, 150, 170, 300], y=[0, 3, 0, 10], fill_value="extrapolate")
+#env.M_profile = lambda x, z: elevated_duct(z)
 
-ant = GaussAntenna(freq_hz=3000e6, height=env.z_max/2, beam_width=3, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=1500e6, height=25, beam_width=3, eval_angle=0, polarz='H')
 
 max_propagation_angle = theta_max
-max_range_m = 3e3
+max_range_m = 500e3
 
-joined_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
-                                                  HelmholtzPropagatorComputationalParams(
-                                                      terrain_method=TerrainMethod.staircase,
-                                                      max_propagation_angle=max_propagation_angle,
-                                                      modify_grid=False,
-                                                      z_order=5,
-                                                      exp_pade_order=order,
-                                                      dx_wl=dx_wl,
-                                                      x_output_filter=1,
-                                                      dz_wl=dz_wl,
-                                                      z_output_filter=1,
-                                                      two_way=False
-                                                  ))
-joined_pade_field = joined_pade_task.calculate()
-
-pade_2nd_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
-                                                  HelmholtzPropagatorComputationalParams(
-                                                      terrain_method=TerrainMethod.staircase,
-                                                      max_propagation_angle=max_propagation_angle,
-                                                      modify_grid=False,
-                                                      z_order=2,
-                                                      exp_pade_order=order,
-                                                      dx_wl=dx_wl,
-                                                      x_output_filter=1,
-                                                      dz_wl=dz_wl,
-                                                      z_output_filter=1,
-                                                      two_way=False
-                                                  ))
-pade_2nd_field = pade_2nd_task.calculate()
 
 pade_4th_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
                                                   HelmholtzPropagatorComputationalParams(
@@ -160,9 +134,9 @@ pade_4th_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_
                                                       z_order=4,
                                                       exp_pade_order=order,
                                                       dx_wl=dx_wl,
-                                                      x_output_filter=1,
+                                                      x_output_filter=10,
                                                       dz_wl=dz_wl,
-                                                      z_output_filter=1,
+                                                      z_output_filter=10,
                                                       two_way=False
                                                   ))
 pade_4th_field = pade_4th_task.calculate()
@@ -175,9 +149,9 @@ joined_cheb_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=e
                                                       z_order=2,
                                                       exp_pade_coefs=list(zip_longest(joined_ratinterp_num, joined_ratinterp_den, fillvalue=0.0j)),
                                                       dx_wl=dx_wl,
-                                                      x_output_filter=1,
+                                                      x_output_filter=10,
                                                       dz_wl=dz_wl,
-                                                      z_output_filter=1,
+                                                      z_output_filter=10,
                                                       two_way=False,
                                                       inv_z_transform_rtol=1e-4
                                                   ))
@@ -189,50 +163,29 @@ petool_task = PETOOLPropagationTask(antenna=ant,
                                              two_way=False,
                                              max_range_m=max_range_m,
                                              dx_wl=dx_wl,
-                                             n_dx_out=1,
+                                             n_dx_out=10,
                                              dz_wl=dz_wl,
-                                             n_dz_out=1)
+                                             n_dz_out=10)
 petool_field = petool_task.calculate()
 
 petool_vis = FieldVisualiser(petool_field, env=env, trans_func=lambda x: 2 * x, label='Метод расщ. Фурье',
                              x_mult=1E-3)
-
-joined_pade_vis = FieldVisualiser(joined_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Joined Pade")
-plt = joined_pade_vis.plot2d(min=-120, max=0, show_terrain=True)
+plt = petool_vis.plot2d(min=-80, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-pade_2nd_vis = FieldVisualiser(pade_2nd_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Pade 2nd")
-plt = pade_2nd_vis.plot2d(min=-120, max=0, show_terrain=True)
-plt.xlabel('Range (km)')
-plt.ylabel('Height (m)')
-plt.tight_layout()
-plt.show()
 
 pade_4th_vis = FieldVisualiser(pade_4th_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Pade 4th")
-plt = pade_4th_vis.plot2d(min=-120, max=0, show_terrain=True)
+plt = pade_4th_vis.plot2d(min=-80, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
 joined_cheb_pade_vis = FieldVisualiser(joined_cheb_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Opt")
-plt = joined_cheb_pade_vis.plot2d(min=-120, max=0, show_terrain=True)
-plt.xlabel('Range (km)')
-plt.ylabel('Height (m)')
-plt.tight_layout()
-plt.show()
-
-joined_cheb_pade_vis.plot_hor(250, joined_pade_vis)
-plt.xlabel('Range (km)')
-plt.ylabel('Height (m)')
-plt.tight_layout()
-plt.show()
-
-f, ax1 = plt.subplots(1, 1, sharey=True)
-joined_cheb_pade_vis.plot_ver(max_range_m, ax1, joined_pade_vis)
+plt = joined_cheb_pade_vis.plot2d(min=-80, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
@@ -244,49 +197,29 @@ mpl.rcParams['axes.titlesize'] = 'medium'
 
 f, ax = plt.subplots(1, 1, sharey=True, figsize=(6, 3.2), constrained_layout=True)
 norm = Normalize(0, 10)
-extent = [joined_pade_field.x_grid[0]*1e-3, joined_pade_field.x_grid[-1]*1e-3, joined_pade_field.z_grid[0], joined_pade_field.z_grid[-1]]
+extent = [joined_cheb_pade_field.x_grid[0]*1e-3, joined_cheb_pade_field.x_grid[-1]*1e-3, joined_cheb_pade_field.z_grid[0], joined_cheb_pade_field.z_grid[-1]]
 
-err = np.abs(2*petool_field.field - 20*np.log10(np.abs(joined_pade_field.field[1:,:-1])+1e-16))
+err = np.abs(20*np.log10(np.abs(joined_cheb_pade_field.field[1:,:-1])+1e-16) - 20*np.log10(np.abs(pade_4th_field.field[1:,:-1])+1e-16))
 im = ax.imshow(err.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
 ax.grid()
 #ax.set_title('Δz=2.0λ, 2nd order')
 ax.set_xlabel('Range (km)')
 ax.set_ylabel('Height (m)')
 
-terrain_grid = np.array([joined_pade_vis.env.terrain.elevation(v) for v in joined_pade_vis.x_grid / joined_pade_vis.x_mult])
-ax.plot(joined_pade_vis.x_grid, terrain_grid, 'k')
-ax.fill_between(joined_pade_vis.x_grid, terrain_grid*0, terrain_grid, color='brown')
+terrain_grid = np.array([joined_cheb_pade_field.env.terrain.elevation(v) for v in joined_cheb_pade_field.x_grid / joined_cheb_pade_field.x_mult])
+ax.plot(joined_cheb_pade_field.x_grid, terrain_grid, 'k')
+ax.fill_between(joined_cheb_pade_field.x_grid, terrain_grid*0, terrain_grid, color='brown')
 
 f.colorbar(im, shrink=0.6, location='right', fraction=0.046, pad=0.04)
 #f.tight_layout()
 plt.show()
 
+stop
 
 
 f, ax = plt.subplots(1, 1, sharey=True, figsize=(6, 3.2), constrained_layout=True)
 norm = Normalize(0, 10)
-extent = [joined_pade_field.x_grid[0]*1e-3, joined_pade_field.x_grid[-1]*1e-3, joined_pade_field.z_grid[0], joined_pade_field.z_grid[-1]]
-
-err = np.abs(2*petool_field.field - 20*np.log10(np.abs(pade_4th_field.field[1:,:-1])+1e-16))
-im = ax.imshow(err.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
-ax.grid()
-#ax.set_title('Δz=2.0λ, 2nd order')
-ax.set_xlabel('Range (km)')
-ax.set_ylabel('Height (m)')
-
-terrain_grid = np.array([joined_pade_vis.env.terrain.elevation(v) for v in joined_pade_vis.x_grid / joined_pade_vis.x_mult])
-ax.plot(joined_pade_vis.x_grid, terrain_grid, 'k')
-ax.fill_between(joined_pade_vis.x_grid, terrain_grid*0, terrain_grid, color='brown')
-
-f.colorbar(im, shrink=0.6, location='right', fraction=0.046, pad=0.04)
-#f.tight_layout()
-plt.show()
-
-
-
-f, ax = plt.subplots(1, 1, sharey=True, figsize=(6, 3.2), constrained_layout=True)
-norm = Normalize(0, 10)
-extent = [joined_pade_field.x_grid[0]*1e-3, joined_pade_field.x_grid[-1]*1e-3, joined_pade_field.z_grid[0], joined_pade_field.z_grid[-1]]
+extent = [joined_cheb_pade_field.x_grid[0]*1e-3, joined_cheb_pade_field.x_grid[-1]*1e-3, joined_cheb_pade_field.z_grid[0], joined_cheb_pade_field.z_grid[-1]]
 
 err = np.abs(2*petool_field.field - 20*np.log10(np.abs(joined_cheb_pade_field.field[1:,:-1])+1e-16))
 im = ax.imshow(err.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
@@ -295,9 +228,9 @@ ax.grid()
 ax.set_xlabel('Range (km)')
 ax.set_ylabel('Height (m)')
 
-terrain_grid = np.array([joined_pade_vis.env.terrain.elevation(v) for v in joined_pade_vis.x_grid / joined_pade_vis.x_mult])
-ax.plot(joined_pade_vis.x_grid, terrain_grid, 'k')
-ax.fill_between(joined_pade_vis.x_grid, terrain_grid*0, terrain_grid, color='brown')
+terrain_grid = np.array([joined_cheb_pade_field.env.terrain.elevation(v) for v in joined_cheb_pade_field.x_grid / joined_cheb_pade_field.x_mult])
+ax.plot(joined_cheb_pade_field.x_grid, terrain_grid, 'k')
+ax.fill_between(joined_cheb_pade_field.x_grid, terrain_grid*0, terrain_grid, color='brown')
 
 f.colorbar(im, shrink=0.6, location='right', fraction=0.046, pad=0.04)
 #f.tight_layout()
