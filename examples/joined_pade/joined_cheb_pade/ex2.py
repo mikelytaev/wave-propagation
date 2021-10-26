@@ -116,15 +116,15 @@ from rwp.vis import *
 
 logging.basicConfig(level=logging.DEBUG)
 env = Troposphere()
-env.z_max = 400
+env.z_max = 250
 #env.terrain = Terrain(elevation=lambda x: pyramid2(x, 20, 100, 1.5e3), ground_material=PerfectlyElectricConducting())
-elevated_duct = interp1d(x=[0, 150, 155, 300], y=[0, 10, 0, 10], fill_value="extrapolate")
+elevated_duct = interp1d(x=[0, 150, 300], y=[0, -5, 5], fill_value="extrapolate")
 env.M_profile = lambda x, z: elevated_duct(z)
 
-ant = GaussAntenna(freq_hz=3000e6, height=25, beam_width=3, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=3000e6, height=200, beam_width=3, eval_angle=0, polarz='H')
 
 max_propagation_angle = theta_max
-max_range_m = 500e3
+max_range_m = 700e3
 
 
 pade_4th_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
@@ -154,7 +154,6 @@ joined_cheb_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=e
                                                       dz_wl=dz_wl,
                                                       z_output_filter=10,
                                                       two_way=False,
-                                                      inv_z_transform_rtol=1e-4
                                                   ))
 joined_cheb_pade_field = joined_cheb_pade_task.calculate()
 
@@ -179,14 +178,14 @@ plt.show()
 
 
 pade_4th_vis = FieldVisualiser(pade_4th_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Pade 4th")
-plt = pade_4th_vis.plot2d(min=-180, max=0, show_terrain=True)
+plt = pade_4th_vis.plot2d(min=-100, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
 joined_cheb_pade_vis = FieldVisualiser(joined_cheb_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Opt")
-plt = joined_cheb_pade_vis.plot2d(min=-180, max=0, show_terrain=True)
+plt = joined_cheb_pade_vis.plot2d(min=-100, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
@@ -197,7 +196,7 @@ import matplotlib.pyplot as plt
 mpl.rcParams['axes.titlesize'] = 'medium'
 
 f, ax = plt.subplots(1, 1, sharey=True, figsize=(6, 3.2), constrained_layout=True)
-norm = Normalize(0, 10)
+norm = Normalize(0, 0.2)
 extent = [joined_cheb_pade_field.x_grid[0]*1e-3, joined_cheb_pade_field.x_grid[-1]*1e-3, joined_cheb_pade_field.z_grid[0], joined_cheb_pade_field.z_grid[-1]]
 
 err = np.abs(20*np.log10(np.abs(joined_cheb_pade_field.field)+1e-16) - 20*np.log10(np.abs(pade_4th_field.field)+1e-16))
