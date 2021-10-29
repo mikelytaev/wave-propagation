@@ -7,6 +7,7 @@ import propagators.dispersion_relations as disp_rels
 import matplotlib.pyplot as plt
 import mpmath
 import propagators._utils as utils
+import matplotlib as mpl
 
 
 def k_x_angle(dx, dz, order, num_coefs, den_coefs, k0, kz_arr):
@@ -52,15 +53,15 @@ k_x_pade_4th = k_x_angle(dx_wl, dz_wl, 4, pade_coefs_num, pade_coefs_den, k0, kz
 k_x_cheb_pade_2nd = k_x_angle(dx_wl, dz_wl, 2, cheb_pade_coefs_num, cheb_pade_coefs_den, k0, kz_arr)
 k_x_cheb_pade_4th = k_x_angle(dx_wl, dz_wl, 4, cheb_pade_coefs_num, cheb_pade_coefs_den, k0, kz_arr)
 
-
+mpl.rcParams["legend.loc"] = 'upper left'
 plt.figure(figsize=(6, 3.2))
-plt.plot(angles, (np.abs(k_x_joined_ratinterp - k_x_r)), label='Joined ratinterp')
-plt.plot(angles, (np.abs(k_x_joined_pade - k_x_r)), label='Joined Pade')
-plt.plot(angles, (np.abs(k_x_pade_2nd - k_x_r)), label='Pade 2nd order')
-plt.plot(angles, (np.abs(k_x_pade_4th - k_x_r)), label='Pade 4th order')
+plt.plot(angles, (np.abs(k_x_joined_ratinterp - k_x_r)), label='Rat.interp. of discrete propagator')
+plt.plot(angles, (np.abs(k_x_joined_pade - k_x_r)), label='Pade approx. of discrete propagator')
+plt.plot(angles, (np.abs(k_x_pade_2nd - k_x_r)), label='Pade approx. of semi-discrete propagator (2nd order)')
+plt.plot(angles, (np.abs(k_x_pade_4th - k_x_r)), label='Pade approx. of semi-discrete propagator (4th order)')
 #plt.plot(angles, (np.abs(k_x_cheb_pade_2nd - k_x_r)), label='ratinterp 2nd order')
 #plt.plot(angles, (np.abs(k_x_cheb_pade_4th - k_x_r)), label='ratinterp 4th order')
-plt.xlabel('angle')
+plt.xlabel('Angle (degrees)')
 plt.ylabel('k_x abs. error')
 plt.xlim([angles[0], angles[-1]])
 plt.ylim([1e-10, 1e0])
@@ -71,15 +72,15 @@ plt.tight_layout()
 plt.show()
 
 plt.figure(figsize=(6, 3.2))
-plt.plot(kz_arr/k0, (np.imag(k_x_joined_ratinterp)), label='Joined ratinterp')
-plt.plot(kz_arr/k0, (np.imag(k_x_joined_pade)), label='Joined Pade')
-plt.plot(kz_arr/k0, (np.imag(k_x_pade_2nd)), label='Pade 2nd order')
-plt.plot(kz_arr/k0, (np.imag(k_x_pade_4th)), label='Pade 4th order')
-#plt.plot(kz_arr/k0, (np.imag(k_x_cheb_pade_2nd)), label='ratinterp 2nd order')
-#plt.plot(kz_arr/k0, (np.imag(k_x_cheb_pade_4th)), label='ratinterp 4th order')
-plt.xlabel('k_z/k0')
-plt.ylabel('im(k_x/k0)')
-plt.xlim([kz_arr[0]/k0, kz_arr[-1]/k0])
+plt.plot(angles, (np.imag(k_x_joined_ratinterp)), label='Rat.interp. of discrete propagator')
+plt.plot(angles, (np.imag(k_x_joined_pade)), label='Pade approx. of discrete propagator')
+plt.plot(angles, (np.imag(k_x_pade_2nd)), label='Pade approx. of semi-discrete propagator (2nd order)')
+plt.plot(angles, (np.imag(k_x_pade_4th)), label='Pade approx. of semi-discrete propagator (4th order)')
+#plt.plot(angles, (np.imag(k_x_cheb_pade_2nd)), label='ratinterp 2nd order')
+#plt.plot(angles, (np.imag(k_x_cheb_pade_4th)), label='ratinterp 4th order')
+plt.xlabel('Angle (degrees)')
+plt.ylabel('Im(k_x/k0)')
+plt.xlim([angles[0], angles[-1]])
 #plt.ylim([1e-10, 1e0])
 plt.legend()
 plt.grid(True)
@@ -95,8 +96,8 @@ t2 = np.array([cm.acosh(z) for z in t])
 vals = np.exp(1j * 2 * fm.pi * dx_wl * (np.sqrt(1+(1/(2*fm.pi*dz_wl)**2 * t2**2))-1))
 
 plt.figure(figsize=(6, 3.2))
-plt.plot(xis, (np.abs(vals_joined_ratinterp - vals)), label='Joined ratinterp')
-plt.plot(xis, (np.abs(vals_joined_pade - vals)), label='Joined Pade')
+plt.plot(xis, (np.abs(vals_joined_ratinterp - vals)), label='Rat.interp. of discrete propagator')
+plt.plot(xis, (np.abs(vals_joined_pade - vals)), label='Pade approx. of discrete propagator')
 plt.xlabel('xi')
 plt.ylabel('Abs. error')
 plt.xlim([xis[0], xis[-1]])
@@ -106,7 +107,6 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
 
 from rwp.sspade import *
 from rwp.vis import *
@@ -238,7 +238,6 @@ plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 mpl.rcParams['axes.titlesize'] = 'medium'
 
