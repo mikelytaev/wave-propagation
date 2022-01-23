@@ -25,7 +25,29 @@ eps_x_max = 1e3
 dx_joined_pade, dz_joined_pade = 50, 0.25
 dx_ga, dz_ga = dx_joined_pade, dz_joined_pade * 1
 
-bounds_ga = [(-50, 50)] * (order[0] + order[1]) * 2
+bounds_ga = [-100] * (order[0] + order[1]) * 2, [100] * (order[0] + order[1]) * 2
+
+
+class sphere_function:
+
+    def fitness(self, x):
+        return [(opt_utils.fit_func_ga(x, dx_ga, dz_ga, order, theta_max_degrees))]
+
+    def get_bounds(self):
+        return bounds_ga
+
+
+import pygmo as pg
+prob = pg.problem(sphere_function())
+algo = pg.algorithm(pg.de1220(gen=50000, variant_adptv=1))
+algo.set_verbosity(100)
+pop = pg.population(prob, 20)
+pop = algo.evolve(pop)
+uda = algo.extract(pg.de1220)
+uda.get_log()
+
+stop
+
 
 result_ga = differential_evolution(
     func=opt_utils.fit_func_ga,
@@ -33,7 +55,6 @@ result_ga = differential_evolution(
     bounds=bounds_ga,
     popsize=50,
     disp=True,
-    mutation=(0.0, 1.9999999),
     recombination=1,
     strategy='randtobest1exp',
     tol=1e-9,

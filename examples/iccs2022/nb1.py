@@ -9,7 +9,7 @@ import propagators.dispersion_relations as disp_rels
 from scipy.optimize import differential_evolution, NonlinearConstraint
 import matplotlib.pyplot as plt
 import mpmath
-import opt_utils
+import examples.optimization.evol.opt_utils as opt_utils
 
 
 k0 = 2*cm.pi
@@ -22,10 +22,10 @@ eps = 1e-3
 eps_x_max = 1e3
 
 
-dx_joined_pade, dz_joined_pade = 50, 0.25
+dx_joined_pade, dz_joined_pade = 50, 1.1
 dx_ga, dz_ga = dx_joined_pade, dz_joined_pade * 1
 
-bounds_ga = [(-50, 50)] * (order[0] + order[1]) * 2
+bounds_ga = [(-100, 100)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
     func=opt_utils.fit_func_ga,
@@ -70,7 +70,7 @@ plt.plot(kz_arr, (np.abs(k_x_3 - k_x_r)), label='Joined Pade')
 plt.xlabel('k_z')
 plt.ylabel('k_x abs. error')
 plt.xlim([kz_arr[0], kz_arr[-1]])
-#plt.ylim([1e-10, 1e-1])
+plt.ylim([1e-10, 1e1])
 plt.yscale("log")
 plt.legend()
 plt.grid(True)

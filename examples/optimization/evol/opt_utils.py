@@ -70,9 +70,9 @@ def constraint_pade_2nd_order(coefs_arr, order, theta_max_degrees):
 def fit_func_ga(coefs_arr, dx, dz, order, theta_max_degrees):
     k0 = 2 * fm.pi
     num_coefs, den_coefs = opt_coefs_to_coefs_ga(coefs_arr, order)
-    return disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs,
+    return fm.log10(disp_rels.k_x_abs_error_range(2 * cm.pi, dx, dz, num_coefs, den_coefs,
                                          k0 * fm.sin(theta_max_degrees * fm.pi / 180),
-                                         round(theta_max_degrees) * 5)
+                                         round(theta_max_degrees) * 5))
 
 
 def fit_func_exp_rational_approx_ga(coefs_arr, dx, order, theta_max_degrees):
