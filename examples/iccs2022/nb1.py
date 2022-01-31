@@ -14,7 +14,7 @@ import examples.optimization.evol.opt_utils as opt_utils
 
 k0 = 2*cm.pi
 theta_max_degrees = 22
-order = (7, 8)
+order = (6, 7)
 
 print(k0*fm.sin(theta_max_degrees * fm.pi / 180))
 
@@ -22,7 +22,7 @@ eps = 1e-3
 eps_x_max = 1e3
 
 
-dx_joined_pade, dz_joined_pade = 50, 1.1
+dx_joined_pade, dz_joined_pade = 50, 0.25
 dx_ga, dz_ga = dx_joined_pade, dz_joined_pade * 1
 
 bounds_ga = [(-100, 100)] * (order[0] + order[1]) * 2
@@ -31,11 +31,11 @@ result_ga = differential_evolution(
     func=opt_utils.fit_func_ga,
     args=(dx_ga, dz_ga, order, theta_max_degrees),
     bounds=bounds_ga,
-    popsize=50,
+    popsize=75,
     disp=True,
-    mutation=(0.0, 1.9999999),
-    recombination=1,
-    strategy='randtobest1exp',
+    #mutation=(0.0, 1.9999999),
+    recombination=1.0,
+    strategy='randtobest1bin',
     tol=1e-9,
     maxiter=30000,
     polish=False,
