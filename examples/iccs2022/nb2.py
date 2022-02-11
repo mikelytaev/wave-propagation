@@ -86,60 +86,50 @@ result_pade = differential_evolution(
     callback=lambda xk, convergence: print(xk)
 )
 print(result_pade)
-dx_joined_pade, dz_joined_pade = opt_coefs_to_grids(result_pade.x)
-dx_joined_pade, dz_joined_pade = 0.5, 0.5
-dx_ga, dz_ga = dx_joined_pade, dz_joined_pade * 1
+dx_pade, dz_pade = opt_coefs_to_grids(result_pade.x)
+pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx_pade)
+pade_coefs_num = np.array([a[0] for a in pade_coefs])
+pade_coefs_den = np.array([a[1] for a in pade_coefs])
 
+bounds_ga = bounds_pade + [(-100, 100)] * (order[0] + order[1]) * 2
 
-num_coefs_ga, den_coefs_ga = opt_utils.opt_coefs_to_coefs_ga(result_ga.x, order)
-
-result_pade = differential_evolution(
+result_ga = differential_evolution(
     fit_func,
-    bounds_pade,
-    constraints=(NonlinearConstraint(constraint_pade_2nd_order, 0, eps/eps_x_max)),
+    bounds_ga,
+    constraints=(NonlinearConstraint(constraint_ga, 0, 1e-6)),
     popsize=15,
     disp=True,
-    recombination=0.99,
-    strategy='currenttobest1bin',
+    recombination=1.0,
+    strategy='randtobest1exp',
     tol=1e-9,
-    maxiter=2000)
-print(result_pade)
-
-dx_pade, dz_pade = opt_coefs_to_grids(result_pade.x)
-
-
-
-pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2*cm.pi, dx=dx_pade)
-
-
-def diff2(s):
-    return mpmath.acosh(1 + (k0 * dz_joined_pade) ** 2 * s / 2) ** 2 / (k0 * dz_joined_pade) ** 2
-
-
-joined_pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=diff2, k0=2*cm.pi, dx=dx_joined_pade)
+    maxiter=1500,
+    polish=False,
+    callback=lambda xk, convergence: print(str(constraint_ga(xk)) + " " + str(opt_coefs_to_grids(xk)))
+)
+print(result_ga)
+dx_ga, dz_ga = opt_coefs_to_grids(result_ga.x)
+ga_coefs_num, ga_coefs_den = opt_coefs_to_coefs(result_ga.x, order)
 
 
 def k_x_angle(dx, dz, num_coefs, den_coefs, kz_arr):
     return np.array([disp_rels.discrete_k_x(k0, dx, dz, num_coefs, den_coefs, kz) for kz in kz_arr])
 
 
-kz_arr = np.linspace(0, 2*k0, 10000)
-k_x_r = np.array([cm.sqrt(k0**2 - kz**2) for kz in kz_arr])
-k_x_1 = k_x_angle(dx_ga, dz_ga, num_coefs_ga, den_coefs_ga, kz_arr)
-pade_coefs_num = np.array([a[0] for a in pade_coefs])
-pade_coefs_den = np.array([a[1] for a in pade_coefs])
-joined_pade_coefs_num = np.array([a[0] for a in joined_pade_coefs])
-joined_pade_coefs_den = np.array([a[1] for a in joined_pade_coefs])
-k_x_2 = k_x_angle(dx_pade, dz_pade, pade_coefs_num, pade_coefs_den, kz_arr)
-k_x_3 = k_x_angle(dx_joined_pade, dz_joined_pade, joined_pade_coefs_num, joined_pade_coefs_den, kz_arr)
+angles = np.linspace(0, theta_max_degrees*1.5, 1000)
+kz_arr = k0*np.sin(angles*fm.pi/180)
+k_x_r = np.sqrt(k0**2 - kz_arr**2)
+k_x_ga = k_x_angle(dx_ga, dz_ga, ga_coefs_num, ga_coefs_den, kz_arr)
+k_x_pade = k_x_angle(dx_pade, dz_pade, pade_coefs_num, pade_coefs_den, kz_arr)
+
+k_x_ga_error = np.abs(k_x_ga - k_x_r)
+k_x_pade_error = np.abs(k_x_pade - k_x_r)
 
 plt.figure(figsize=(6, 3.2))
-plt.plot(kz_arr, (np.abs(k_x_1 - k_x_r)), label='opt')
-plt.plot(kz_arr, (np.abs(k_x_2 - k_x_r)), label='Pade')
-plt.plot(kz_arr, (np.abs(k_x_3 - k_x_r)), label='Joined Pade')
-plt.xlabel('k_z')
+plt.plot(angles, k_x_ga_error, label='ga')
+plt.plot(angles, k_x_pade_error, label='Pade')
+plt.xlabel('Angle (degrees)')
 plt.ylabel('k_x abs. error')
-plt.xlim([kz_arr[0], kz_arr[-1]])
+plt.xlim([angles[0], angles[-1]])
 #plt.ylim([1e-10, 1e-1])
 plt.yscale("log")
 plt.legend()
@@ -148,13 +138,11 @@ plt.tight_layout()
 plt.show()
 
 
-
 plt.figure(figsize=(6, 3.2))
 # plt.plot(angles, (np.real(k_x_1)), label='opt real')
 # plt.plot(angles, (np.real(k_x_2)), label='Pade real')
-plt.plot(kz_arr, (np.imag(k_x_1)), label='opt imag')
-plt.plot(kz_arr, (np.imag(k_x_2)), label='Pade imag')
-plt.plot(kz_arr, (np.imag(k_x_3)), label='Joined Pade imag')
+plt.plot(kz_arr, (np.imag(k_x_ga)), label='ga imag')
+plt.plot(kz_arr, (np.imag(k_x_pade)), label='Pade imag')
 plt.xlabel('k_z')
 plt.ylabel('k_x abs. error')
 plt.xlim([kz_arr[0], kz_arr[-1]])
@@ -165,7 +153,7 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-
+stop
 
 from rwp.sspade import *
 from rwp.vis import *
