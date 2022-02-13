@@ -27,13 +27,13 @@ result_ga = differential_evolution(
     func=opt_utils.fit_func_ga,
     args=(dx, dz, order, theta_max_degrees),
     bounds=bounds_ga,
-    popsize=20,
+    popsize=50,
     disp=True,
     mutation=(0.0, 1.9999999),
     recombination=1.0,
-    strategy='randtobest1exp',
+    strategy='currenttobest1exp',
     tol=1e-9,
-    maxiter=30000,
+    maxiter=2000,
     polish=False,
     workers=-1,
     #callback=lambda xk, convergence: print(xk)
@@ -62,22 +62,24 @@ k_x_ga = k_x_angle(dx, dz, ga_coefs_num, ga_coefs_den, kz_arr)
 k_x_pade = k_x_angle(dx, dz, pade_coefs_num, pade_coefs_den, kz_arr)
 k_x_ratinterp = k_x_angle(dx, dz, ratinterp_coefs_num, ratinterp_coefs_den, kz_arr)
 
-k_x_ga_error = np.abs(k_x_ga - k_x_r)
-k_x_pade_error = np.abs(k_x_pade - k_x_r)
-k_x_ratinterp_error = np.abs(k_x_ratinterp - k_x_r)
+k_x_ga_error = np.abs(k_x_ga - k_x_r) / k0
+k_x_pade_error = np.abs(k_x_pade - k_x_r) / k0
+k_x_ratinterp_error = np.abs(k_x_ratinterp - k_x_r) / k0
 
 plt.figure(figsize=(6, 3.2))
-plt.plot(angles, k_x_ga_error, label='ga')
+plt.plot(angles, k_x_ga_error, label='Diff. evol.')
 plt.plot(angles, k_x_pade_error, label='Pade')
 plt.plot(angles, k_x_ratinterp_error, label='ratinterp')
 plt.xlabel('Angle (degrees)')
 plt.ylabel('k_x abs. error')
 plt.xlim([angles[0], angles[-1]])
-#plt.ylim([1e-10, 1e-1])
+plt.ylim([1e-6, 1e0])
 plt.yscale("log")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
+plt.axvline(x=theta_max_degrees, color='gray', linestyle='--')
+plt.savefig("ex1_k_x_error.eps")
 plt.show()
 
 
