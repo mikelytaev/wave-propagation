@@ -48,7 +48,7 @@ def fit_func(coefs_arr):
     return 1 / (dx * dz)
 
 
-eps = 1e-3
+eps = 3e-4
 eps_x_max = 3e3
 
 
@@ -103,7 +103,7 @@ result_ga = differential_evolution(
     recombination=1.0,
     strategy='randtobest1exp',
     tol=1e-9,
-    maxiter=2000,
+    maxiter=3000,
     polish=False,
     workers=1,
     callback=lambda xk, convergence: print(str(constraint_ga(xk)) + " " + str(opt_coefs_to_grids(xk)))
@@ -173,7 +173,7 @@ elevation = lambda x: pyramid2(x, 20, 200, 1.5e3)
 env.terrain = Terrain(elevation=elevation, ground_material=PerfectlyElectricConducting())
 #env.knife_edges = [KnifeEdge(range=1.5e3, height=1500)]
 
-ant = GaussAntenna(freq_hz=300e6, height=200, beam_width=theta_max_degrees-5, eval_angle=0, polarz='H')
+ant = GaussAntenna(freq_hz=1000e6, height=200, beam_width=theta_max_degrees-5, eval_angle=0, polarz='H')
 
 max_propagation_angle = theta_max_degrees
 max_range_m = eps_x_max
@@ -186,13 +186,28 @@ pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_rang
                                                       modify_grid=False,
                                                       z_order=2,
                                                       exp_pade_order=order,
+                                                      dx_wl=dx_ga / round(dx_ga / dx_pade),
+                                                      x_output_filter=round(dx_ga / dx_pade),
+                                                      dz_wl=dz_ga / round(dz_ga / dz_pade),
+                                                      z_output_filter=round(dz_ga / dz_pade),
+                                                      two_way=False
+                                                  ))
+pade_field = pade_task.calculate()
+
+pade_task_f = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
+                                                  HelmholtzPropagatorComputationalParams(
+                                                      terrain_method=TerrainMethod.staircase,
+                                                      max_propagation_angle=max_propagation_angle,
+                                                      modify_grid=False,
+                                                      z_order=2,
+                                                      exp_pade_order=order,
                                                       dx_wl=dx_ga,
                                                       x_output_filter=1,
                                                       dz_wl=dz_ga,
                                                       z_output_filter=1,
                                                       two_way=False
                                                   ))
-pade_field = pade_task.calculate()
+pade_field_f = pade_task_f.calculate()
 
 opt_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
                                                   HelmholtzPropagatorComputationalParams(
@@ -211,14 +226,21 @@ opt_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_
 opt_pade_field = opt_pade_task.calculate()
 
 pade_vis = FieldVisualiser(pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Pade")
-plt = pade_vis.plot2d(min=-100, max=0, show_terrain=True)
+plt = pade_vis.plot2d(min=-120, max=0, show_terrain=True)
+plt.xlabel('Range (km)')
+plt.ylabel('Height (m)')
+plt.tight_layout()
+plt.show()
+
+pade_f_vis = FieldVisualiser(pade_field_f, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Pade")
+plt = pade_f_vis.plot2d(min=-120, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
 plt.show()
 
 opt_vis = FieldVisualiser(opt_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Opt")
-plt = opt_vis.plot2d(min=-100, max=0, show_terrain=True)
+plt = opt_vis.plot2d(min=-120, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
