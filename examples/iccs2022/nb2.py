@@ -103,7 +103,7 @@ result_ga = differential_evolution(
     recombination=1.0,
     strategy='randtobest1exp',
     tol=1e-9,
-    maxiter=3000,
+    maxiter=4000,
     polish=False,
     workers=1,
     callback=lambda xk, convergence: print(str(constraint_ga(xk)) + " " + str(opt_coefs_to_grids(xk)))
@@ -136,6 +136,7 @@ plt.ylim([1e-6, 1e0])
 plt.yscale("log")
 plt.legend()
 plt.grid(True)
+plt.axvline(x=theta_max_degrees, color='gray', linestyle='--')
 plt.tight_layout()
 plt.savefig("ex2_k_x_error.eps")
 plt.show()
@@ -230,6 +231,7 @@ plt = pade_vis.plot2d(min=-120, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
+plt.savefig("ex3_pade.eps")
 plt.show()
 
 pade_f_vis = FieldVisualiser(pade_field_f, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Pade")
@@ -237,6 +239,7 @@ plt = pade_f_vis.plot2d(min=-120, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
+plt.savefig("ex3_pade_f.eps")
 plt.show()
 
 opt_vis = FieldVisualiser(opt_pade_field, env=env, trans_func=lambda v: 20 * cm.log10(1e-16 + abs(v)), x_mult=1E-3, label="Opt")
@@ -244,6 +247,7 @@ plt = opt_vis.plot2d(min=-120, max=0, show_terrain=True)
 plt.xlabel('Range (km)')
 plt.ylabel('Height (m)')
 plt.tight_layout()
+plt.savefig("ex3_ga.eps")
 plt.show()
 
 opt_vis.plot_hor(300, pade_vis)

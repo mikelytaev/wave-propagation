@@ -29,11 +29,11 @@ result_ga = differential_evolution(
     bounds=bounds_ga,
     popsize=50,
     disp=True,
-    mutation=(0.0, 1.9999999),
+    mutation=(0.5, 1),
     recombination=1.0,
-    strategy='currenttobest1exp',
+    strategy='randtobest1bin',
     tol=1e-9,
-    maxiter=2000,
+    maxiter=5000,
     polish=False,
     workers=-1,
     #callback=lambda xk, convergence: print(xk)
@@ -73,7 +73,7 @@ plt.plot(angles, k_x_ratinterp_error, label='ratinterp')
 plt.xlabel('Angle (degrees)')
 plt.ylabel('k_x abs. error')
 plt.xlim([angles[0], angles[-1]])
-plt.ylim([1e-6, 1e0])
+plt.ylim([1e-8, 1e0])
 plt.yscale("log")
 plt.legend()
 plt.grid(True)
