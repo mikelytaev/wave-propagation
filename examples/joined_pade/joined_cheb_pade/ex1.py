@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import mpmath
 import propagators._utils as utils
 import matplotlib as mpl
+from rwp.petool import PETOOLPropagationTask
 
 
 def k_x_angle(dx, dz, order, num_coefs, den_coefs, k0, kz_arr):
@@ -137,6 +138,31 @@ joined_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, m
                                                   ))
 joined_pade_field = joined_pade_task.calculate()
 
+joined_pade_task_2 = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
+                                                  HelmholtzPropagatorComputationalParams(
+                                                      terrain_method=TerrainMethod.staircase,
+                                                      max_propagation_angle=max_propagation_angle,
+                                                      modify_grid=False,
+                                                      z_order=5,
+                                                      exp_pade_order=order,
+                                                      dx_wl=dx_wl/3,
+                                                      x_output_filter=1,
+                                                      dz_wl=dz_wl,
+                                                      z_output_filter=1,
+                                                      two_way=False
+                                                  ))
+joined_pade_field_2 = joined_pade_task_2.calculate()
+
+petool_task_2 = PETOOLPropagationTask(antenna=ant,
+                                             env=env,
+                                             two_way=False,
+                                             max_range_m=max_range_m,
+                                             dx_wl=dx_wl/3,
+                                             n_dx_out=1,
+                                             dz_wl=dz_wl,
+                                             n_dz_out=1)
+petool_field_2 = petool_task_2.calculate()
+
 pade_2nd_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=env, max_range_m=max_range_m, comp_params=
                                                   HelmholtzPropagatorComputationalParams(
                                                       terrain_method=TerrainMethod.staircase,
@@ -183,7 +209,6 @@ joined_cheb_pade_task = TroposphericRadioWaveSSPadePropagator(antenna=ant, env=e
                                                   ))
 joined_cheb_pade_field = joined_cheb_pade_task.calculate()
 
-from rwp.petool import PETOOLPropagationTask
 petool_task = PETOOLPropagationTask(antenna=ant,
                                              env=env,
                                              two_way=False,
@@ -246,6 +271,26 @@ norm = Normalize(0, 10)
 extent = [joined_pade_field.x_grid[0]*1e-3, joined_pade_field.x_grid[-1]*1e-3, joined_pade_field.z_grid[0], joined_pade_field.z_grid[-1]]
 
 err = np.abs(2*petool_field.field - 20*np.log10(np.abs(joined_pade_field.field[1:,:-1])+1e-16))
+im = ax.imshow(err.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
+ax.grid()
+#ax.set_title('Δz=2.0λ, 2nd order')
+ax.set_xlabel('Range (km)')
+ax.set_ylabel('Height (m)')
+
+terrain_grid = np.array([joined_pade_vis.env.terrain.elevation(v) for v in joined_pade_vis.x_grid / joined_pade_vis.x_mult])
+ax.plot(joined_pade_vis.x_grid, terrain_grid, 'k')
+ax.fill_between(joined_pade_vis.x_grid, terrain_grid*0, terrain_grid, color='brown')
+
+f.colorbar(im, shrink=0.6, location='right', fraction=0.046, pad=0.04)
+#f.tight_layout()
+plt.show()
+
+
+f, ax = plt.subplots(1, 1, sharey=True, figsize=(6, 3.2), constrained_layout=True)
+norm = Normalize(0, 10)
+extent = [joined_pade_field.x_grid[0]*1e-3, joined_pade_field.x_grid[-1]*1e-3, joined_pade_field.z_grid[0], joined_pade_field.z_grid[-1]]
+
+err = np.abs(2*petool_field_2.field - 20*np.log10(np.abs(joined_pade_field_2.field[1:,:-1])+1e-16))
 im = ax.imshow(err.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
 ax.grid()
 #ax.set_title('Δz=2.0λ, 2nd order')
