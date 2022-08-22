@@ -1,9 +1,12 @@
 import numpy as np
 
 import pyximport
+from pymoo.algorithms.moo.rvea import RVEA
+from pymoo.algorithms.soo.nonconvex.es import ES
 from pymoo.algorithms.soo.nonconvex.g3pcx import G3PCX
 from pymoo.algorithms.soo.nonconvex.nelder import NelderMead
 from pymoo.algorithms.soo.nonconvex.pso import PSO
+from pymoo.factory import get_reference_directions
 
 pyximport.install(setup_args={"include_dirs": np.get_include()}, language_level=3)
 
@@ -39,16 +42,22 @@ problem = UnconditionalOptimization(
     dz_wl=0.25
 )
 
-algorithm_de = DE(
-    pop_size=20,
-    sampling=LHS(),
-    variant="DE/best/1/exp",
-    CR=0.9,
-    dither="vector",
-    jitter=True,
-)
+# algorithm_de = DE(
+#     pop_size=20,
+#     sampling=LHS(),
+#     variant="DE/best/1/exp",
+#     CR=0.9,
+#     dither="vector",
+#     jitter=True,
+# )
 
-algorithm = PSO(pop_size=50, max_velocity_rate=0.001, w=0.9)
+# algorithm = PSO(pop_size=100)
+
+#ref_dirs = get_reference_directions("das-dennis", 3, n_partitions=12)
+
+#algorithm = RVEA(ref_dirs)
+
+algorithm = ES(n_offsprings=50, rule=1.0 / 7.0)
 
 termination = get_termination("n_gen", 100000000)
 
