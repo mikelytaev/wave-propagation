@@ -17,22 +17,7 @@ from pymoo.operators.sampling.lhs import LHS
 from pymoo.optimize import minimize
 from pymoo.termination.default import DefaultSingleObjectiveTermination
 from pymoo.termination import get_termination
-
-
-class UnconditionalOptimization(Problem):
-
-    def __init__(self, order, theta_max_degrees, dx_wl, dz_wl):
-        super().__init__(n_var=2 * (order[0] + order[1]), n_obj=1, xl=-100.0, xu=100.0)
-        self.order = order
-        self.theta_max_degrees = theta_max_degrees
-        self.dx_wl = dx_wl
-        self.dz_wl = dz_wl
-
-    def _evaluate(self, x, out, *args, **kwargs):
-        res = np.empty(x.shape[0])
-        for i in range(0, x.shape[0]):
-            res[i] = opt_utils.fit_func_ga(x[i], self.dx_wl, self.dz_wl, self.order, self.theta_max_degrees)
-        out["F"] = res
+from problems import UnconditionalOptimization
 
 
 problem = UnconditionalOptimization(
