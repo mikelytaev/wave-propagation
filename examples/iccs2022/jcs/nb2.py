@@ -4,10 +4,15 @@ from pymoo.algorithms.soo.nonconvex.g3pcx import G3PCX
 from pymoo.algorithms.soo.nonconvex.optuna import Optuna
 from pymoo.core.parameters import set_params, hierarchical
 from pymoo.optimize import minimize
-from pymoo.problems.single import Sphere
 from pymoo.termination import get_termination
+from pymoo.core.mixed import MixedVariableGA
 
 from problems import UnconditionalOptimization
+
+from pymoo.core.parameters import get_params
+from pymoo.operators.sampling.lhs import LHS
+
+from pymoo.algorithms.soo.nonconvex.es import ES
 
 
 problem = UnconditionalOptimization(
@@ -17,15 +22,19 @@ problem = UnconditionalOptimization(
     dz_wl=0.25
 )
 
-algorithm = G3PCX()
+algorithm = DE(
+    pop_size=50,
+    dither="scalar",
+    sampling=LHS(),
+)
 
-termination = get_termination("n_gen", 300)
+termination = get_termination("n_gen", 500)
 
 performance = SingleObjectiveSingleRun(problem, termination=termination, seed=1)
 
 res = minimize(HyperparameterProblem(algorithm, performance),
                Optuna(),
-               termination=('n_evals', 100),
+               termination=('n_evals', 10),
                seed=1,
                verbose=True)
 

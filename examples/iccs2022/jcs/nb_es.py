@@ -30,7 +30,12 @@ problem = UnconditionalOptimization(
 
 #problem = AutomaticDifferentiation(problem)
 
-algorithm = ES(n_offsprings=50, rule=1.0 / 7.0)
+algorithm = ES(
+    n_offsprings=200,
+    rule=1.0 / 7.0,
+    gamma=1,
+    sampling=LHS(),
+)
 
 termination = get_termination("n_gen", 100000000)
 

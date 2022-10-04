@@ -10,8 +10,8 @@ import examples.optimization.evol.opt_utils as opt_utils
 
 class UnconditionalOptimization(Problem):
 
-    def __init__(self, order, theta_max_degrees, dx_wl, dz_wl):
-        super().__init__(n_var=2 * (order[0] + order[1]), n_obj=1, xl=-100.0, xu=100.0)
+    def __init__(self, order, theta_max_degrees, dx_wl, dz_wl, **kwargs):
+        super().__init__(n_var=2 * (order[0] + order[1]), n_obj=1, xl=-100.0, xu=100.0, vtype=float, **kwargs)
         self.order = order
         self.theta_max_degrees = theta_max_degrees
         self.dx_wl = dx_wl

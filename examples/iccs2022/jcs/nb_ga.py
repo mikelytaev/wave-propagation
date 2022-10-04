@@ -18,6 +18,14 @@ from pymoo.optimize import minimize
 from pymoo.termination.default import DefaultSingleObjectiveTermination
 from pymoo.termination import get_termination
 from problems import UnconditionalOptimization
+from pymoo.operators.selection.rnd import RandomSelection
+
+from pymoo.operators.mutation.pm import PolynomialMutation
+from pymoo.operators.repair.rounding import RoundingRepair
+
+
+
+from pymoo.algorithms.soo.nonconvex.ga import GA
 
 
 problem = UnconditionalOptimization(
@@ -27,15 +35,13 @@ problem = UnconditionalOptimization(
     dz_wl=0.25
 )
 
-algorithm = DE(
-    pop_size=50,
-    #sampling=LHS(),
-    variant="DE/best/1/bin",
-    CR=0.9,
-    F=0.5,
-    dither="scalar",
-    jitter=False,
-)
+mutation = PolynomialMutation(prob=0.0, eta=20, repair=RoundingRepair())
+
+algorithm = GA(
+    pop_size=100,
+    #selection=RandomSelection(),
+    mutation=mutation,
+    eliminate_duplicates=True)
 
 termination = get_termination("n_gen", 100000000)
 
