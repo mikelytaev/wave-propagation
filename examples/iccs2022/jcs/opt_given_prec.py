@@ -81,7 +81,7 @@ result_pade = differential_evolution(
     tol=1e-9,
     polish=False,
     maxiter=2000,
-    workers=1,
+    workers=-1,
     callback=lambda xk, convergence: print(xk)
 )
 print(result_pade)
@@ -90,7 +90,7 @@ pade_coefs = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
 
-bounds_ga = bounds_pade + [(-100, 100)] * (order[0] + order[1]) * 2
+bounds_ga = bounds_pade + [(-50, 50)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
     fit_func,
@@ -99,11 +99,11 @@ result_ga = differential_evolution(
     popsize=15,
     disp=True,
     recombination=1.0,
-    strategy='randtobest1exp',
+    strategy='randtobest1bin',
     tol=1e-9,
     maxiter=4000,
     polish=False,
-    workers=1,
+    workers=-1,
     callback=lambda xk, convergence: print(str(constraint_ga(xk)) + " " + str(opt_coefs_to_grids(xk)))
 )
 print(result_ga)
