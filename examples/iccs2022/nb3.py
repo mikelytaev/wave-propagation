@@ -17,7 +17,7 @@ print(k0*fm.sin(theta_max_degrees * fm.pi / 180))
 
 dx, dz = 50, 0.25
 
-bounds_ga = [(-50, 50)] * (order[0] + order[1]) * 2
+bounds_ga = [(-100, 100)] * (order[0] + order[1]) * 2
 
 arr = []
 def calc(mutation, recombination, strategy):
@@ -51,18 +51,19 @@ def print_arr(arr):
     print(str(arr[99]) + " " + str(arr[199]) + " " + str(arr[499]) + " " + str(arr[999]) + " " + str(arr[1999]) +
           " " + str(arr[4999]) + " " + str(arr[9999]))
 
-arr1 = calc(mutation=(0.0, 1.9999999), recombination=1.0, strategy='currenttobest1exp')
-arr2 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='currenttobest1exp')
-arr3 = calc(mutation=(0.5, 1.0), recombination=0.7, strategy='currenttobest1exp')
-arr4 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='best1bin')
-arr5 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='best2exp')
-arr6 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='rand2exp')
-arr7 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='best1exp')
-arr8 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='rand1exp')
-arr9 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='randtobest1exp')
+# arr1 = calc(mutation=(0.0, 1.9999999), recombination=1.0, strategy='currenttobest1exp')
+# arr2 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='currenttobest1exp')
+# arr3 = calc(mutation=(0.5, 1.0), recombination=0.7, strategy='currenttobest1exp')
+# arr4 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='best1bin')
+# arr5 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='best2exp')
+# arr6 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='rand2exp')
+# arr7 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='best1exp')
+# arr8 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='rand1exp')
+# arr9 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='randtobest1exp')
 arr10 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='randtobest1bin')
-arr11 = calc(mutation=(0.5, 1.0), recombination=0.9, strategy='randtobest1bin')
-arr12 = calc(mutation=(0.5, 1.0), recombination=0.7, strategy='randtobest1bin')
-arr13 = calc(mutation=0.5, recombination=1.0, strategy='randtobest1bin')
-arr14 = calc(mutation=0.3, recombination=1.0, strategy='randtobest1bin')
-arr15 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='currenttobest1bin')
+# arr11 = calc(mutation=(0.5, 1.0), recombination=0.9, strategy='randtobest1exp')
+# arr12 = calc(mutation=(0.5, 1.0), recombination=0.7, strategy='randtobest1exp')
+# arr13 = calc(mutation=0.5, recombination=1.0, strategy='randtobest1exp')
+# arr14 = calc(mutation=0.3, recombination=1.0, strategy='randtobest1exp')
+# arr15 = calc(mutation=(0.5, 1.0), recombination=1.0, strategy='currenttobest1bin')
+# arr16 = calc(mutation=(0.7, 1.2), recombination=1.0, strategy='randtobest1exp')
