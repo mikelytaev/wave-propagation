@@ -10,6 +10,7 @@ from scipy.optimize import differential_evolution, NonlinearConstraint
 import matplotlib.pyplot as plt
 import mpmath
 import examples.optimization.evol.opt_utils as opt_utils
+from itertools import zip_longest
 
 
 k0 = 2*cm.pi
@@ -18,10 +19,21 @@ arr = []
 def de_error(dx, dz, bounds, theta_max_degrees, order, mutation=(0.5, 1), recombination=1.0, strategy='randtobest1exp', popsize=15, max_evals=1e6):
     bounds_ga = [bounds] * (order[0] + order[1]) * 2
 
+    def stability_constr(x):
+        #print('constr')
+        abss = []
+        for v in np.linspace(0, 1, 10):
+            num_coefs, den_coefs = opt_utils.opt_coefs_to_coefs_ga(x, order)
+            zipped = list(zip_longest(num_coefs, den_coefs, fillvalue=0.0j))
+            l = [((k0*dz)**2 - 4*a*v) / ((k0*dz)**2 - 4*b*v) for a, b in zipped]
+            abss += [fm.fabs(np.prod(l))]
+        return max(abss)
+
     print(round(max_evals / (popsize * len(bounds_ga)) - 1))
     result_ga = differential_evolution(
         func=opt_utils.fit_func_ga,
         args=(dx, dz, order, theta_max_degrees),
+        constraints=(NonlinearConstraint(stability_constr, 0, 1)),
         bounds=bounds_ga,
         popsize=popsize,
         disp=True,
