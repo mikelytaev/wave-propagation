@@ -11,6 +11,7 @@ import cmath as cm
 from examples.optimization.evol import opt_utils as opt_utils
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 
 
 dx = 10
@@ -57,4 +58,37 @@ plt.figure(figsize=(6, 3.2))
 plt.plot(xi_grid, error)
 plt.grid(True)
 plt.tight_layout()
+plt.show()
+
+
+def approx_exp(num_coefs, den_coefs, xi_grid):
+    k0 = 2 * fm.pi
+    res = xi_grid * 0.0
+    for xi_i, xi in enumerate(xi_grid):
+        p = 1.0
+        for a, b in zip_longest(num_coefs, den_coefs, fillvalue=0.0j):
+            p *= (1 + xi * a) / (1 + xi * b)
+        res[xi_i] = p
+    return res
+
+
+grid = np.linspace(-0.2, 0.2, 500)
+i_grid, j_grid = np.meshgrid(grid, grid)
+xi_grid = i_grid + 1j*j_grid
+shape = xi_grid.shape
+approx_exp_vals = approx_exp(num_coefs, den_coefs, xi_grid.flatten()).reshape(shape)
+plt.imshow(abs(approx_exp_vals) > 1, extent=[grid[0], grid[-1], grid[0], grid[-1]], cmap=plt.get_cmap('binary'))
+plt.colorbar()
+plt.grid(True)
+plt.show()
+
+errors = approx_error(num_coefs, den_coefs, xi_grid.flatten()).reshape(shape)
+plt.imshow(
+    np.log10(abs(errors)) > -5,
+    extent=[grid[0], grid[-1], grid[0], grid[-1]],
+    cmap=plt.get_cmap('binary'),
+    #norm=Normalize(-9, -5)
+)
+plt.colorbar()
+plt.grid(True)
 plt.show()
