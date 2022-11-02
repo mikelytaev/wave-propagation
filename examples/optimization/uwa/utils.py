@@ -11,7 +11,7 @@ def fit_func(coefs_arr, dx, order, xi_bounds):
     k0 = 2 * fm.pi
     num_coefs, den_coefs = opt_utils.opt_coefs_to_coefs_ga(coefs_arr, order)
     max_err = 0.0
-    for xi in np.linspace(xi_bounds[0], xi_bounds[1], 20):
+    for xi in np.linspace(xi_bounds[0], xi_bounds[1], 100):
         p = 1.0
         for a, b in zip_longest(num_coefs, den_coefs, fillvalue=0.0j):
             p *= (1 + xi * a) / (1 + xi * b)

@@ -19,18 +19,18 @@ import propagators._utils as utils
 dx = 50
 order = (6, 7)
 theta_max_degrees = 20
-xi_bound = fm.sin(theta_max_degrees*fm.pi/180)**2
+xi_bound = fm.sin(theta_max_degrees*fm.pi/180)**2 * 0.3
 xi_bounds = (-xi_bound, xi_bound)
-bounds_ga = [(-30, 30)] * (order[0] + order[1]) * 2
+bounds_ga = [(-20, 20)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
     func=fit_func,
     args=(dx, order, xi_bounds),
     bounds=bounds_ga,
-    popsize=20,
+    popsize=15,
     disp=True,
-    mutation=(0.5, 1),
-    recombination=1.0,
+    mutation=(0.5, 1.0),
+    recombination=0.9,
     strategy='randtobest1exp',
     tol=1e-9,
     maxiter=2000,
@@ -97,7 +97,7 @@ plt.grid(True)
 plt.show()
 
 plt.imshow(
-    np.log10(abs(errors_de)) < -3,
+    np.log10(abs(errors_de)) < -5,
     extent=[grid[0], grid[-1], grid[0], grid[-1]],
     cmap=plt.get_cmap('binary'),
     #norm=Normalize(-9, -5)
@@ -111,7 +111,7 @@ pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
 errors_pade = approx_error(pade_coefs_num, pade_coefs_den, xi_grid_2d.flatten()).reshape(shape)
 plt.imshow(
-    np.log10(abs(errors_pade)) < -3,
+    np.log10(abs(errors_pade)) < -5,
     extent=[grid[0], grid[-1], grid[0], grid[-1]],
     cmap=plt.get_cmap('binary')
 )
@@ -119,13 +119,14 @@ plt.colorbar()
 plt.grid(True)
 plt.show()
 
-xi_grid = np.linspace(xi_bounds[0], -xi_bounds[0], 100)
+xi_grid = np.linspace(xi_bounds[0]*2, -xi_bounds[0]*2, 100)
 error_de = approx_error(num_coefs, den_coefs, xi_grid)
 error_pade = approx_error(pade_coefs_num, pade_coefs_den, xi_grid)
 
 plt.figure(figsize=(6, 3.2))
-plt.plot(xi_grid, error_de)
-plt.plot(xi_grid, error_pade)
+plt.plot(xi_grid, 10*np.log10(error_de), label="de")
+plt.plot(xi_grid, 10*np.log10(error_pade), label="pade")
 plt.grid(True)
 plt.tight_layout()
+plt.legend()
 plt.show()
