@@ -16,24 +16,24 @@ from matplotlib.colors import Normalize
 import propagators._utils as utils
 
 
-dx = 50
+dx = 2
 order = (6, 7)
 theta_max_degrees = 20
-xi_bound = fm.sin(theta_max_degrees*fm.pi/180)**2 * 0.3
+xi_bound = 1
 xi_bounds = (-xi_bound, xi_bound)
-bounds_ga = [(-25, 25)] * (order[0] + order[1]) * 2
+bounds_ga = [(-1.1, 1.1)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
-    func=fit_func,
+    func=opt_utils.fit_func_exp_rational_approx_ga,
     args=(dx, order, xi_bounds),
     bounds=bounds_ga,
-    popsize=50,
+    popsize=15,
     disp=True,
     mutation=(0.5, 1.0),
     recombination=1.0,
     strategy='randtobest1exp',
     tol=1e-9,
-    maxiter=2000,
+    maxiter=15000,
     polish=False,
     workers=-1
 )
