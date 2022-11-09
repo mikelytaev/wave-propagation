@@ -33,12 +33,14 @@ result_ga = differential_evolution(
     recombination=1.0,
     strategy='currenttobest1exp',
     tol=1e-9,
-    maxiter=20000,
+    maxiter=5000,
     polish=False,
     workers=-1
 )
 
 print(result_ga)
+print(min(result_ga.x))
+print(max(result_ga.x))
 
 def approx_error(num_coefs, den_coefs, xi_grid):
     k0 = 2 * fm.pi
