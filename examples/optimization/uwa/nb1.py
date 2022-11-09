@@ -16,24 +16,24 @@ from matplotlib.colors import Normalize
 import propagators._utils as utils
 
 
-dx = 2
-order = (6, 7)
-theta_max_degrees = 20
-xi_bound = 1
-xi_bounds = (-xi_bound, xi_bound)
-bounds_ga = [(-1.1, 1.1)] * (order[0] + order[1]) * 2
+dx = 5
+order = (7, 8)
+#theta_max_degrees = 20
+xi_bound = 0.8
+xi_bounds = (-xi_bound, 0)
+bounds_ga = [(-2.5, 2.5)] * (order[0] + order[1]) * 2
 
 result_ga = differential_evolution(
     func=opt_utils.fit_func_exp_rational_approx_ga,
     args=(dx, order, xi_bounds),
     bounds=bounds_ga,
-    popsize=15,
+    popsize=20,
     disp=True,
     mutation=(0.5, 1.0),
     recombination=1.0,
-    strategy='randtobest1exp',
+    strategy='currenttobest1exp',
     tol=1e-9,
-    maxiter=15000,
+    maxiter=20000,
     polish=False,
     workers=-1
 )
@@ -75,27 +75,27 @@ def approx_exp(num_coefs, den_coefs, xi_grid):
     return res
 
 
-grid = np.linspace(-0.2, 0.2, 500)
+grid = np.linspace(-xi_bound, 0.01, 500)
 i_grid, j_grid = np.meshgrid(grid, grid)
 xi_grid_2d = i_grid + 1j*j_grid
 shape = xi_grid_2d.shape
 approx_exp_vals = approx_exp(num_coefs, den_coefs, xi_grid_2d.flatten()).reshape(shape)
-plt.imshow(abs(approx_exp_vals) > 1, extent=[grid[0], grid[-1], grid[0], grid[-1]], cmap=plt.get_cmap('binary'))
-plt.colorbar()
-plt.grid(True)
-plt.show()
+# plt.imshow(abs(approx_exp_vals) > 1, extent=[grid[0], grid[-1], grid[0], grid[-1]], cmap=plt.get_cmap('binary'))
+# plt.colorbar()
+# plt.grid(True)
+# plt.show()
 
 errors_de = approx_error(num_coefs, den_coefs, xi_grid_2d.flatten()).reshape(shape)
-plt.imshow(
-    10*np.log10(abs(errors_de)),
-    extent=[grid[0], grid[-1], grid[0], grid[-1]],
-    cmap=plt.get_cmap('binary'),
-    norm=Normalize(-90, -40)
-)
-plt.colorbar()
-plt.grid(True)
-plt.show()
-
+# plt.imshow(
+#     10*np.log10(abs(errors_de)),
+#     extent=[grid[0], grid[-1], grid[0], grid[-1]],
+#     cmap=plt.get_cmap('binary'),
+#     norm=Normalize(-90, -40)
+# )
+# plt.colorbar()
+# plt.grid(True)
+# plt.show()
+#
 plt.imshow(
     np.log10(abs(errors_de)) < -5,
     extent=[grid[0], grid[-1], grid[0], grid[-1]],
@@ -123,10 +123,10 @@ xi_grid = np.linspace(xi_bounds[0]*2, -xi_bounds[0]*2, 100)
 error_de = approx_error(num_coefs, den_coefs, xi_grid)
 error_pade = approx_error(pade_coefs_num, pade_coefs_den, xi_grid)
 
-plt.figure(figsize=(6, 3.2))
-plt.plot(xi_grid, 10*np.log10(error_de), label="de")
-plt.plot(xi_grid, 10*np.log10(error_pade), label="pade")
-plt.grid(True)
-plt.tight_layout()
-plt.legend()
-plt.show()
+# plt.figure(figsize=(6, 3.2))
+# plt.plot(xi_grid, 10*np.log10(error_de), label="de")
+# plt.plot(xi_grid, 10*np.log10(error_pade), label="pade")
+# plt.grid(True)
+# plt.tight_layout()
+# plt.legend()
+# plt.show()
