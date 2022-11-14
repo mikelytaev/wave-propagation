@@ -25,7 +25,7 @@ from uwa.utils import *
 from uwa.vis import AcousticPressureFieldVisualiser2d
 
 
-dr_wl = 50
+dr_wl = 20
 dz_wl = 0.1
 pade_order = (7, 8)
 xi_bound = 0.2
@@ -95,7 +95,7 @@ env.bottom_sound_speed_m_s = 1700
 env.bottom_density_g_cm = 1.5
 env.bottom_attenuation_dm_lambda = 0.5
 
-max_range_m = 150000
+max_range_m = 15000
 
 sspe_comp_params = HelmholtzPropagatorComputationalParams(
     z_order=4,

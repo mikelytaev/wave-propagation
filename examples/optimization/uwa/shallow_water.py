@@ -11,22 +11,22 @@ import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.DEBUG)
 
-src = GaussSource(freq_hz=500, depth=30, beam_width=45, eval_angle=0)
+src = GaussSource(freq_hz=500, depth=50, beam_width=45, eval_angle=0)
 env = UnderwaterEnvironment()
-env.sound_speed_profile_m_s = lambda x, z: 1500 - z/2
-env.bottom_profile = Bathymetry(ranges_m=[0, 50000], depths_m=[100, 100])
+env.sound_speed_profile_m_s = lambda x, z: 1500 + z/2*0
+env.bottom_profile = Bathymetry(ranges_m=[0, 2000, 7500, 13000, 15000], depths_m=[150, 150, 20, 150, 150])
 env.bottom_sound_speed_m_s = 1700
 env.bottom_density_g_cm = 1.5
 env.bottom_attenuation_dm_lambda = 0.5
 
-max_range = 150000
+max_range = 15000
 
 wavelength = 1500 / src.freq_hz
 max_range_wl = max_range / wavelength
 
-dr_wl = 10
+dr_wl = 20
 dz_wl = 0.1
-pade_order = (8, 8)
+pade_order = (7, 8)
 
 xi_bound = 0.5
 grid_re = np.linspace(-xi_bound, 0.1, 500)
@@ -39,7 +39,7 @@ pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
 errors_pade = approx_error(pade_coefs_num, pade_coefs_den, xi_grid_2d.flatten(), dr_wl).reshape(shape) * (max_range_wl / dr_wl)
 plt.imshow(
-    np.log10(abs(errors_pade)) < -2,
+    np.log10(abs(errors_pade)) < -1,
     extent=[grid_re[0], grid_re[-1], grid_im[-1], grid_im[0]],
     cmap=plt.get_cmap('binary')
 )
@@ -54,12 +54,12 @@ sspe_comp_params = HelmholtzPropagatorComputationalParams(
     dx_wl=dr_wl,
     dz_wl=dz_wl,
     exp_pade_order=pade_order,
-    sqrt_alpha=45,
+    sqrt_alpha=0,
     modify_grid=False
 )
 
-sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_range, max_depth_m=150, comp_params=sspe_comp_params)
+sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_range, max_depth_m=200, comp_params=sspe_comp_params)
 sspe_field = sspe_propagator.calculate()
 sspe_field.field *= 5.50 #normalization
 sspe_vis = AcousticPressureFieldVisualiser2d(field=sspe_field, label='WPF')
-sspe_vis.plot2d(-50, -5).show()
+sspe_vis.plot2d(-60, -5).show()
