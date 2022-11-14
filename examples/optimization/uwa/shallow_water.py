@@ -5,7 +5,9 @@ from uwa.propagators import *
 from uwa.utils import *
 
 from uwa.vis import AcousticPressureFieldVisualiser2d
-
+import propagators._utils as utils
+from utils import approx_error
+import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -20,15 +22,40 @@ env.bottom_attenuation_dm_lambda = 0.5
 max_range = 150000
 
 wavelength = 1500 / src.freq_hz
+max_range_wl = max_range / wavelength
+
 dr_wl = 10
 dz_wl = 0.1
+pade_order = (8, 8)
+
+xi_bound = 0.5
+grid_re = np.linspace(-xi_bound, 0.1, 500)
+grid_im = np.linspace(-0.1, xi_bound, 500)
+i_grid, j_grid = np.meshgrid(grid_re, grid_im)
+xi_grid_2d = i_grid + 1j*j_grid
+shape = xi_grid_2d.shape
+pade_coefs = utils.pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=2 * cm.pi, dx=dr_wl)
+pade_coefs_num = np.array([a[0] for a in pade_coefs])
+pade_coefs_den = np.array([a[1] for a in pade_coefs])
+errors_pade = approx_error(pade_coefs_num, pade_coefs_den, xi_grid_2d.flatten(), dr_wl).reshape(shape) * (max_range_wl / dr_wl)
+plt.imshow(
+    np.log10(abs(errors_pade)) < -2,
+    extent=[grid_re[0], grid_re[-1], grid_im[-1], grid_im[0]],
+    cmap=plt.get_cmap('binary')
+)
+plt.colorbar()
+plt.grid(True)
+plt.show()
+
+#stop
 
 sspe_comp_params = HelmholtzPropagatorComputationalParams(
     z_order=4,
     dx_wl=dr_wl,
     dz_wl=dz_wl,
-    exp_pade_order=(8, 8),
-    sqrt_alpha=45
+    exp_pade_order=pade_order,
+    sqrt_alpha=45,
+    modify_grid=False
 )
 
 sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_range, max_depth_m=150, comp_params=sspe_comp_params)
