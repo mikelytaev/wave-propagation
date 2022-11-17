@@ -6,25 +6,25 @@ from uwa.utils import *
 
 from uwa.vis import AcousticPressureFieldVisualiser2d
 import propagators._utils as utils
-from utils import approx_error
+from utils import approx_error, approx_exp
 import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.DEBUG)
 
-src = GaussSource(freq_hz=500, depth=50, beam_width=45, eval_angle=0)
+src = GaussSource(freq_hz=500, depth=50, beam_width=5, eval_angle=-30)
 env = UnderwaterEnvironment()
 env.sound_speed_profile_m_s = lambda x, z: 1500 + z/2*0
-env.bottom_profile = Bathymetry(ranges_m=[0, 2000, 7500, 13000, 15000], depths_m=[150, 150, 20, 150, 150])
+env.bottom_profile = Bathymetry(ranges_m=[0, 5000], depths_m=[200, 200])
 env.bottom_sound_speed_m_s = 1700
 env.bottom_density_g_cm = 1.5
 env.bottom_attenuation_dm_lambda = 0.5
 
-max_range = 15000
+max_range = 5000
 
 wavelength = 1500 / src.freq_hz
 max_range_wl = max_range / wavelength
 
-dr_wl = 20
+dr_wl = 10
 dz_wl = 0.1
 pade_order = (7, 8)
 
@@ -47,7 +47,11 @@ plt.colorbar()
 plt.grid(True)
 plt.show()
 
-#stop
+approx_exp_vals = approx_exp(pade_coefs_num, pade_coefs_den, xi_grid_2d.flatten()).reshape(shape)
+plt.imshow(abs(approx_exp_vals) > 1, extent=[grid_re[0], grid_re[-1], grid_im[-1], grid_im[0]], cmap=plt.get_cmap('binary'))
+plt.colorbar()
+plt.grid(True)
+plt.show()
 
 sspe_comp_params = HelmholtzPropagatorComputationalParams(
     z_order=4,
@@ -58,7 +62,7 @@ sspe_comp_params = HelmholtzPropagatorComputationalParams(
     modify_grid=False
 )
 
-sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_range, max_depth_m=200, comp_params=sspe_comp_params)
+sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_range, max_depth_m=250, comp_params=sspe_comp_params)
 sspe_field = sspe_propagator.calculate()
 sspe_field.field *= 5.50 #normalization
 sspe_vis = AcousticPressureFieldVisualiser2d(field=sspe_field, label='WPF')

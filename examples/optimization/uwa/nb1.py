@@ -12,7 +12,7 @@ from examples.optimization.evol import opt_utils as opt_utils
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
-from utils import approx_error
+from utils import approx_error, approx_exp
 
 import propagators._utils as utils
 
@@ -53,17 +53,6 @@ plt.plot(xi_grid, error)
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
-
-def approx_exp(num_coefs, den_coefs, xi_grid):
-    k0 = 2 * fm.pi
-    res = xi_grid * 0.0
-    for xi_i, xi in enumerate(xi_grid):
-        p = 1.0
-        for a, b in zip_longest(num_coefs, den_coefs, fillvalue=0.0j):
-            p *= (1 + xi * a) / (1 + xi * b)
-        res[xi_i] = p
-    return res
 
 
 grid_re = np.linspace(-xi_bound*2, 0.1, 500)
