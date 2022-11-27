@@ -5,8 +5,8 @@ from math import pi
 from cmath import sqrt, exp
 
 
-def tau_error(complex xi1, complex xi2, double dx_wl, np.ndarray[complex, ndim=1] pade_coefs_num, np.ndarray[complex, ndim=1] pade_coefs_den):
-    cdef complex product = 1
+def tau_error(complex xi1, complex xi2, double dx_wl, np.ndarray[complex, ndim=1] pade_coefs_num, np.ndarray[complex, ndim=1] pade_coefs_den, complex c0):
+    cdef complex product = c0
     cdef complex a_i = 0
     cdef Py_ssize_t i
     for i in range(0, len(pade_coefs_den)):
