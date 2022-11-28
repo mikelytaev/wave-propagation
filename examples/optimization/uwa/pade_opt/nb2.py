@@ -1,6 +1,9 @@
 import numpy as np
 
 import pyximport
+
+import examples.optimization.uwa.pade_opt.utils
+
 pyximport.install(setup_args={"include_dirs": np.get_include()}, language_level=3)
 
 import utils as utils
@@ -17,4 +20,4 @@ pade_coefs_num = np.array([a[0] for a in coefs])
 pade_coefs_den = np.array([a[1] for a in coefs])
 
 xi = -0.4
-error = utils.tau_error(xi, xi, dx_wl, pade_coefs_num, pade_coefs_den, a0)
+error = examples.optimization.uwa.pade_opt.utils.tau_error(xi, xi, dx_wl, pade_coefs_num, pade_coefs_den, a0)
