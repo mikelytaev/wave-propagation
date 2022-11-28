@@ -17,6 +17,7 @@ class UnderwaterAcousticsSSPadePropagator:
         # prepare Helmholtz environment
         m2_ground = (c0 / env.bottom_sound_speed_m_s) ** 2
         self.helmholtz_env = HelmholtzEnvironment(x_max_m=max_range_m, lower_bc=TransparentBC(m2_ground), upper_bc=RobinBC(q1=1, q2=0, q3=0))
+        #self.helmholtz_env = HelmholtzEnvironment(x_max_m=max_range_m, lower_bc=RobinBC(q1=0, q2=1, q3=0), upper_bc=RobinBC(q1=1, q2=0, q3=0))
         self.helmholtz_env.z_max = 0
         self.helmholtz_env.z_min = -max_depth_m if max_depth_m else -(self.uwa_env.bottom_profile.max_depth + 300)
 

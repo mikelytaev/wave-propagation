@@ -19,14 +19,14 @@ env.bottom_sound_speed_m_s = 1700
 env.bottom_density_g_cm = 1.5
 env.bottom_attenuation_dm_lambda = 0.5
 
-max_range = 5000
+max_range = 3000
 
 wavelength = 1500 / src.freq_hz
 max_range_wl = max_range / wavelength
 
-dr_wl = 10
+dr_wl = 5
 dz_wl = 0.1
-pade_order = (7, 8)
+pade_order = (8, 8)
 
 xi_bound = 0.5
 grid_re = np.linspace(-xi_bound, 0.1, 500)
@@ -34,7 +34,7 @@ grid_im = np.linspace(-0.1, xi_bound, 500)
 i_grid, j_grid = np.meshgrid(grid_re, grid_im)
 xi_grid_2d = i_grid + 1j*j_grid
 shape = xi_grid_2d.shape
-pade_coefs = utils.pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=2 * cm.pi, dx=dr_wl)
+pade_coefs, c0 = utils.pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=2 * cm.pi, dx=dr_wl)
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
 errors_pade = approx_error(pade_coefs_num, pade_coefs_den, xi_grid_2d.flatten(), dr_wl).reshape(shape) * (max_range_wl / dr_wl)
@@ -62,7 +62,7 @@ sspe_comp_params = HelmholtzPropagatorComputationalParams(
     modify_grid=False
 )
 
-sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_range, max_depth_m=250, comp_params=sspe_comp_params)
+sspe_propagator = UnderwaterAcousticsSSPadePropagator(src=src, env=env, max_range_m=max_range, max_depth_m=300, comp_params=sspe_comp_params)
 sspe_field = sspe_propagator.calculate()
 sspe_field.field *= 5.50 #normalization
 sspe_vis = AcousticPressureFieldVisualiser2d(field=sspe_field, label='WPF')

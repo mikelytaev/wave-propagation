@@ -42,12 +42,12 @@ def tau_error_sup_h(xi, xi_bounds, h, n, dx_wl, pade_coefs_num, pade_coefs_den, 
     return max(errors)
 
 
-def precision_step(xi_bounds, k_z_max, dxs_wl: np.array, dzs_wl: np.array, pade_order):
+def precision_step(xi_bounds, k_z_max, dxs_wl: np.array, dzs_wl: np.array, pade_order, shift_pade=False):
     k0 = 2 * fm.pi
     res = np.zeros((len(dxs_wl), len(dzs_wl)))
     xi_grid = np.linspace(xi_bounds[0], xi_bounds[1], 100)
     for dx_i, dx_wl in enumerate(dxs_wl):
-        coefs, c0 = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_wl, a0=(xi_bounds[0]+xi_bounds[1])/2*0)
+        coefs, c0 = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_wl, a0=((xi_bounds[0]+xi_bounds[1])/2 if shift_pade else 0))
         pade_coefs_num = np.array([a[0] for a in coefs])
         pade_coefs_den = np.array([a[1] for a in coefs])
         for dz_i, dz_wl in enumerate(dzs_wl):
@@ -57,7 +57,7 @@ def precision_step(xi_bounds, k_z_max, dxs_wl: np.array, dzs_wl: np.array, pade_
     return res
 
 
-def get_optimal(x_max_wl, prec, xi_min, k_z_max):
+def get_optimal(x_max_wl, prec, xi_min, k_z_max, shift_pade=False):
     pade_order = (8, 8)
     dxs_wl = np.concatenate((
         #[0.0005],
@@ -74,7 +74,7 @@ def get_optimal(x_max_wl, prec, xi_min, k_z_max):
         np.linspace(0.02, 0.1, 9),
         np.linspace(0.2, 1, 9),
     ))
-    errors = precision_step([xi_min, 0], k_z_max, dxs_wl, dzs_wl, pade_order)
+    errors = precision_step([xi_min, 0], k_z_max, dxs_wl, dzs_wl, pade_order, shift_pade)
     cur_best_dx = 1e-16
     cur_best_dz = 1e-16
     for dx_i, dx in enumerate(dxs_wl):
@@ -88,7 +88,7 @@ def get_optimal(x_max_wl, prec, xi_min, k_z_max):
 
 
 k0 = 2*fm.pi
-theta_max_degrees = 80
+theta_max_degrees = 70
 k_z_max = k0*fm.sin(theta_max_degrees*fm.pi/180)
 xi_bounds = [-k_z_max**2/k0**2, 0]
 # z_grid = np.linspace(0.01, 5, 100)
@@ -98,7 +98,8 @@ xi_bounds = [-k_z_max**2/k0**2, 0]
 # plt.grid(True)
 # plt.show()
 
-dx, dz = get_optimal(10000, 1e-2, xi_bounds[0], k_z_max)
+dx, dz = get_optimal(10000, 1e-2, xi_bounds[0], k_z_max, shift_pade=False)
 print(f"dx = {dx}; dz = {dz}")
 
-precision_step(xi_bounds, k_z_max, [1], [0.01], (8, 8))
+dx, dz = get_optimal(10000, 1e-2, xi_bounds[0], k_z_max, shift_pade=True)
+print(f"dx = {dx}; dz = {dz}")
