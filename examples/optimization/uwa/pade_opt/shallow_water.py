@@ -5,11 +5,11 @@ import propagators._utils as utils
 
 #logging.basicConfig(level=logging.DEBUG)
 
-src = GaussSource(freq_hz=1000, depth=50, beam_width=1, eval_angle=-30)
+src = GaussSource(freq_hz=1000, depth=100, beam_width=1, eval_angle=-30)
 env = UnderwaterEnvironment()
-env.sound_speed_profile_m_s = lambda x, z: 1500 + z/2*0
+env.sound_speed_profile_m_s = lambda x, z: 2500 + z*0 if 50 < x < 2000 else 1500 + z*0
 env.bottom_profile = Bathymetry(ranges_m=[0, 5000], depths_m=[200, 200])
-env.bottom_sound_speed_m_s = 1700
+env.bottom_sound_speed_m_s = 2500
 #env.bottom_density_g_cm = 1.0
 env.bottom_attenuation_dm_lambda = 0.0
 
@@ -24,7 +24,7 @@ pade_order = (8, 8)
 k0 = 2*fm.pi
 theta_max_degrees = 33
 k_z_max = k0*fm.sin(theta_max_degrees*fm.pi/180)
-xi_bounds = [-k_z_max**2/k0**2-0.23*0, 0]
+xi_bounds = [-k_z_max**2/k0**2-0.33*0, 0]
 
 dr_wl_s, dz_wl_s = get_optimal(max_range_wl, prec, xi_bounds[0], k_z_max, pade_order=pade_order, shift_pade=True)
 #dr_wl_s *= 2
@@ -48,13 +48,16 @@ sspe_shifted_propagator = UnderwaterAcousticsSSPadePropagator(
     src=src,
     env=env,
     max_range_m=max_range,
-    max_depth_m=300,
-    comp_params=sspe_shifted_comp_params
+    max_depth_m=500,
+    comp_params=sspe_shifted_comp_params,
+    c0=1500
 )
 sspe_shifted_field = sspe_shifted_propagator.calculate()
 sspe_shifted_field.field *= 5.50 #normalization
 sspe_shifted_vis = AcousticPressureFieldVisualiser2d(field=sspe_shifted_field, label='WPF')
 sspe_shifted_vis.plot2d(-60, -5).show()
+
+stop
 
 #####
 

@@ -7,11 +7,11 @@ from copy import deepcopy
 
 class UnderwaterAcousticsSSPadePropagator:
 
-    def __init__(self, src: Source, env: UnderwaterEnvironment, max_range_m, comp_params=HelmholtzPropagatorComputationalParams(), max_depth_m=None):
+    def __init__(self, src: Source, env: UnderwaterEnvironment, max_range_m, comp_params=HelmholtzPropagatorComputationalParams(), max_depth_m=None, c0=None):
         self.uwa_env = deepcopy(env)
         self.comp_params = deepcopy(comp_params)
         self.src = deepcopy(src)
-        c0 = min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(0, self.uwa_env.bottom_profile.max_depth, 1)])
+        c0 = c0 or min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(0, self.uwa_env.bottom_profile.max_depth, 1)])
         self.k0 = 2*cm.pi*self.src.freq_hz / c0
 
         # prepare Helmholtz environment
