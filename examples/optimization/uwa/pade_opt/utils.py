@@ -43,7 +43,7 @@ def precision_step(xi_bounds, k_z_max, dxs_wl: np.array, dzs_wl: np.array, pade_
     return res
 
 
-def get_optimal(x_max_wl, prec, xi_min, k_z_max, pade_order=(8, 8), shift_pade=False):
+def get_optimal(x_max_wl, prec, xi_bounds, k_z_max, pade_order=(8, 8), shift_pade=False):
     dxs_wl = np.concatenate((
         #[0.0005],
         #[0.001],
@@ -59,7 +59,7 @@ def get_optimal(x_max_wl, prec, xi_min, k_z_max, pade_order=(8, 8), shift_pade=F
         np.linspace(0.02, 0.1, 9),
         np.linspace(0.2, 1, 9),
     ))
-    errors = precision_step([xi_min, 0], k_z_max, dxs_wl, dzs_wl, pade_order, shift_pade)
+    errors = precision_step(xi_bounds, k_z_max, dxs_wl, dzs_wl, pade_order, shift_pade)
     cur_best_dx = 1e-16
     cur_best_dz = 1e-16
     for dx_i, dx in enumerate(dxs_wl):

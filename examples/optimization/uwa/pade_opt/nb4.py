@@ -21,14 +21,14 @@ prec = 1e-1
 wavelength = 1500 / src.freq_hz
 max_range_wl = max_range / wavelength
 
-pade_order = (6, 8)
+pade_order = (7, 8)
 
 k0 = 2*fm.pi
 theta_max_degrees = 30
 k_z_max = k0*fm.sin(theta_max_degrees*fm.pi/180)
-xi_bounds = [-k_z_max**2/k0**2+((1500/2000)**2-1), 0]
+xi_bounds = [-k_z_max**2/k0**2+((1500/2000)**2-1)*0, 0]
 
-dr_wl, dz_wl = get_optimal(max_range_wl, prec, xi_bounds[0], k_z_max, pade_order=pade_order, shift_pade=False)
+dr_wl, dz_wl = get_optimal(max_range_wl, prec, xi_bounds, k_z_max, pade_order=pade_order, shift_pade=False)
 print(f"Pade: dx = {dr_wl}; dz = {dz_wl}")
 
 sspe_comp_params = HelmholtzPropagatorComputationalParams(

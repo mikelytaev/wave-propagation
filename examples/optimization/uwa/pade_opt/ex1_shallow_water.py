@@ -15,7 +15,7 @@ env.bottom_attenuation_dm_lambda = 0.0
 
 max_range = 3000
 max_depth_m = 300
-prec = 1e-1
+prec = 1e-2
 
 wavelength = 1500 / src.freq_hz
 max_range_wl = max_range / wavelength
@@ -25,21 +25,16 @@ pade_order = (7, 8)
 k0 = 2*fm.pi
 theta_max_degrees = 31
 k_z_max = k0*fm.sin(theta_max_degrees*fm.pi/180)
-xi_bounds = [-k_z_max**2/k0**2, 0]
-
-dr_wl_s, dz_wl_s = get_optimal(max_range_wl, prec, xi_bounds[0], k_z_max, pade_order=pade_order, shift_pade=True)
+xi_bounds = [-k_z_max**2/k0**2+((1590/1500)**2-1), ((1590/1500)**2-1)]
+dr_wl_s, dz_wl_s = get_optimal(max_range_wl, prec, xi_bounds, k_z_max, pade_order=pade_order, shift_pade=False)
+dr_wl_s *= 1.2
 print(f"Shifted: dx = {dr_wl_s}; dz = {dz_wl_s}")
-
-pade_coefs, c0 = utils.pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=2 * cm.pi, dx=dr_wl_s,
-                                             a0=xi_bounds[0])
 
 sspe_shifted_comp_params = HelmholtzPropagatorComputationalParams(
     z_order=4,
     dx_wl=dr_wl_s,
     dz_wl=dz_wl_s,
     exp_pade_order=pade_order,
-    #exp_pade_coefs=pade_coefs,
-    #exp_pade_a0_coef=c0,
     sqrt_alpha=0,
     modify_grid=False
 )
@@ -50,17 +45,18 @@ sspe_shifted_propagator = UnderwaterAcousticsSSPadePropagator(
     max_range_m=max_range,
     max_depth_m=max_depth_m,
     comp_params=sspe_shifted_comp_params,
-    c0=1580,
+    c0=1590,
     lower_bc=RobinBC(q1=0, q2=1, q3=0)
 )
 sspe_shifted_field = sspe_shifted_propagator.calculate()
 sspe_shifted_field.field *= 5.50 #normalization
 sspe_shifted_vis = AcousticPressureFieldVisualiser2d(field=sspe_shifted_field, label='WPF')
-sspe_shifted_vis.plot2d(-90, -5).show()
+sspe_shifted_vis.plot2d(-50, -5).show()
 
 #####
 
-dr_wl, dz_wl = get_optimal(max_range_wl, prec, xi_bounds[0], k_z_max, pade_order=pade_order, shift_pade=False)
+xi_bounds = [-k_z_max**2/k0**2, 0]
+dr_wl, dz_wl = get_optimal(max_range_wl, prec, xi_bounds, k_z_max, pade_order=pade_order, shift_pade=False)
 print(f"Pade: dx = {dr_wl}; dz = {dz_wl}")
 
 sspe_comp_params = HelmholtzPropagatorComputationalParams(
@@ -84,7 +80,7 @@ sspe_propagator = UnderwaterAcousticsSSPadePropagator(
 sspe_field = sspe_propagator.calculate()
 sspe_field.field *= 5.50 #normalization
 sspe_vis = AcousticPressureFieldVisualiser2d(field=sspe_field, label='WPF')
-sspe_vis.plot2d(-90, -5).show()
+sspe_vis.plot2d(-50, -5).show()
 
 ######
 
@@ -109,4 +105,4 @@ sspe_f_propagator = UnderwaterAcousticsSSPadePropagator(
 sspe_f_field = sspe_f_propagator.calculate()
 sspe_f_field.field *= 5.50 #normalization
 sspe_f_vis = AcousticPressureFieldVisualiser2d(field=sspe_f_field, label='WPF')
-sspe_f_vis.plot2d(-90, -5).show()
+sspe_f_vis.plot2d(-50, -5).show()
