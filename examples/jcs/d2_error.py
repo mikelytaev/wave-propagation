@@ -11,15 +11,13 @@ def fourth_difference_disp_rel(k_z: complex, dz: float, z=0):
     return cm.exp(1j*k_z*z) * (cm.exp(-1j*k_z*dz) - 2 + cm.exp(1j*k_z*dz))**2
 
 
-def second_order_error(theta: float, dz: float):
-    k0 = 2 * cm.pi
+def second_order_error(theta: float, dz: float, k0=2*cm.pi):
     k_z = k0 * cm.sin(theta * cm.pi / 180)
     d = 1 / dz**2 * (second_difference_disp_rel(k_z, dz))
     return abs(d - (-k_z**2))
 
 
-def fourth_order_error_theta(theta: float, dz: float):
-    k0 = 2 * cm.pi
+def fourth_order_error_theta(theta: float, dz: float, k0=2*cm.pi):
     k_z = k0 * cm.sin(theta * cm.pi / 180)
     d = 1 / dz**2 * (second_difference_disp_rel(k_z, dz) - 1/12 * fourth_difference_disp_rel(k_z, dz))
     return abs(d - (-k_z**2))
