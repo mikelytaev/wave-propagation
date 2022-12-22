@@ -5,24 +5,57 @@ import propagators._utils as utils
 
 #logging.basicConfig(level=logging.DEBUG)
 
-src = GaussSource(freq_hz=1000, depth=100, beam_width=1, eval_angle=-30)
-env = UnderwaterEnvironment()
-env.sound_speed_profile_m_s = lambda x, z: 1500 + z*0
-env.bottom_profile = Bathymetry(ranges_m=[0, 5000], depths_m=[300, 300])
-env.bottom_sound_speed_m_s = 1500
-#env.bottom_density_g_cm = 1.0
-env.bottom_attenuation_dm_lambda = 0.0
 
-max_range = 3000
 prec = 1e-3
 
-wavelength = 1500 / src.freq_hz
-max_range_wl = max_range / wavelength
 
 pade_order = (7, 8)
 
-k0 = 2*fm.pi
-theta_max_degrees = 31
-k_z_max = k0*fm.sin(theta_max_degrees*fm.pi/180)
-xi_bounds = [-k_z_max**2/k0**2+((1590/1500)**2-1), ((1590/1500)**2-1)]
-dr_wl_s, dz_wl_s = get_optimal(max_range_wl, prec, xi_bounds, k_z_max, pade_order=pade_order)
+freq_hz = 500
+
+c_min = 1500
+c_max = 1500
+
+
+def func(max_range_m, theta_max_degrees):
+    print(f"max range = {max_range_m} m; theta_max = {theta_max_degrees}")
+    dr_wl, dz_wl, c0, xi_bounds = get_optimal(
+        freq_hz=freq_hz,
+        x_max_m=max_range_m,
+        prec=prec,
+        theta_max_degrees=theta_max_degrees,
+        pade_order=pade_order,
+        c_bounds=[c_min, c_max],
+        c0=1500,
+        return_meta=True
+    )
+    print(f"c0 = {c0}; xi = {xi_bounds}; Pade: dx = {dr_wl} m; dz = {dz_wl} m")
+
+    dr_wl, dz_wl, c0, xi_bounds = get_optimal(
+        freq_hz=freq_hz,
+        x_max_m=max_range_m,
+        prec=prec,
+        theta_max_degrees=theta_max_degrees,
+        pade_order=pade_order,
+        c_bounds=[c_min, c_max],
+        return_meta=True
+    )
+    print(f"c0 = {c0}; xi = {xi_bounds}; Pade (shifted): dx = {dr_wl} m; dz = {dz_wl} m")
+
+
+func(max_range_m=1000, theta_max_degrees=30)
+func(max_range_m=2000, theta_max_degrees=30)
+func(max_range_m=5000, theta_max_degrees=30)
+func(max_range_m=10000, theta_max_degrees=30)
+func(max_range_m=50000, theta_max_degrees=30)
+
+
+func(max_range_m=5000, theta_max_degrees=5)
+func(max_range_m=5000, theta_max_degrees=10)
+func(max_range_m=5000, theta_max_degrees=20)
+func(max_range_m=5000, theta_max_degrees=30)
+func(max_range_m=5000, theta_max_degrees=45)
+func(max_range_m=5000, theta_max_degrees=60)
+func(max_range_m=5000, theta_max_degrees=70)
+func(max_range_m=5000, theta_max_degrees=80)
+func(max_range_m=5000, theta_max_degrees=85)
