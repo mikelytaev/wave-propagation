@@ -8,16 +8,13 @@ import propagators._utils as utils
 
 prec = 1e-3
 
-
-pade_order = (7, 8)
-
 freq_hz = 500
 
 c_min = 1500
 c_max = 1500
 
 
-def func(max_range_m, theta_max_degrees):
+def func(*, max_range_m, theta_max_degrees, pade_order=(7, 8)):
     print(f"max range = {max_range_m} m; theta_max = {theta_max_degrees}")
     dr_wl, dz_wl, c0, xi_bounds = get_optimal(
         freq_hz=freq_hz,
@@ -45,19 +42,26 @@ def func(max_range_m, theta_max_degrees):
     print(f"gain = {gain}")
 
 
-func(max_range_m=1000, theta_max_degrees=30)
-func(max_range_m=2000, theta_max_degrees=30)
-func(max_range_m=5000, theta_max_degrees=30)
-func(max_range_m=10000, theta_max_degrees=30)
-func(max_range_m=50000, theta_max_degrees=30)
+# func(max_range_m=1000, theta_max_degrees=30)
+# func(max_range_m=2000, theta_max_degrees=30)
+# func(max_range_m=5000, theta_max_degrees=30)
+# func(max_range_m=10000, theta_max_degrees=30)
+# func(max_range_m=50000, theta_max_degrees=30)
+#
+#
+# func(max_range_m=5000, theta_max_degrees=5)
+# func(max_range_m=5000, theta_max_degrees=10)
+# func(max_range_m=5000, theta_max_degrees=20)
+# func(max_range_m=5000, theta_max_degrees=30)
+# func(max_range_m=5000, theta_max_degrees=45)
+# func(max_range_m=5000, theta_max_degrees=60)
+# func(max_range_m=5000, theta_max_degrees=70)
+# func(max_range_m=5000, theta_max_degrees=80)
+# func(max_range_m=5000, theta_max_degrees=85)
 
 
-func(max_range_m=5000, theta_max_degrees=5)
-func(max_range_m=5000, theta_max_degrees=10)
-func(max_range_m=5000, theta_max_degrees=20)
-func(max_range_m=5000, theta_max_degrees=30)
-func(max_range_m=5000, theta_max_degrees=45)
-func(max_range_m=5000, theta_max_degrees=60)
-func(max_range_m=5000, theta_max_degrees=70)
-func(max_range_m=5000, theta_max_degrees=80)
-func(max_range_m=5000, theta_max_degrees=85)
+func(max_range_m=1000, theta_max_degrees=30, pade_order=(1, 1))
+func(max_range_m=1000, theta_max_degrees=30, pade_order=(3, 4))
+func(max_range_m=1000, theta_max_degrees=30, pade_order=(6, 7))
+func(max_range_m=1000, theta_max_degrees=30, pade_order=(7, 8))
+func(max_range_m=1000, theta_max_degrees=30, pade_order=(9, 10))
