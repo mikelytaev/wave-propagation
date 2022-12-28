@@ -23,6 +23,11 @@ def fourth_order_error_theta(theta: float, dz: float, k0=2*cm.pi):
     return abs(d - (-k_z**2))
 
 
+def second_order_error_kz(k_z: float, dz: float):
+    d = 1 / dz**2 * second_difference_disp_rel(k_z, dz)
+    return abs(d - (-k_z**2))
+
+
 def fourth_order_error_kz(k_z: float, dz: float):
     d = 1 / dz**2 * (second_difference_disp_rel(k_z, dz) - 1/12 * fourth_difference_disp_rel(k_z, dz))
     return abs(d - (-k_z**2))

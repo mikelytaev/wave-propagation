@@ -3,7 +3,7 @@ import cmath as cm
 import math as fm
 import numpy as np
 
-from examples.jcs.d2_error import fourth_order_error_kz
+from examples.jcs.d2_error import second_order_error_kz, fourth_order_error_kz
 from propagators._utils import pade_propagator_coefs
 
 import pyximport
@@ -11,8 +11,11 @@ pyximport.install(setup_args={"include_dirs": np.get_include()}, language_level=
 from examples.optimization.uwa.pade_opt import utils_pyx as utils_pyx
 
 
-def h_error(dz, k_z_max):
-    return fourth_order_error_kz(k_z_max, dz)
+def h_error(dz, k_z_max, z_order=4):
+    if z_order == 2:
+        return second_order_error_kz(k_z_max, dz)
+    else:
+        return fourth_order_error_kz(k_z_max, dz)
 
 
 def tau_error(xi1, xi2, dx_m, pade_coefs):
@@ -28,7 +31,7 @@ def tau_error_sup_h(k0, xi, xi_bounds, h, n, dx_m, pade_coefs_num, pade_coefs_de
     return max(errors)
 
 
-def precision_step(k0, xi_bounds, k_z_max, dxs_m: np.array, dzs_wl: np.array, pade_order, shift_pade=False):
+def precision_step(k0, xi_bounds, k_z_max, dxs_m: np.array, dzs_wl: np.array, pade_order, z_order, shift_pade=False):
     res = np.zeros((len(dxs_m), len(dzs_wl)))
     xi_grid = np.linspace(xi_bounds[0], xi_bounds[1], 100)
     for dx_i, dx_m in enumerate(dxs_m):
@@ -36,13 +39,13 @@ def precision_step(k0, xi_bounds, k_z_max, dxs_m: np.array, dzs_wl: np.array, pa
         pade_coefs_num = np.array([a[0] for a in coefs])
         pade_coefs_den = np.array([a[1] for a in coefs])
         for dz_i, dz_m in enumerate(dzs_wl):
-            h = h_error(dz_m, k_z_max) / k0**2
+            h = h_error(dz_m, k_z_max, z_order) / k0**2
             error = max([tau_error_sup_h(k0, xi, xi_bounds, h, 100, dx_m, pade_coefs_num, pade_coefs_den, c0) for xi in xi_grid])
             res[dx_i, dz_i] = error
     return res
 
 
-def get_optimal(freq_hz, x_max_m, prec, theta_max_degrees, pade_order, c_bounds, c0=None, return_meta=False):
+def get_optimal(*, freq_hz, x_max_m, prec, theta_max_degrees, pade_order, z_order=4, c_bounds, c0=None, return_meta=False):
     c0 = c0 or fm.sqrt((2 + fm.sin(theta_max_degrees * fm.pi / 180)**2) / (1 / c_bounds[0]**2 + 1/c_bounds[1]**2))
     k0 = 2 * fm.pi * freq_hz / c0
     k_z_max = k0 * fm.sin(theta_max_degrees * fm.pi / 180)
@@ -62,7 +65,7 @@ def get_optimal(freq_hz, x_max_m, prec, theta_max_degrees, pade_order, c_bounds,
         np.linspace(0.02, 0.1, 9),
         np.linspace(0.2, 1, 9),
     ))
-    errors = precision_step(k0, xi_bounds, k_z_max, dxs_m, dzs_m, pade_order, False)
+    errors = precision_step(k0, xi_bounds, k_z_max, dxs_m, dzs_m, pade_order, z_order, False)
     cur_best_dx = 1e-16
     cur_best_dz = 1e-16
     for dx_i, dx in enumerate(dxs_m):

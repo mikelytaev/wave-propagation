@@ -35,24 +35,33 @@ pade_coefs, a0 = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x
 pade_coefs_num = np.array([a[0] for a in pade_coefs])
 pade_coefs_den = np.array([a[1] for a in pade_coefs])
 errors_pade = approx_error(pade_coefs_num, pade_coefs_den, xi_grid_2d.flatten(), dx).reshape(shape)
+plt.figure(figsize=(4, 3.2))
 plt.imshow(
     10*np.log10(abs(errors_pade)),
     extent=[grid_re[0], grid_re[-1], grid_im[-1], grid_im[0]],
     cmap=plt.get_cmap('binary'),
-    norm=Normalize(-140, 20)
+    #aspect='auto',
+    norm=Normalize(-100, 20)
 )
 plt.colorbar()
 plt.grid(True)
-plt.show()
+plt.xlabel("Re(error)")
+plt.ylabel("Im(error)")
+plt.tight_layout()
+#plt.show()
+plt.savefig("approx_error_2d.eps")
 
 
 
 xi_grid = np.linspace(-xi_bound*2, xi_bound*2, 1000)
 error_pade = approx_error(pade_coefs_num, pade_coefs_den, xi_grid, dx)
 
-plt.figure(figsize=(6, 3.2))
+plt.figure(figsize=(4, 3.2))
 plt.plot(xi_grid, 10*np.log10(error_pade))
 plt.grid(True)
+plt.xlim([xi_grid[0], xi_grid[-1]])
+plt.xlabel("xi")
+plt.ylabel("10log(error)")
 plt.tight_layout()
-plt.legend()
-plt.show()
+#plt.show()
+plt.savefig("approx_error_real.eps")

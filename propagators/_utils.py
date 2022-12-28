@@ -55,8 +55,11 @@ def pade_propagator_coefs(*, pade_order, diff2, k0, dx, spe=False, alpha=0, a0=0
     q0 = q[-1]
     p = [t / p0 for t in p]
     q = [t / q0 for t in q]
-    p_roots = mpmath.polyroots(p[::-1], maxsteps=5000)
-    q_roots = mpmath.polyroots(q[::-1], maxsteps=5000)
+    try:
+        p_roots = mpmath.polyroots(p[::-1], maxsteps=5000)
+        q_roots = mpmath.polyroots(q[::-1], maxsteps=5000)
+    except:
+        return list(zip_longest([0j] * (len(p)-1), [0j] * (len(q)-1), fillvalue=0.0j)), 1.0+0j
     pade_coefs = list(zip_longest([-1 / complex(v) / (1 - a0 * (-1 / complex(v))) for v in p_roots],
                                        [-1 / complex(v) / (1 - a0 * (-1 / complex(v))) for v in q_roots],
                                        fillvalue=0.0j))
