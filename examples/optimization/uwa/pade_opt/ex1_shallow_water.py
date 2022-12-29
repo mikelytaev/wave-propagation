@@ -90,7 +90,6 @@ sspe_shifted_etalon_field.field *= 5.50 #normalization
 
 #####
 
-xi_bounds = [-k_z_max**2/k0**2, 0]
 dr, dz, c0ns, _ = get_optimal(
         freq_hz=src.freq_hz,
         x_max_m=max_range_m,
@@ -128,6 +127,28 @@ sspe_field = sspe_propagator.calculate()
 sspe_field.field *= 5.50 #normalization
 sspe_vis = AcousticPressureFieldVisualiser2d(field=sspe_field, label='WPF')
 sspe_vis.plot2d(-50, -5).show()
+
+
+sspe_etalon_comp_params = HelmholtzPropagatorComputationalParams(
+    z_order=4,
+    dx_wl=dr / wl0 / 2,
+    dz_wl=dz / wl0 / 2,
+    exp_pade_order=pade_order,
+    sqrt_alpha=0,
+    modify_grid=False
+)
+
+sspe_etalon_propagator = UnderwaterAcousticsSSPadePropagator(
+    src=src,
+    env=env,
+    max_range_m=max_range_m,
+    max_depth_m=max_depth_m,
+    comp_params=sspe_etalon_comp_params,
+    c0=1500,
+    lower_bc=RobinBC(q1=0, q2=1, q3=0)
+)
+sspe_etalon_field = sspe_etalon_propagator.calculate()
+sspe_etalon_field.field *= 5.50 #normalization
 
 ######
 
@@ -178,18 +199,18 @@ plt.savefig("ex1_shifted_2d.eps")
 f, ax = plt.subplots(1, 2, sharey=True, figsize=(7, 3.2), constrained_layout=True)
 extent = [sspe_shifted_vis.field.x_grid[0]*1e-3, sspe_shifted_vis.field.x_grid[-1]*1e-3, sspe_shifted_vis.field.z_grid[-1], sspe_shifted_vis.field.z_grid[0]]
 norm = Normalize(-30, 0)
-im = ax[0].imshow(10*np.log10(0.5*abs(sspe_shifted_field.field.T[:,:-1:] - sspe_shifted_etalon_field.field.T[::3, ::3])), extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
+im = ax[0].imshow(10*np.log10(0.4*abs(sspe_shifted_field.field.T[:,:-1:] - sspe_shifted_etalon_field.field.T[::3, ::3])), extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
 ax[0].grid()
 ax[0].set_title("c0=1591 m/s")
 ax[0].set_xlabel('Range (km)')
 ax[0].set_ylabel('Depth (m)')
 
-im = ax[1].imshow(10*np.log10(abs(sspe_f_vis.field.field.T)*10), extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
+im = ax[1].imshow(10*np.log10(7*abs(sspe_field.field.T[:,:] - sspe_etalon_field.field.T[::2, ::2])), extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('binary'))
 ax[1].grid()
 ax[1].set_title("c0=1500 m/s")
 ax[1].set_xlabel('Range (km)')
 ax[1].set_ylabel('Depth (m)')
 
 f.colorbar(im, ax=ax[:], shrink=0.6, location='bottom')
-plt.show()
-plt.savefig("ex1_shifted_2d.eps")
+#plt.show()
+plt.savefig("ex1_shifted_2d_error.eps")

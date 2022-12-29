@@ -13,27 +13,34 @@ env.bottom_sound_speed_m_s = 2000
 #env.bottom_density_g_cm = 1.0
 env.bottom_attenuation_dm_lambda = 0.0
 
-max_range = 3000
+max_range_m = 3000
 max_depth_m = 600
-prec = 1e-1
+prec = 1e-2
 
 wavelength = 1500 / src.freq_hz
-max_range_wl = max_range / wavelength
+max_range_wl = max_range_m / wavelength
 
 pade_order = (7, 8)
 
-k0 = 2*fm.pi
 theta_max_degrees = 31
-k_z_max = k0*fm.sin(theta_max_degrees*fm.pi/180)
-xi_bounds = [-k_z_max**2/k0**2+((1800/2000)**2-1), ((1800/1500)**2-1)]
-dr_wl_s, dz_wl_s = get_optimal(max_range_wl, prec, xi_bounds, k_z_max, pade_order=pade_order, shift_pade=False)
-dr_wl_s *= 2
-print(f"Shifted: dx = {dr_wl_s}; dz = {dz_wl_s}")
+dr_s, dz_s, c0s, _ = get_optimal(
+        freq_hz=src.freq_hz,
+        x_max_m=max_range_m,
+        prec=prec,
+        theta_max_degrees=theta_max_degrees,
+        pade_order=pade_order,
+        z_order=4,
+        c_bounds=[1500, 2000],
+        return_meta=True
+    )
+dr_s *= 2
+wl0s = c0s / src.freq_hz
+print(f"Shifted: dx = {dr_s}; dz = {dz_s}")
 
 sspe_shifted_comp_params = HelmholtzPropagatorComputationalParams(
     z_order=4,
-    dx_wl=dr_wl_s,
-    dz_wl=dz_wl_s,
+    dx_wl=dr_s / wl0s,
+    dz_wl=dz_s / wl0s,
     exp_pade_order=pade_order,
     sqrt_alpha=0,
     modify_grid=False
@@ -42,10 +49,10 @@ sspe_shifted_comp_params = HelmholtzPropagatorComputationalParams(
 sspe_shifted_propagator = UnderwaterAcousticsSSPadePropagator(
     src=src,
     env=env,
-    max_range_m=max_range,
+    max_range_m=max_range_m,
     max_depth_m=max_depth_m,
     comp_params=sspe_shifted_comp_params,
-    c0=1800
+    c0=c0s
 )
 sspe_shifted_field = sspe_shifted_propagator.calculate()
 sspe_shifted_field.field *= 5.50 #normalization
@@ -53,15 +60,26 @@ sspe_shifted_vis = AcousticPressureFieldVisualiser2d(field=sspe_shifted_field, l
 sspe_shifted_vis.plot2d(-90, -5).show()
 
 #####
+dr, dz, c0ns, _ = get_optimal(
+        freq_hz=src.freq_hz,
+        x_max_m=max_range_m,
+        prec=prec,
+        theta_max_degrees=theta_max_degrees,
+        pade_order=pade_order,
+        z_order=4,
+        c_bounds=[1500, 2000],
+        c0=1500,
+        return_meta=True
+    )
+print(f"Pade: dx = {dr}; dz = {dz}")
 
-xi_bounds = [-k_z_max**2/k0**2+((1500/2000)**2-1), 0]
-dr_wl, dz_wl = get_optimal(max_range_wl, prec, xi_bounds, k_z_max, pade_order=pade_order, shift_pade=False)
-print(f"Pade: dx = {dr_wl}; dz = {dz_wl}")
+wl0 = c0ns / src.freq_hz
+print(f"Pade: dx = {dr}; dz = {dz}")
 
 sspe_comp_params = HelmholtzPropagatorComputationalParams(
     z_order=4,
-    dx_wl=dr_wl,
-    dz_wl=dz_wl,
+    dx_wl=dr / wl0,
+    dz_wl=dz / wl0,
     exp_pade_order=pade_order,
     sqrt_alpha=0,
     modify_grid=False
@@ -70,7 +88,7 @@ sspe_comp_params = HelmholtzPropagatorComputationalParams(
 sspe_propagator = UnderwaterAcousticsSSPadePropagator(
     src=src,
     env=env,
-    max_range_m=max_range,
+    max_range_m=max_range_m,
     max_depth_m=max_depth_m,
     comp_params=sspe_comp_params,
     c0=1500
@@ -84,8 +102,8 @@ sspe_vis.plot2d(-90, -5).show()
 
 sspe_f_comp_params = HelmholtzPropagatorComputationalParams(
     z_order=4,
-    dx_wl=dr_wl_s,
-    dz_wl=dz_wl_s,
+    dx_wl=dr_s / wl0s,
+    dz_wl=dz_s / wl0s,
     exp_pade_order=pade_order,
     sqrt_alpha=0,
     modify_grid=False
@@ -94,7 +112,7 @@ sspe_f_comp_params = HelmholtzPropagatorComputationalParams(
 sspe_f_propagator = UnderwaterAcousticsSSPadePropagator(
     src=src,
     env=env,
-    max_range_m=max_range,
+    max_range_m=max_range_m,
     max_depth_m=max_depth_m,
     comp_params=sspe_f_comp_params,
     c0=1500
