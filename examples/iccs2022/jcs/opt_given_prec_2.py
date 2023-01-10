@@ -45,11 +45,7 @@ def fit_func(coefs_arr):
     return 1 / (dx * dz)
 
 
-eps = 3e-4
-eps_x_max = 3e3
-
-
-def get_pade_opt_grid(*, theta_max_degrees, order, grid_bounds=None):
+def get_pade_opt_grid(*, theta_max_degrees, order, grid_bounds=None, eps=3e-4, eps_x_max=3e3):
     def constraint_pade_2nd_order(coefs_arr):
         dx, dz = opt_coefs_to_grids(coefs_arr)
         pade_coefs, _ = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=2 * cm.pi, dx=dx)
@@ -80,7 +76,7 @@ def get_pade_opt_grid(*, theta_max_degrees, order, grid_bounds=None):
     return dx_pade, dz_pade
 
 
-def get_de_opt_grid(*, theta_max_degrees, order, coef_bounds, grid_bounds=None):
+def get_de_opt_grid(*, theta_max_degrees, order, coef_bounds, grid_bounds=None, eps=3e-4, eps_x_max=3e3):
     grid_bounds = grid_bounds or [(0.1, 100), (0.0001, 1)]
     bounds_ga = grid_bounds + [coef_bounds] * (order[0] + order[1]) * 2
 
@@ -128,10 +124,74 @@ def get_de_opt_grid(*, theta_max_degrees, order, coef_bounds, grid_bounds=None):
 # dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-50, 50), grid_bounds=[(dx_pade, 300), (dz_pade, 3.0)])
 # print(f"DE: dx = {dx_de}; dz = {dz_de}")
 
+# theta_max = 30
+# dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 10.8), (0, 0.005)])
+# print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-20, 20), grid_bounds=[(dx_pade, 50), (dz_pade, 0.7)])
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 45
+# dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 5), (0, 0.002)])
+# print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-20, 20), grid_bounds=[(dx_pade, 25), (dz_pade, 0.3)])
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 60
+# #dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 2), (0, 0.001)])
+# #print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_pade, dz_pade = 0.0, 0.0
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-5, 5), grid_bounds=[(dx_pade, 3), (dz_pade, 0.1)])
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 85
+# #dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 2), (0, 0.001)])
+# #print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_pade, dz_pade = 0.0, 0.0
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-5, 5), grid_bounds=[(dx_pade, 1), (dz_pade, 0.005)])
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 45
+# dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 5), (0, 0.1)], eps_x_max=100, eps=1e-2)
+# print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-20, 20), grid_bounds=[(dx_pade, 25), (dz_pade, 1)], eps_x_max=100, eps=1e-2)
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 60
+# dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 5), (0, 0.02)], eps_x_max=100, eps=1e-2)
+# print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-5, 5), grid_bounds=[(dx_pade, 25), (dz_pade, 0.7)], eps_x_max=100, eps=1e-2)
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 85
+# # dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 2), (0, 0.001)], eps_x_max=100, eps=1e-2)
+# dx_pade, dz_pade = 0.0, 0.0
+# # print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-2, 2), grid_bounds=[(dx_pade, 5), (dz_pade, 0.3)], eps_x_max=100, eps=1e-2)
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 30
+# dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 10.8), (0, 0.2)], eps_x_max=1000, eps=1e-2)
+# print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-20, 20), grid_bounds=[(dx_pade, 50), (dz_pade, 1.5)], eps_x_max=1000, eps=1e-2)
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 30
+# dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(3, 4), grid_bounds=[(0, 8), (0, 0.1)], eps_x_max=1000, eps=1e-2)
+# print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(3, 4), coef_bounds=(-20, 20), grid_bounds=[(dx_pade, 40), (dz_pade, 1.0)], eps_x_max=1000, eps=1e-2)
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
+# theta_max = 30
+# dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(2, 3), grid_bounds=[(0, 3), (0, 0.03)], eps_x_max=1000, eps=1e-2)
+# print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
+# dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(2, 3), coef_bounds=(-20, 20), grid_bounds=[(dx_pade, 15), (dz_pade, 1.0)], eps_x_max=1000, eps=1e-2)
+# print(f"DE: dx = {dx_de}; dz = {dz_de}")
+
 theta_max = 30
-dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(6, 7), grid_bounds=[(0, 10.8), (0, 0.005)])
+#dx_pade, dz_pade = get_pade_opt_grid(theta_max_degrees=theta_max, order=(1, 1), grid_bounds=[(0, 0.5), (0, 0.005)], eps_x_max=1000, eps=1e-2)
+dx_pade, dz_pade = 0.0, 0.0
 print(f"Pade: dx = {dx_pade}; dz = {dz_pade}")
-dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(6, 7), coef_bounds=(-20, 20), grid_bounds=[(dx_pade, 50), (dz_pade, 0.7)])
+dx_de, dz_de = get_de_opt_grid(theta_max_degrees=theta_max, order=(1, 1), coef_bounds=(-30, 30), grid_bounds=[(dx_pade, 6), (dz_pade, 1.0)], eps_x_max=1000, eps=1e-2)
 print(f"DE: dx = {dx_de}; dz = {dz_de}")
 
 
