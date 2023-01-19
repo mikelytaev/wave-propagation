@@ -149,10 +149,10 @@ def optimal_params_m(max_angle_deg, max_distance_wl, threshold, dx_wl=None, dz_w
         for dx_wl in dxs:
             updated = False
             if z_order <= 4:
-                coefs = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_wl, spe=False)
+                coefs, c0 = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_wl, spe=False)
             for dz_wl in dzs:
                 if z_order > 4:
-                    coefs = pade_propagator_coefs(pade_order=pade_order,
+                    coefs, c0 = pade_propagator_coefs(pade_order=pade_order,
                                                   diff2=lambda s: mpmath.acosh(1 + (k0 * dz_wl) ** 2 * s / 2) ** 2 / (k0 * dz_wl) ** 2,
                                                   k0=k0, dx=dx_wl, spe=False)
 
