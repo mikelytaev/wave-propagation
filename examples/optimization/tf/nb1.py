@@ -8,8 +8,8 @@ import math as fm
 
 
 rational_order = (7, 7)
-num_coef = tf.Variable(tf.reshape(tf.Variable(np.random.rand(rational_order[0])+np.random.rand(rational_order[0])*1j, tf.complex128), (rational_order[0], 1)))
-den_coef = tf.Variable(tf.reshape(tf.Variable(np.random.rand(rational_order[1])+np.random.rand(rational_order[1])*1j, tf.complex128), (rational_order[1], 1)))
+num_coef = tf.Variable(tf.reshape(tf.Variable((np.random.rand(rational_order[0])+np.random.rand(rational_order[0])*1j - 0.5 - 0.5j)*1, tf.complex128), (rational_order[0], 1)))
+den_coef = tf.Variable(tf.reshape(tf.Variable((np.random.rand(rational_order[1])+np.random.rand(rational_order[1])*1j - 0.5 - 0.5j)*1, tf.complex128), (rational_order[1], 1)))
 k0 = 2 * fm.pi
 dx = 50
 dz = 0.25
@@ -28,7 +28,7 @@ loss_fn4 = lambda: tf.reduce_max(tf.abs(discrete_k_x() - tf.math.sqrt(k0 ** 2 - 
 
 trace_fn = lambda traceable_quantities: {
   'loss': traceable_quantities.loss, 'num_coef': num_coef}
-losses = tfp.math.minimize(loss_fn4,
+losses = tfp.math.minimize(loss_fn3,
                            num_steps=20000,
                            optimizer=tf.optimizers.Adam(learning_rate=10, epsilon=0.1),
                            trainable_variables=[num_coef, den_coef],
@@ -37,9 +37,14 @@ losses = tfp.math.minimize(loss_fn4,
 
 print("optimized value is {} with loss {}".format(num_coef, losses[-1]))
 
-# Setup a stochastic gradient descent optimizer
-# opt = tf.keras.optimizers.SGD(learning_rate=0.01)
+# optimizer = tf.optimizers.SGD(learning_rate=10, nesterov=True)
 #
-# # Optimize for a fixed number of steps
-# for _ in range(1000):
-#     opt.minimize(loss_fn3, [num_coef, den_coef])
+# for i in range(20000):
+#   with tf.GradientTape() as tape:
+#     loss = loss_fn4()
+#   print(loss)
+#   grads = tape.gradient(loss, [num_coef, den_coef])
+#   print(num_coef)
+#   optimizer.apply_gradients(zip(grads, [num_coef, den_coef]))
+#
+# print("Minimum value: ", loss_fn4())
