@@ -8,8 +8,8 @@ import math as fm
 
 
 rational_order = (7, 7)
-num_coef = tf.Variable(tf.reshape(tf.Variable((np.random.rand(rational_order[0])+np.random.rand(rational_order[0])*1j - 0.5 - 0.5j)*1, tf.complex128), (rational_order[0], 1)))
-den_coef = tf.Variable(tf.reshape(tf.Variable((np.random.rand(rational_order[1])+np.random.rand(rational_order[1])*1j - 0.5 - 0.5j)*1, tf.complex128), (rational_order[1], 1)))
+num_coef = tf.Variable(tf.reshape(tf.Variable((np.random.rand(rational_order[0])+np.random.rand(rational_order[0])*1j - 0.5 - 0.5j)*0.1, tf.complex128), (rational_order[0], 1)))
+den_coef = tf.Variable(tf.reshape(tf.Variable((np.random.rand(rational_order[1])+np.random.rand(rational_order[1])*1j - 0.5 - 0.5j)*0.1, tf.complex128), (rational_order[1], 1)))
 k0 = 2 * fm.pi
 dx = 50
 dz = 0.25
@@ -29,8 +29,8 @@ loss_fn4 = lambda: tf.reduce_max(tf.abs(discrete_k_x() - tf.math.sqrt(k0 ** 2 - 
 trace_fn = lambda traceable_quantities: {
   'loss': traceable_quantities.loss, 'num_coef': num_coef}
 losses = tfp.math.minimize(loss_fn4,
-                           num_steps=100000,
-                           optimizer=tf.optimizers.Adam(learning_rate=10, epsilon=0.1),
+                           num_steps=300000,
+                           optimizer=tf.optimizers.Adam(learning_rate=0.5, epsilon=0.1),
                            trainable_variables=[num_coef, den_coef],
                            #trace_fn=trace_fn
                            )
