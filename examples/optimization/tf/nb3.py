@@ -6,6 +6,7 @@ import math as fm
 
 
 
+
 rational_order = (6, 7)
 num_coef = tf.Variable(tf.reshape(tf.Variable((np.random.rand(rational_order[0])+np.random.rand(rational_order[0])*1j - 0.5 - 0.5j)*1, tf.complex128), (rational_order[0], 1)))
 den_coef = tf.Variable(tf.reshape(tf.Variable((np.random.rand(rational_order[1])+np.random.rand(rational_order[1])*1j - 0.5 - 0.5j)*1, tf.complex128), (rational_order[1], 1)))
@@ -27,10 +28,16 @@ loss_fn4 = lambda: 1/k0*tf.reduce_max(tf.abs(discrete_k_x() - tf.math.sqrt(k0 **
 
 trace_fn = lambda traceable_quantities: {
   'loss': traceable_quantities.loss, 'num_coef': num_coef}
+
+lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+    initial_learning_rate=0.3,
+    decay_steps=10000,
+    decay_rate=0.96)
+
 losses = tfp.math.minimize(loss_fn4,
-                           num_steps=300000,
+                           num_steps=2000000,
                            optimizer=tf.optimizers.Adam(
-                               learning_rate=0.001,
+                               learning_rate=lr_schedule, epsilon=0.001
                            ),
                            trainable_variables=[num_coef, den_coef],
                            jit_compile=True,
@@ -40,4 +47,5 @@ print("optimized value is {} with loss {}".format(num_coef, losses[-1]))
 
 import matplotlib.pyplot as plt
 plt.plot(np.log10(losses.numpy()))
+plt.grid(True)
 plt.show()
