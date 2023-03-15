@@ -8,12 +8,12 @@ from matplotlib.colors import Normalize
 
 n = 200
 k0 = 2 * fm.pi
-dx = 4
-dy = 0.01
-dz = 0.01
+dx = 0.2
+dy = 0.0000001
+dz = 0.0000001
 order = (6, 7)
 phi_max_degrees = 30
-theta_max_degrees = 30
+theta_max_degrees = 85
 k_y_min = -k0 * fm.sin(fm.radians(theta_max_degrees))
 k_y_max = k0 * fm.sin(fm.radians(theta_max_degrees))
 k_z_min = -k0 * fm.sin(fm.radians(theta_max_degrees))
@@ -36,7 +36,8 @@ def xi2(alpha=0.0):
 
 def discrete_k_x_2d(alpha=0.0):
     xi = xi2(0)
-    pade_coefs, c0 = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=k0, dx=dx, a0=-alpha)
+    print(f"{np.min(xi)} {np.max(xi)}")
+    pade_coefs, c0 = utils.pade_propagator_coefs(pade_order=order, diff2=lambda x: x, k0=k0, dx=dx, a0=0, alpha=alpha)
     t = c0
     for (a, b) in pade_coefs:
         t *= (1 + a*xi) / (1 + b*xi)
@@ -50,12 +51,12 @@ def k_x_2d():
     return np.sqrt(k0**2 - k_y_2d_grid**2 - k_z_2d_grid**2)
 
 
-err1 = 10*np.log10(np.abs((k_x_2d() - discrete_k_x_2d())/k_x_2d()))
-err2 = 10*np.log10(np.abs((k_x_2d() - discrete_k_x_2d(alpha=0.125))/k_x_2d()))
+err1 = 10*np.log10(np.abs((k_x_2d() - discrete_k_x_2d())))
+err2 = 10*np.log10(np.abs((k_x_2d() - discrete_k_x_2d(alpha=50))))
 
 # extent = [k_y_min/k0, k_y_max/k0, k_z_min/k0, k_z_max/k0]
-# norm = Normalize(0, -30)
-# plt.imshow(err1, extent=extent, norm=norm, cmap=plt.get_cmap('binary'))
+# norm = Normalize(0, -100)
+# plt.imshow(err2, extent=extent, norm=norm, cmap=plt.get_cmap('binary'))
 # plt.colorbar(fraction=0.046, pad=0.04)
 # plt.show()
 
@@ -66,6 +67,6 @@ plt.grid(True)
 plt.show()
 
 
-plt.plot(k_y_grid/k0, k_x_2d()[100,:], k_y_grid/k0, discrete_k_x_2d(alpha=0.125)[100,:])
-plt.grid(True)
-plt.show()
+# plt.plot(k_y_grid/k0, k_x_2d()[100,:], k_y_grid/k0, discrete_k_x_2d(alpha=0.125)[100,:])
+# plt.grid(True)
+# plt.show()
