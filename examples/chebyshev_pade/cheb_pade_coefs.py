@@ -3,17 +3,23 @@ import numpy as np
 from itertools import zip_longest
 
 
-def cheb_pade_coefs(dx_wl, pade_order, max_spc_val, type):
+def cheb_pade_coefs(k0, dx_m, pade_order, spc_val, typee):
     """
 
     :param dx_wl:
     :param pade_order:
     :param max_spc_val:
-    :param type: "chebpade" , "ratinterp"
+    :param typee: "chebpade" , "ratinterp"
     :return:
     """
-    eng = matlab.engine.start_matlab()
-    a_mat, b_mat, a0 = eng.ExpChebPadeCoefs(int(pade_order[0]), int(pade_order[1]), float(dx_wl), float(max_spc_val), type, nargout=3)
+
+    if type(spc_val) is tuple:
+        eng = matlab.engine.start_matlab()
+        a_mat, b_mat, a0 = eng.ExpChebPadeCoefs2(int(pade_order[0]), int(pade_order[1]), float(k0), float(dx_m),
+                                                float(spc_val[0]), float(spc_val[1]), typee, nargout=3)
+    else:
+        eng = matlab.engine.start_matlab()
+        a_mat, b_mat, a0 = eng.ExpChebPadeCoefs2(int(pade_order[0]), int(pade_order[1]), float(dx_wl), float(spc_val), typee, nargout=3)
     eng.quit()
     a = np.array(a_mat).reshape(max(a_mat.size))
     b = np.array(b_mat).reshape(max(b_mat.size))
