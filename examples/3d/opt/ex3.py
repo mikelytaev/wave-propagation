@@ -23,13 +23,24 @@ def f1(theta_max_degrees, pade_order=(6, 7), prec=1e-2, x_max_m=1000):
 
 
 # f1(3, x_max_m=10000)
+f1(theta_max_degrees=3, x_max_m=10000, pade_order=(1, 1))
+f1(theta_max_degrees=3, x_max_m=10000, pade_order=(2, 3))
+f1(theta_max_degrees=3, x_max_m=10000, pade_order=(5, 6))
+f1(theta_max_degrees=3, x_max_m=10000, pade_order=(6, 7))
+f1(theta_max_degrees=3, x_max_m=10000, pade_order=(7, 8))
 # f1(5)
-# f1(10)
-# f1(20)
+
+f1(theta_max_degrees=10, pade_order=(1, 1))
+f1(theta_max_degrees=10, pade_order=(2, 3))
+f1(theta_max_degrees=10, pade_order=(5, 6))
+f1(theta_max_degrees=10, pade_order=(6, 7))
+f1(theta_max_degrees=10, pade_order=(7, 8))
+
 f1(theta_max_degrees=20, pade_order=(1, 1))
 f1(theta_max_degrees=20, pade_order=(2, 3))
 f1(theta_max_degrees=20, pade_order=(5, 6))
 f1(theta_max_degrees=20, pade_order=(6, 7))
+f1(theta_max_degrees=20, pade_order=(7, 8))
 # f1(45)
 # f1(60, x_max_m=100)
 # f1(70, x_max_m=100)

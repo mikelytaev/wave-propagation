@@ -51,7 +51,7 @@ def get_optimal(*, freq_hz, x_max_m, prec, theta_max_degrees, pade_order, z_orde
         #[0.01],
         np.linspace(0.1, 1, 10),
         np.linspace(1, 10, 31),
-        np.linspace(10, 100, 31),
+        np.linspace(10, 100, 61),
         np.linspace(100, 1000, 31),
     ))
     dzs_m = np.concatenate((
