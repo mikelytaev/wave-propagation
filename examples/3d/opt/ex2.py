@@ -32,7 +32,7 @@ def f1(theta_max_degrees, prec=1e-2, x_max_m=1000):
     )
 
     print(f'ADI 2nd: dx={dx_adi_pade_2nd}; dz={dz_adi_pade_2nd}')
-    print(f"Gain={dx_adi_pade_4th * (dz_adi_pade_4th ** 2) ** 2 / (dx_adi_pade_2nd * (dz_adi_pade_2nd ** 2) ** 2)}")
+    print(f"Gain={dx_adi_pade_4th * (dz_adi_pade_4th ** 2) / (dx_adi_pade_2nd * (dz_adi_pade_2nd ** 2))}")
 
     dx_cn_pade_4th, dz_cn_pade_4th = get_optimal(
         freq_hz=300e6,
@@ -58,7 +58,7 @@ def f1(theta_max_degrees, prec=1e-2, x_max_m=1000):
     )
 
     print(f'CN 2nd: dx={dx_cn_pade_2nd}; dz={dz_cn_pade_2nd}')
-    print(f"Gain={dx_cn_pade_4th * (dz_cn_pade_4th ** 2) / (dx_cn_pade_2nd * (dz_cn_pade_2nd ** 2))}")
+    print(f"Gain={dx_cn_pade_4th * (dz_cn_pade_4th ** 2)**2 / (dx_cn_pade_2nd * (dz_cn_pade_2nd ** 2)**2)}")
     print()
 
 
