@@ -129,8 +129,12 @@ def get_optimal(*, freq_hz, x_max_m, prec, theta_max_degrees, pade_order, z_orde
         for dz_i, dz in enumerate(dzs_m):
             err = errors[dx_i, dz_i]
             if x_max_m / dx * err < prec and (x_max_m / dx) > 0.9999:
-                if dx * dz > cur_best_dx * cur_best_dz:
-                    cur_best_dx, cur_best_dz = dx, dz
+                if adi:
+                    if dx * (dz**2) > cur_best_dx * (cur_best_dz**2):
+                        cur_best_dx, cur_best_dz = dx, dz
+                else:
+                    if dx * (dz**2)**2 > cur_best_dx * (cur_best_dz**2)**2:
+                        cur_best_dx, cur_best_dz = dx, dz
 
     if return_meta:
         return cur_best_dx, cur_best_dz, xi_bounds
