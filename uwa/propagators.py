@@ -7,18 +7,21 @@ from copy import deepcopy
 
 class UnderwaterAcousticsSSPadePropagator:
 
-    def __init__(self, src: Source, env: UnderwaterEnvironment, max_range_m, comp_params=HelmholtzPropagatorComputationalParams()):
+    def __init__(self, src: Source, env: UnderwaterEnvironment, max_range_m,
+                 comp_params=HelmholtzPropagatorComputationalParams(), max_depth_m=None, c0=None, lower_bc=None):
         self.uwa_env = deepcopy(env)
         self.comp_params = deepcopy(comp_params)
         self.src = deepcopy(src)
-        c0 = min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(0, self.uwa_env.bottom_profile.max_depth, 1)])
+        c0 = c0 or min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(0, self.uwa_env.bottom_profile.max_depth, 1)])
         self.k0 = 2*cm.pi*self.src.freq_hz / c0
+        self.c0 = c0
 
         # prepare Helmholtz environment
         m2_ground = (c0 / env.bottom_sound_speed_m_s) ** 2
-        self.helmholtz_env = HelmholtzEnvironment(x_max_m=max_range_m, lower_bc=TransparentBC(m2_ground), upper_bc=RobinBC(q1=1, q2=0, q3=0))
+        lower_bc = lower_bc or TransparentBC(m2_ground)
+        self.helmholtz_env = HelmholtzEnvironment(x_max_m=max_range_m, lower_bc=lower_bc, upper_bc=RobinBC(q1=1, q2=0, q3=0))
         self.helmholtz_env.z_max = 0
-        self.helmholtz_env.z_min = -(self.uwa_env.bottom_profile.max_depth + 300)
+        self.helmholtz_env.z_min = -max_depth_m if max_depth_m else -(self.uwa_env.bottom_profile.max_depth + 300)
 
         eta = 1 / (40*cm.pi*cm.log10(cm.exp(1)))
         def n2minus1(x, z, freq_hz):
@@ -59,6 +62,6 @@ class UnderwaterAcousticsSSPadePropagator:
         self.propagator = HelmholtzPadeSolver(env=self.helmholtz_env, wavelength=wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)
 
     def calculate(self):
-        h_field = self.propagator.calculate(lambda z: self.src.aperture(self.k0, -z))
+        h_field = self.propagator.calculate(lambda z: self.src.aperture(self.k0, -z, self.c0 / self.uwa_env.sound_speed_profile_m_s(self.src.depth, 0)))
         res = AcousticPressureField(x_grid=h_field.x_grid_m, z_grid=-h_field.z_grid_m[::-1], freq_hz=self.src.freq_hz, field=h_field.field[:,::-1])
         return res

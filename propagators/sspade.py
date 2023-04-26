@@ -213,7 +213,7 @@ class HelmholtzPadeSolver:
                 return s
 
         if self.params.exp_pade_coefs is None:
-            self.params.exp_pade_coefs = pade_propagator_coefs(pade_order=self.params.exp_pade_order, diff2=diff2,
+            self.params.exp_pade_coefs, self.params.exp_pade_a0_coef = pade_propagator_coefs(pade_order=self.params.exp_pade_order, diff2=diff2,
                                                                k0=self.k0, dx=self.dx_m, spe=self.params.standard_pe,
                                                                alpha=self.params.sqrt_alpha)
 

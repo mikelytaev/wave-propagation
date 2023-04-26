@@ -8,8 +8,6 @@ import propagators._utils as utils
 import propagators.dispersion_relations as disp_rels
 from scipy.optimize import differential_evolution, NonlinearConstraint
 import matplotlib.pyplot as plt
-import mpmath
-import examples.optimization.evol.opt_utils as opt_utils
 
 
 def opt_coefs_to_coefs(coefs_arr, order):

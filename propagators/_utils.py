@@ -21,7 +21,7 @@ def pade_sqrt(z, a_n, b_n, alpha=0):
     return cm.exp(1j*alpha/2) * (1 + sum([a * ((1 + z) * cm.exp(-1j*alpha) - 1) / (1 + b * ((1 + z) * cm.exp(-1j*alpha) - 1)) for (a, b) in zip(a_n, b_n)]))
 
 
-def pade_propagator_coefs(*, pade_order, diff2, k0, dx, spe=False, alpha=0):
+def pade_propagator_coefs(*, pade_order, diff2, k0, dx, spe=False, alpha=0, a0=0.0):
     """
     Pade approximation of the exponential propagator of the form \prod_{l=1}^{p}\frac{1+a_{l}L}{1+b_{l}L}
     :param pade_order: order of Pade approximation, tuple, for ex (7, 8)
@@ -49,12 +49,26 @@ def pade_propagator_coefs(*, pade_order, diff2, k0, dx, spe=False, alpha=0):
     def propagator_func(s):
         return mpmath.mp.exp(1j * k0 * dx * (sqrt_1plus(diff2(s)) - 1))
 
-    t = mpmath.taylor(propagator_func, 0, pade_order[0] + pade_order[1] + 2)
+    t = mpmath.taylor(propagator_func, a0, pade_order[0] + pade_order[1] + 2)
     p, q = mpmath.pade(t, pade_order[0], pade_order[1])
-    pade_coefs = list(zip_longest([-1 / complex(v) for v in mpmath.polyroots(p[::-1], maxsteps=5000)],
-                                       [-1 / complex(v) for v in mpmath.polyroots(q[::-1], maxsteps=5000)],
+    p0 = p[-1]
+    q0 = q[-1]
+    p = [t / p0 for t in p]
+    q = [t / q0 for t in q]
+    try:
+        p_roots = mpmath.polyroots(p[::-1], maxsteps=5000)
+        q_roots = mpmath.polyroots(q[::-1], maxsteps=5000)
+    except:
+        return list(zip_longest([0j] * (len(p)-1), [0j] * (len(q)-1), fillvalue=0.0j)), 1.0+0j
+    pade_coefs = list(zip_longest([-1 / complex(v) / (1 - a0 * (-1 / complex(v))) for v in p_roots],
+                                       [-1 / complex(v) / (1 - a0 * (-1 / complex(v))) for v in q_roots],
                                        fillvalue=0.0j))
-    return pade_coefs
+    c0 = p0 / q0
+    for t in p_roots:
+        c0 *= -t * (1 - a0 * (-1 / complex(t)))
+    for t in q_roots:
+        c0 /= -t * (1 - a0 * (-1 / complex(t)))
+    return pade_coefs, complex(c0)
 
 
 def discrete_k_x(k, dx, pade_coefs, dz, kz, order=2):
@@ -135,10 +149,10 @@ def optimal_params_m(max_angle_deg, max_distance_wl, threshold, dx_wl=None, dz_w
         for dx_wl in dxs:
             updated = False
             if z_order <= 4:
-                coefs = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_wl, spe=False)
+                coefs, c0 = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_wl, spe=False)
             for dz_wl in dzs:
                 if z_order > 4:
-                    coefs = pade_propagator_coefs(pade_order=pade_order,
+                    coefs, c0 = pade_propagator_coefs(pade_order=pade_order,
                                                   diff2=lambda s: mpmath.acosh(1 + (k0 * dz_wl) ** 2 * s / 2) ** 2 / (k0 * dz_wl) ** 2,
                                                   k0=k0, dx=dx_wl, spe=False)
 
