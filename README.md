@@ -1,4 +1,6 @@
-# Wave propagation framework for python 3
+![](docs/logo.png)
+
+# Wave propagation framework for Python 3
     
 ## Details
 
