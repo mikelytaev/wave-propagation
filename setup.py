@@ -30,8 +30,7 @@ setup(
         'scipy',
         'mpmath',
         'matplotlib',
-        'cython',
-        'pymoo'
+        'cython'
     ],
     ext_modules=extensions,
     zip_safe=False,
