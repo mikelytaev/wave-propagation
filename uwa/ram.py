@@ -23,13 +23,16 @@ class RAMComputationalParams:
 
 
 class RAMMatlabPropagator:
+    """
+    Pyton wrapper on Matlab version of RAM http://staff.washington.edu/dushaw/AcousticsCode/RamMatlabCode.html
+    """
 
     def __init__(self, src: Source, env: UnderwaterEnvironment, comp_params: RAMComputationalParams):
         self.src = src
         self.env = env
         self.comp_params = comp_params
 
-    def calculate(self):
+    def calculate(self) -> AcousticPressureField:
 
         z_grid_m = np.arange(0, self.env.bottom_profile.max_depth, self.comp_params.dz)
 

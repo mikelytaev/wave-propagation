@@ -3,6 +3,7 @@ from uwa.source import *
 from uwa.environment import *
 from propagators.sspade import *
 from copy import deepcopy
+from _optimization.utils import get_optimal
 
 
 class UnderwaterAcousticsSSPadePropagator:
@@ -59,9 +60,26 @@ class UnderwaterAcousticsSSPadePropagator:
         wavelength = c0 / src.freq_hz
         self.comp_params.terrain_method = TerrainMethod.pass_through
 
+        c_min = np.min(self.uwa_env.sound_speed_profile_m_s(0, np.linspace(0, self.uwa_env.bottom_profile.max_depth, 5000)))
+        c_max = np.max(self.uwa_env.sound_speed_profile_m_s(0, np.linspace(0, self.uwa_env.bottom_profile.max_depth, 5000)))
+        dr_s, dz_s, c0s, _ = get_optimal(
+            freq_hz=src.freq_hz,
+            x_max_m=max_range_m,
+            prec=1e-2,
+            theta_max_degrees=15,
+            pade_order=comp_params.exp_pade_order,
+            z_order=4,
+            c_bounds=[c_min, c_max],
+            return_meta=True
+        )
+        wl0s = c0s / src.freq_hz
+        self.comp_params.dx_wl = dr_s / wl0s
+        self.comp_params.dz_wl = dz_s / wl0s
+        self.comp_params.modify_grid = False
+
         self.propagator = HelmholtzPadeSolver(env=self.helmholtz_env, wavelength=wavelength, freq_hz=self.src.freq_hz, params=self.comp_params)
 
-    def calculate(self):
+    def calculate(self) -> AcousticPressureField:
         h_field = self.propagator.calculate(lambda z: self.src.aperture(self.k0, -z, self.c0 / self.uwa_env.sound_speed_profile_m_s(self.src.depth, 0)))
         res = AcousticPressureField(x_grid=h_field.x_grid_m, z_grid=-h_field.z_grid_m[::-1], freq_hz=self.src.freq_hz, field=h_field.field[:,::-1])
         return res
