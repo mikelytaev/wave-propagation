@@ -33,10 +33,10 @@ def local_bc(lbc):
                                use_n2minus1=False,
                                use_rho=False)
 
-    src = GaussSource(freq_hz=1, depth=150, beam_width=15, eval_angle=0)
+    src = GaussSource(freq_hz=1, depth_m=150, beam_width_deg=15, eval_angle_deg=0)
     wavelength = 1
     k0 = 2*cm.pi / wavelength
-    params = HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8), max_src_angle=src.max_angle(), dz_wl=0.5, dx_wl=50)
+    params = HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8), max_src_angle=src.max_angle_deg(), dz_wl=0.5, dx_wl=50)
     propagator = HelmholtzPadeSolver(env=env, wavelength=wavelength, freq_hz=300e6, params=params)
     initials_fw = [np.empty(0)] * propagator.n_x
     initials_fw[0] = np.array([src.aperture(k0, z) for z in propagator.z_computational_grid])
@@ -61,7 +61,7 @@ def transparent_const_bc(src):
     wavelength = 0.1
     k0 = 2 * cm.pi / wavelength
     params = HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8),
-                                                    max_src_angle=src.max_angle(),
+                                                    max_src_angle=src.max_angle_deg(),
                                                     dz_wl=0.5,
                                                     dx_wl=50,
                                                     inv_z_transform_rtol=1e-11
@@ -91,7 +91,7 @@ def transparent_const_bc_cn(src):
     params = HelmholtzPropagatorComputationalParams(exp_pade_order=(1, 1),
                                                     dx_wl=1,
                                                     dz_wl=0.1,
-                                                    max_src_angle=src.max_angle()
+                                                    max_src_angle=src.max_angle_deg()
                                                     )
     propagator = HelmholtzPadeSolver(env=env, wavelength=wavelength, freq_hz=300e6, params=params)
     initials_fw = [np.empty(0)] * propagator.n_x
@@ -118,34 +118,34 @@ class HelmholtzPropagatorTest(unittest.TestCase):
 
     def test_transparent_const(self):
         #logging.basicConfig(level=logging.DEBUG)
-        src = GaussSource(freq_hz=1, depth=150, beam_width=15, eval_angle=0)
+        src = GaussSource(freq_hz=1, depth_m=150, beam_width_deg=15, eval_angle_deg=0)
         f = transparent_const_bc(src)
         self.assertTrue(energy_decaying(f, x_start_m=20))
 
     def test_transparent_const_lower(self):
         #logging.basicConfig(level=logging.DEBUG)
-        src = GaussSource(freq_hz=1, depth=150, beam_width=2, eval_angle=10)
+        src = GaussSource(freq_hz=1, depth_m=150, beam_width_deg=2, eval_angle_deg=10)
         f = transparent_const_bc(src)
         self.assertTrue(energy_decaying(f, x_start_m=20))
         self.assertTrue(np.linalg.norm(f.field[-1, :]) < 5e-11)
 
     def test_transparent_const_upper(self):
         #logging.basicConfig(level=logging.DEBUG)
-        src = GaussSource(freq_hz=1, depth=150, beam_width=2, eval_angle=-10)
+        src = GaussSource(freq_hz=1, depth_m=150, beam_width_deg=2, eval_angle_deg=-10)
         f = transparent_const_bc(src)
         self.assertTrue(energy_decaying(f, x_start_m=20))
         self.assertTrue(np.linalg.norm(f.field[-1, :]) < 5e-11)
 
     def test_transparent_const_lower_cn(self):
         #logging.basicConfig(level=logging.DEBUG)
-        src = GaussSource(freq_hz=1, depth=150, beam_width=2, eval_angle=10)
+        src = GaussSource(freq_hz=1, depth_m=150, beam_width_deg=2, eval_angle_deg=10)
         f = transparent_const_bc_cn(src)
         self.assertTrue(energy_decaying(f, x_start_m=20))
         self.assertTrue(np.linalg.norm(f.field[-1, :]) < 1e-5)
 
     def test_transparent_const_upper_cn(self):
         #logging.basicConfig(level=logging.DEBUG)
-        src = GaussSource(freq_hz=1, depth=150, beam_width=2, eval_angle=-10)
+        src = GaussSource(freq_hz=1, depth_m=150, beam_width_deg=2, eval_angle_deg=-10)
         f = transparent_const_bc_cn(src)
         self.assertTrue(energy_decaying(f, x_start_m=20))
         self.assertTrue(np.linalg.norm(f.field[-1, :]) < 1e-5)
@@ -166,10 +166,10 @@ class HelmholtzPropagatorTest(unittest.TestCase):
                                    )
 
         wavelength = 0.1
-        src = GaussSource(freq_hz=1, depth=150, beam_width=15, eval_angle=0)
+        src = GaussSource(freq_hz=1, depth_m=150, beam_width_deg=15, eval_angle_deg=0)
         k0 = 2 * cm.pi / wavelength
         params = HelmholtzPropagatorComputationalParams(exp_pade_order=(7, 8),
-                                                        max_src_angle=src.max_angle(),
+                                                        max_src_angle=src.max_angle_deg(),
                                                         dz_wl=0.5,
                                                         dx_wl=50,
                                                         inv_z_transform_rtol=1e-11,

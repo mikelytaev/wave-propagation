@@ -38,7 +38,7 @@ class RAMMatlabPropagator:
 
         dim = 2
         frq = float(self.src.freq_hz)
-        zsrc = float(self.src.depth)
+        zsrc = float(self.src.depth_m)
         rg = matlab.double(self.comp_params.output_ranges.tolist())
         dr = float(self.comp_params.dr)
         if self.comp_params.zmax is None:
