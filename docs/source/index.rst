@@ -1,7 +1,10 @@
 Welcome to wave propagation framework's documentation!
 ======================================================
 
-Documentation is under construction.
+.. image:: logo.png
+  :width: 400
+  :alt: PyWaveProp logo
+
 
 .. toctree::
    :maxdepth: 2
