@@ -80,3 +80,13 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
         ax.grid()
         ax.set_xlim([self.field.x_grid[0]*self.x_mult, self.field.x_grid[-1]*self.x_mult])
         return fig
+
+    def sound_speed_profile(self, x=0):
+        fig = plt.figure(figsize=(3, 3.2))
+        ax = fig.add_subplot(1, 1, 1)
+        z_grid = self.field.z_grid[::-1]
+        ax.plot(self.env.sound_speed_profile_m_s(x, z_grid), z_grid)
+        fig.tight_layout()
+        ax.set_ylim([z_grid[0], z_grid[-1]])
+        ax.grid()
+        return fig
