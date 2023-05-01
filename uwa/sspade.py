@@ -39,8 +39,8 @@ class UnderwaterAcousticsSSPadePropagator:
         if self.comp_params.max_propagation_angle is None:
             self.comp_params.max_propagation_angle = self.src.max_angle_deg()
 
-        c_min = np.min(self.uwa_env.sound_speed_profile_m_s(0, np.linspace(0, self.uwa_env.bottom_profile.max_depth, 5000)))
-        c_max = np.max(self.uwa_env.sound_speed_profile_m_s(0, np.linspace(0, self.uwa_env.bottom_profile.max_depth, 5000)))
+        c_min = np.min(self.uwa_env.sound_speed_profile_m_s(0, np.linspace(0, self.uwa_env.bottom_profile.max_depth(), 5000)))
+        c_max = np.max(self.uwa_env.sound_speed_profile_m_s(0, np.linspace(0, self.uwa_env.bottom_profile.max_depth(), 5000)))
         dx, dz, c0, _ = get_optimal(
             freq_hz=src.freq_hz,
             x_max_m=max_range_m,
@@ -56,7 +56,7 @@ class UnderwaterAcousticsSSPadePropagator:
         self.comp_params.dz_wl = dz / wavelength
         self.comp_params.modify_grid = False
 
-        c0 = c0 or min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(0, self.uwa_env.bottom_profile.max_depth, 1)])
+        c0 = c0 or min([self.uwa_env.sound_speed_profile_m_s(0, z) for z in range(0, self.uwa_env.bottom_profile.max_depth(), 1)])
         self.k0 = 2*cm.pi*self.src.freq_hz / c0
         self.c0 = c0
 
@@ -65,7 +65,7 @@ class UnderwaterAcousticsSSPadePropagator:
         lower_bc = lower_bc or TransparentBC(m2_ground)
         self.helmholtz_env = HelmholtzEnvironment(x_max_m=max_range_m, lower_bc=lower_bc, upper_bc=RobinBC(q1=1, q2=0, q3=0))
         self.helmholtz_env.z_max = 0
-        self.helmholtz_env.z_min = -max_depth_m if max_depth_m else -(self.uwa_env.bottom_profile.max_depth + 300)
+        self.helmholtz_env.z_min = -max_depth_m if max_depth_m else -(self.uwa_env.bottom_profile.max_depth() + 300)
 
         eta = 1 / (40*cm.pi*cm.log10(cm.exp(1)))
         def n2minus1(x, z, freq_hz):
