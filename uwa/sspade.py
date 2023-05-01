@@ -6,6 +6,7 @@ from copy import deepcopy
 from uwa._optimization.utils import get_optimal
 
 
+@dataclass
 class UWASSpadeComputationalParams:
     max_range_m: float = None
     max_depth_m: float = None
@@ -20,7 +21,10 @@ def uwa_ss_pade(src: Source, env: UnderwaterEnvironment, params: UWASSpadeComput
         src=src,
         env=env,
         max_range_m=params.max_range_m,
-        max_depth_m=params.max_depth_m
+        max_depth_m=params.max_depth_m,
+        comp_params=HelmholtzPropagatorComputationalParams(
+            exp_pade_order=params.rational_approx_order
+        )
     )
     return propagator.calculate()
 

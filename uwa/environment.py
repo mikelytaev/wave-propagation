@@ -1,4 +1,6 @@
 from scipy.interpolate import interp1d
+from dataclasses import dataclass
+import numpy as np
 
 
 class Bathymetry:
@@ -22,12 +24,14 @@ class Bathymetry:
         return self._depth_m
 
 
+@dataclass
 class UnderwaterEnvironment:
+    bottom_sound_speed_m_s: float = 1500
+    sound_speed_profile_m_s: "function" = lambda x, z: 1500 + z*0
+    bottom_profile: Bathymetry = Bathymetry(ranges_m=[0], depths_m=[300])
+    bottom_density_g_cm: float = 1
+    bottom_attenuation_dm_lambda: float = 0.0
 
-    def __init__(self):
-        self.c0 = 1500
-        self.sound_speed_profile_m_s = lambda x, z: self.c0
-        self.bottom_profile = Bathymetry(ranges_m=[0], depths_m=[300])
-        self.bottom_sound_speed_m_s = self.c0
-        self.bottom_density_g_cm = 1
-        self.bottom_attenuation_dm_lambda = 0.0
+def munk_profile(z_grid_m, ref_sound_speed=1500, ref_depth=1300, eps_=0.00737):
+    z_ = 2 * (z_grid_m - ref_depth) / ref_depth
+    return ref_sound_speed * (1 + eps_ * (z_ - 1 + np.exp(-z_)))

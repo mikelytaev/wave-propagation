@@ -1,5 +1,6 @@
 from propagators.vis import *
 from uwa.field import *
+from uwa.environment import *
 import cmath as cm
 
 
@@ -22,7 +23,7 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
         Default is dB (20log10|u|)
     """
 
-    def __init__(self, field: AcousticPressureField, label='', black_white=False, x_units='km', lang='en', f_units='db'):
+    def __init__(self, field: AcousticPressureField, env: UnderwaterEnvironment, label='', black_white=False, x_units='km', lang='en', f_units='db'):
         self.f_units = f_units
         if self.f_units.lower() == 'db':
             trans_func = lambda v: 20 * cm.log10(1e-16 + abs(v))
@@ -35,8 +36,9 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
             self.x_mult = 1e-3
         else:
             self.x_mult = 1
+        self.env = env
 
-    def plot2d(self, min_val, max_val):
+    def plot2d(self, min_val, max_val, grid=False, show_terrain=False):
         norm = Normalize(min_val, max_val)
         extent = [self.field.x_grid[0]*self.x_mult, self.field.x_grid[-1]*self.x_mult, self.field.z_grid[-1], self.field.z_grid[0]]
         fig = plt.figure(figsize=(6, 3.2))
@@ -49,6 +51,12 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
             elif self.x_units.lower() == 'm':
                 ax.set_xlabel('Range (m)')
             ax.set_ylabel('Depth (m)')
+        ax.grid(True)
+        if show_terrain:
+            terrain_grid = np.array([self.env.bottom_profile(v) for v in self.field.x_grid])
+            ax.plot(self.field.x_grid*self.x_mult, terrain_grid, 'k')
+            ax.fill_between(self.field.x_grid*self.x_mult, self.field.z_grid[-1], terrain_grid, color='black', alpha=0.3)
+
         fig.tight_layout()
         return fig
 
