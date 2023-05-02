@@ -271,7 +271,6 @@ class Impediment:
 class Troposphere:
 
     def __init__(self, flat=False):
-        self.z_max = 300
         self.M_profile = None
         self.terrain = Terrain()
         self.vegetation = []

@@ -17,10 +17,10 @@
 * Python wrappers for [PETOOL](https://www.sciencedirect.com/science/article/pii/S0010465511002669) and [RAM](http://staff.washington.edu/dushaw/AcousticsCode/RamMatlabCode.html)
 * Greene and Claerbout approximations with linear shift map method ([link](https://ieeexplore.ieee.org/abstract/document/8023886))
 
-# Acknowledgements
+## Acknowledgements
 
 The library is supported by the Russian Science Foundation grant number [21-71-00039](https://rscf.ru/en/project/21-71-00039/).
 
-# Contacts
+## Contacts
 
 You are welcome to contact [Dr. Mikhail S. Lytaev](https://github.com/mikelytaev) with any questions, problems or proposals regarding the PyWaveProp.

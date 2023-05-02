@@ -15,7 +15,7 @@ if USE_CYTHON:
     extensions = cythonize(extensions, language_level="3")
 
 setup(
-    name='wpf',
+    name='PyWaveProp',
     version='1.0.0',
     url='https://github.com/mikelytaev/wave-propagation',
     license='MIT',

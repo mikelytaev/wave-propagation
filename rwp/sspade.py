@@ -6,6 +6,29 @@ from copy import deepcopy
 import logging
 
 
+@dataclass
+class RWPSSpadeComputationalParams:
+    max_range_m: float = None
+    max_height_m: float = None
+    k0: float = None,
+    rational_approx_order = (7, 8)
+    dx_m: float = None
+    dz_m: float = None
+
+
+def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> Field:
+    propagator = TroposphericRadioWaveSSPadePropagator(
+        antenna=antenna,
+        env=env,
+        max_range_m=params.max_range_m,
+        comp_params=HelmholtzPropagatorComputationalParams(
+            exp_pade_order=params.rational_approx_order,
+            max_height_m=params.max_height_m
+        )
+    )
+    return propagator.calculate()
+
+
 class TroposphericRadioWaveSSPadePropagator:
 
     def __init__(self, *, antenna: Source, env: Troposphere, max_range_m: float,
@@ -63,11 +86,11 @@ class TroposphericRadioWaveSSPadePropagator:
             rho = lambda x, z: z*0+1
 
         if self.env.is_flat:
-            upper_bc = TransparentBC(self.env.n2m1_profile(0, self.env.z_max, self.src.freq_hz) + 1)
+            upper_bc = TransparentBC(self.env.n2m1_profile(0, self.comp_params.max_height_m, self.src.freq_hz) + 1)
         else:
-            gamma = self.env.n2m1_profile(0, self.env.z_max + 1, self.src.freq_hz) - self.env.n2m1_profile(0, self.env.z_max,
+            gamma = self.env.n2m1_profile(0, self.comp_params.max_height_m + 1, self.src.freq_hz) - self.env.n2m1_profile(0, self.comp_params.max_height_m,
                                                                                                self.src.freq_hz)
-            beta = self.env.n2m1_profile(0, self.env.z_max, self.src.freq_hz) + 1
+            beta = self.env.n2m1_profile(0, self.comp_params.max_height_m, self.src.freq_hz) + 1
             upper_bc = TransparentBC(beta, gamma)
 
         if self.comp_params.terrain_method == TerrainMethod.pass_through:
@@ -102,7 +125,6 @@ class TroposphericRadioWaveSSPadePropagator:
                                              lower_bc=lower_bc,
                                              upper_bc=upper_bc,
                                              z_min=0,
-                                             z_max=env.z_max,
                                              n2minus1=n2m1,
                                              use_n2minus1=not self.env.is_homogeneous(),
                                              rho=rho,

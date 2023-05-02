@@ -23,7 +23,7 @@ class FieldVisualiser:
         {'color': 'black'}
     )
 
-    def __init__(self, field: Field, env: Troposphere, trans_func=lambda v: v, label='', x_mult=1.0, bw=False):
+    def __init__(self, field: Field, env: Troposphere, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)), label='', x_mult=1.0, bw=False):
         trans_func = np.vectorize(trans_func)
         self.field = trans_func(field.field).real
         self.x_grid, self.z_grid = field.x_grid, field.z_grid
