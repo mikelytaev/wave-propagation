@@ -1,33 +1,26 @@
 ![](docs/logo.png)
 
-# Wave propagation framework for Python 3
-    
-## Details
+# PyWaveProp: wave propagation framework for Python 3
 
-The following methods are implemented:
+## Key features
 
-### Padé approximations for 2D Helmholtz equation with transparent nonlocal boundary conditions
+* Modelling the radio wave propagation over irregular terrain, tropospheric duct and vegetation ([link](https://doi.org/10.1109/RTUWO.2018.8587886))
+* Diffraction over the Earth's surface ([link](https://ieeexplore.ieee.org/abstract/document/8409980))
+* Transparent boundaries modelling via the discrete nonlocal boundary conditions ([link](https://ieeexplore.ieee.org/abstract/document/8409980))
+* Arbitrary operational frequency and transmitting antenna patterns ([link](https://doi.org/10.1109/ICUMT.2018.8631206))
+* Automatic mesh generation and artificial parameters selection: no expert required ([link1](https://doi.org/10.3390/jmse11030496), [link2](https://doi.org/10.1007/978-3-030-58799-4_22))
+* Higher-order [discrete](https://doi.org/10.1007/978-3-031-10522-7_3) and semi-discrete propagator approximations: Padé approximation, [rational interpolation](https://doi.org/10.1016/j.jocs.2021.101536), [Numerov scheme](https://doi.org/10.1109/LAWP.2020.3026626), [differential evolution method](https://doi.org/10.1007/978-3-031-08751-6_15)
+* Discrete dispersion relation analysis
+* Underwater acoustics: sound propagation over inhomogeneous sound speed profile and irregular bottom ([link](https://doi.org/10.3390/jmse11030496))
+* Multiple knife-edge diffraction problem solver ([link](https://doi.org/10.1109/TAP.2019.2957085))
+* Wavenumber integration method
+* Python wrappers for [PETOOL](https://www.sciencedirect.com/science/article/pii/S0010465511002669) and [RAM](http://staff.washington.edu/dushaw/AcousticsCode/RamMatlabCode.html)
+* Greene and Claerbout approximations with linear shift map method ([link](https://ieeexplore.ieee.org/abstract/document/8023886))
 
-* [Lytaev M. S. Nonlocal Boundary Conditions for Split-Step Padé Approximations of the Helmholtz Equation With Modified Refractive Index
-//IEEE Antennas and Wireless Propagation Letters. – 2018. – Vol. 17. – N. 8. – pp. 1561-1565.](https://ieeexplore.ieee.org/document/8409980)
+# Acknowledgements
 
-* [Лытаев М. С. Численный метод расчета тропосферного распространения электромагнитных волн в задачах построения геоинформационных систем
-дистанционного мониторинга //Труды СПИИРАН. – 2018. – Т. 1. – №. 56. – С. 195-213.](http://www.mathnet.ru/php/archive.phtml?wshow=paper&jrnid=trspy&paperid=993&option_lang=rus)
+The library is supported by the Russian Science Foundation grant number [21-71-00039](https://rscf.ru/en/project/21-71-00039/).
 
-### Scattering and diffraction on thin bodies
+# Contacts
 
-* [Vavilov S. A., Lytaev M. S. Modeling Equation for Multiple Knife-Edge Diffraction 
-//IEEE Transactions on Antennas and Propagation. – 2020. – Vol. 68. – Iss. 5. – pp. 3869-3877.](https://doi.org/10.1109/TAP.2019.2957085)
-
-* [Vavilov S. A., Lytaev M. S. Modelling Equation of Electromagnetic Scattering on Thin Dielectric Structures 
-//Journal of Mathematical Sciences. – 2019. – Vol. 238. – No. 5. – pp. 621-629.](https://link.springer.com/article/10.1007/s10958-019-04261-6)
-
-### Greene and Claerbout approximations with linear shift map method
-* [Guo Q., Zhou C., Long Y. Greene approximation wide-angle parabolic equation for radio propagation //IEEE Transactions on Antennas and Propagation. – 2017. – Т. 65. – №. 11. – pp. 6048-6056.](https://ieeexplore.ieee.org/abstract/document/8023886)
-
-### PETOOL
-Wrapper for [PETOOL](https://www.sciencedirect.com/science/article/pii/S0010465511002669) matlab program.
-
-### 3D Split-step Fourier method
-
-
+You are welcome to contact [Dr. Mikhail S. Lytaev](https://github.com/mikelytaev) with any questions, problems or proposals regarding the PyWaveProp.
