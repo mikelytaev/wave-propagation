@@ -1,4 +1,4 @@
-Welcome to the PyWaveProp documentation!
+PyWaveProp
 ======================================================
 
 .. image:: logo.png
@@ -41,6 +41,11 @@ One can also get it from source
    $ git clone https://github.com/mikelytaev/wave-propagation.git
 
    $ python setup.py install
+
+
+Acknowledgements
+==================
+The library is supported by the Russian Science Foundation grant number `21-71-00039 <https://rscf.ru/en/project/21-71-00039/>`_.
 
 
 Indices and tables

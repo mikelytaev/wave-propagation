@@ -24,9 +24,9 @@ class GaussSource(Source):
         self.multiplier = multiplier;
 
     def aperture(self, k0, z, n2=1):
-        eval_angle_m = cm.asin(cm.sin(self.eval_angle_deg * cm.pi / 180) / (1 / n2))
+        eval_angle_deg = cm.asin(cm.sin(self.eval_angle_deg * cm.pi / 180) / (1 / n2))
         ww = cm.sqrt(2 * cm.log(2)) / (k0 * cm.sin(self.beam_width_deg * cm.pi / 180 / 2))
-        return 1 / (cm.sqrt(cm.pi) * ww) * np.exp(-1j * k0 * np.sin(eval_angle_m) * z) * \
+        return 1 / (cm.sqrt(cm.pi) * ww) * np.exp(-1j * k0 * np.sin(eval_angle_deg) * z) * \
         np.exp(-((z - self.depth_m) / ww) ** 2) * self.multiplier
 
     def max_angle_deg(self):
