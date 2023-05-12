@@ -30,18 +30,6 @@ Key features
 * Python wrappers for PETOOL and RAM
 * Greene and Claerbout approximations with linear shift map method
 
-Install rwp
-==================
-The easiest way to install rwp is by using pip. Current version of rwp can be installed from the Python Package Index (PyPI) by the following command
-
-   $ pip install wpf
-
-One can also get it from source
-
-   $ git clone https://github.com/mikelytaev/wave-propagation.git
-
-   $ python setup.py install
-
 
 Acknowledgements
 ==================
