@@ -86,6 +86,8 @@ class AcousticPressureFieldVisualiser2d(FieldVisualiser2d):
         ax = fig.add_subplot(1, 1, 1)
         z_grid = self.field.z_grid[::-1]
         ax.plot(self.env.sound_speed_profile_m_s(x, z_grid), z_grid)
+        ax.set_xlabel('Sound speed (m/s)')
+        ax.set_ylabel('Depth (m)')
         fig.tight_layout()
         ax.set_ylim([z_grid[0], z_grid[-1]])
         ax.grid()
