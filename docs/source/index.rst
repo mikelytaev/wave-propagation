@@ -21,7 +21,9 @@ Key features
 * Diffraction over the Earth's surface
 * Transparent boundaries modelling via the discrete nonlocal boundary conditions
 * Arbitrary operational frequency and transmitting antenna patterns
-* Automatic mesh generation and artificial parameters selection: no expert required
+* Automatic mesh generation
+* Automatic artificial parameters fitting: approximation method and order, propagation constant, nonlocal boundary condition parameters, backscattering parameters, maximum propagation angle
+* Arbitrary output result grid
 * Higher-order discrete and semi-discrete propagator approximations: Padé approximation, rational interpolation, Numerov scheme, differential evolution method
 * Discrete dispersion relation analysis
 * Underwater acoustics: sound propagation over inhomogeneous sound speed profile and irregular bottom
@@ -29,6 +31,7 @@ Key features
 * Wavenumber integration method
 * Python wrappers for PETOOL and RAM
 * Greene and Claerbout approximations with linear shift map method
+* Visualization of the wave fields
 
 
 Acknowledgements
