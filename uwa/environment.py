@@ -41,3 +41,10 @@ class UnderwaterEnvironment:
 def munk_profile(z_grid_m, ref_sound_speed=1500, ref_depth=1300, eps_=0.00737):
     z_ = 2 * (z_grid_m - ref_depth) / ref_depth
     return ref_sound_speed * (1 + eps_ * (z_ - 1 + np.exp(-z_)))
+
+
+def sound_speed_mps(z_m, temperature_deg_cent, salinity_ppt):
+    z = z_m
+    t = temperature_deg_cent
+    s = salinity_ppt
+    return 1449.2 + 4.6*t - 0.055*t**2 + 0.00029*t**3 + (1.34-0.01*t)*(s-35) + 0.016*t
