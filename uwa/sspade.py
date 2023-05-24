@@ -14,6 +14,7 @@ class UWASSpadeComputationalParams:
     rational_approx_order = (7, 8)
     dx_m: float = None
     dz_m: float = None
+    precision: float = 0.01
 
 
 def uwa_ss_pade(src: Source, env: UnderwaterEnvironment, params: UWASSpadeComputationalParams) -> AcousticPressureField:
@@ -23,7 +24,8 @@ def uwa_ss_pade(src: Source, env: UnderwaterEnvironment, params: UWASSpadeComput
         max_range_m=params.max_range_m,
         max_depth_m=params.max_depth_m,
         comp_params=HelmholtzPropagatorComputationalParams(
-            exp_pade_order=params.rational_approx_order
+            exp_pade_order=params.rational_approx_order,
+            grid_optimizator_abs_threshold=params.precision
         )
     )
     return propagator.calculate()
@@ -44,7 +46,7 @@ class UnderwaterAcousticsSSPadePropagator:
         dx, dz, c0, _ = get_optimal(
             freq_hz=src.freq_hz,
             x_max_m=max_range_m,
-            prec=1e-2,
+            prec=comp_params.grid_optimizator_abs_threshold,
             theta_max_degrees=self.comp_params.max_propagation_angle,
             pade_order=comp_params.exp_pade_order,
             z_order=4,
