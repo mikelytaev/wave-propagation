@@ -26,18 +26,18 @@ class Source:
 
 class GaussAntenna(Source):
 
-    def __init__(self, *, freq_hz=None, wavelength=None, height, beam_width, eval_angle, polarz):
+    def __init__(self, *, freq_hz=None, wavelength=None, height, beam_width, elevation_angle, polarz):
         super().__init__(height_m=height, freq_hz=freq_hz, wavelength=wavelength, polarz=polarz)
         self.beam_width = beam_width
-        self.eval_angle = eval_angle
+        self.elevation_angle = elevation_angle
         self._ww = cm.sqrt(2 * cm.log(2)) / (self.k0 * cm.sin(beam_width * cm.pi / 180 / 2))
 
     def _ufsp(self, z):
-        return 1 / (cm.sqrt(cm.pi) * self._ww) * np.exp(-1j * self.k0 * np.sin(self.eval_angle * cm.pi / 180) * z) * \
+        return 1 / (cm.sqrt(cm.pi) * self._ww) * np.exp(-1j * self.k0 * np.sin(self.elevation_angle * cm.pi / 180) * z) * \
                np.exp(-((z - self.height_m) / self._ww) ** 2)
 
     def _ufsn(self, z):
-        return 1 / (cm.sqrt(cm.pi) * self._ww) * np.exp(-1j * self.k0 * np.sin(self.eval_angle * cm.pi / 180) * (-z)) * \
+        return 1 / (cm.sqrt(cm.pi) * self._ww) * np.exp(-1j * self.k0 * np.sin(self.elevation_angle * cm.pi / 180) * (-z)) * \
                np.exp(-((-z - self.height_m) / self._ww) ** 2)
 
     def aperture(self, z_grid: np.ndarray):
@@ -47,7 +47,7 @@ class GaussAntenna(Source):
             return self._ufsp(z_grid) + self._ufsn(z_grid)
 
     def max_angle(self):
-        return self.beam_width + abs(self.eval_angle)
+        return self.beam_width + abs(self.elevation_angle)
 
 
 class GaussSource3D:

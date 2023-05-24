@@ -61,7 +61,7 @@ class PETOOLPropagator:
         path_loss, prop_fact, free_space_loss, range_vec, z_user, z, stopflag = \
             eng.SSPE_function(float(3 * 1e8 / self.wavelength * 1e-6),  # freq, MHz
                           float(src.beam_width),  # thetabw, degrees
-                          float(src.eval_angle),  # thetae, degrees
+                          float(src.elevation_angle),  # thetae, degrees
                           polarz_n,  # polrz (1=hor, 2=ver)
                           float(src.height_m),  # tx_height, m
                           float(self.dx * (n_x - 1) * 1e-3),  # range, km

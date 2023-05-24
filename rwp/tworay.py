@@ -13,7 +13,7 @@ class TwoRayModel:
 
         if isinstance(self.src, GaussAntenna):
             def fur_q_func(z_spectral_point):
-                z_spectral_point += self.src.k0 * cm.sin(self.src.eval_angle * cm.pi / 180)
+                z_spectral_point += self.src.k0 * cm.sin(self.src.elevation_angle * cm.pi / 180)
                 ww = cm.exp(-z_spectral_point**2 * cm.log(2) / (2 * self.k0**2 * cm.sin(self.src.beam_width * fm.pi / 180 / 2)**2))
                 return ww
         else:

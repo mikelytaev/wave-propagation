@@ -15,7 +15,7 @@ class TestSSPade(unittest.TestCase):
         environment.ground_material = PerfectlyElectricConducting()
         environment.z_max = 300
         max_range_m = 1000
-        antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, eval_angle=0, polarz='H')
+        antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, elevation_angle=0, polarz='H')
         propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m,
                                                            comp_params=HelmholtzPropagatorComputationalParams(z_order=4))
         sspade_field = propagator.calculate()
@@ -33,7 +33,7 @@ class TestSSPade(unittest.TestCase):
         environment.ground_material = PerfectlyElectricConducting()
         environment.z_max = 300
         max_range_m = 1000
-        antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, eval_angle=0, polarz='V')
+        antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, elevation_angle=0, polarz='V')
         propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range_m,
                                                            comp_params=HelmholtzPropagatorComputationalParams(z_order=4))
         sspade_field = propagator.calculate()
@@ -50,7 +50,7 @@ class TestSSPade(unittest.TestCase):
         environment = Troposphere()
         environment.ground_material = WetGround()
         environment.z_max = 300
-        antenna = GaussAntenna(wavelength=0.1, height=30, beam_width=2, eval_angle=0, polarz='H')
+        antenna = GaussAntenna(wavelength=0.1, height=30, beam_width=2, elevation_angle=0, polarz='H')
         max_range = 150e3
         propagator = TroposphericRadioWaveSSPadePropagator(antenna=antenna, env=environment, max_range_m=max_range)
         f = propagator.calculate()
@@ -67,7 +67,7 @@ class TestSSPade(unittest.TestCase):
         environment.z_max = 300
         environment.knife_edges = [KnifeEdge(range=200, height=50)]
         max_range_m = 300
-        antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, eval_angle=0, polarz='H')
+        antenna = GaussAntenna(wavelength=1, height=50, beam_width=15, elevation_angle=0, polarz='H')
         params = HelmholtzPropagatorComputationalParams(
             exp_pade_order=(10, 11),
             z_order=5,
@@ -102,7 +102,7 @@ class TestSSPade(unittest.TestCase):
             elevation=elevation_func,
             ground_material=VeryDryGround()
         )
-        ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=2, eval_angle=0, polarz='H')
+        ant = GaussAntenna(freq_hz=3000e6, height=30, beam_width=2, elevation_angle=0, polarz='H')
 
         computational_params_pt = HelmholtzPropagatorComputationalParams(terrain_method=TerrainMethod.pass_through,
                                                                          z_order=4)
