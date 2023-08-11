@@ -401,6 +401,12 @@ def pyramid2(x, angle, height, center):
         return 0
 
 
+def gauss_hill_func(height_m, length_m, x0_m):
+    w = length_m / 2
+    return lambda x: height_m / 2 * (1 + fm.cos(fm.pi * (x - x0_m) / w)) \
+        if -w <= x - x0_m <= w else 0
+
+
 def evaporation_duct(height, z_grid_m, m_0=320, z_0=1.5e4):
     z_grid_m = z_grid_m + 0.001
     return m_0 + 0.125*(z_grid_m - height*np.log10(z_grid_m / z_0))

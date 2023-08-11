@@ -125,6 +125,7 @@ class TroposphericRadioWaveSSPadePropagator:
                                              lower_bc=lower_bc,
                                              upper_bc=upper_bc,
                                              z_min=0,
+                                             z_max=comp_params.max_height_m,
                                              n2minus1=n2m1,
                                              use_n2minus1=not self.env.is_homogeneous(),
                                              rho=rho,

@@ -9,5 +9,6 @@ Radio wave propagation
 
    notebooks/std_atmosphere
    notebooks/elevated_duct
+   notebooks/irregular_terrain
    notebooks/brewster_angle
    notebooks/knife_edge_in_elevated_duct
