@@ -261,10 +261,10 @@ class KnifeEdge:
 
 class Impediment:
 
-    def __init__(self, *, x1, x2, height, material: Material):
-        self.x1 = x1
-        self.x2 = x2
-        self.height = height
+    def __init__(self, *, left_m, right_m, height_m, material: Material):
+        self.x1 = left_m
+        self.x2 = right_m
+        self.height = height_m
         self.material = material
 
 
