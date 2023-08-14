@@ -10,10 +10,11 @@ import logging
 class RWPSSpadeComputationalParams:
     max_range_m: float = None
     max_height_m: float = None
-    k0: float = None,
-    rational_approx_order = (7, 8)
+    k0: float = None
     dx_m: float = None
     dz_m: float = None
+    rational_approx_order = (7, 8)
+    precision: float = 0.01
 
 
 def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> Field:
