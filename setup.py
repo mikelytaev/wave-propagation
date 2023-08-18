@@ -15,7 +15,7 @@ if USE_CYTHON:
     extensions = cythonize(extensions, language_level="3")
 
 setup(
-    name='PyWaveProp',
+    name='pywaveprop',
     version='1.0.0',
     url='https://github.com/mikelytaev/wave-propagation',
     license='MIT',
@@ -37,5 +37,6 @@ setup(
     packages=['propagators', 'rwp', 'uwa', 'transforms', 'transforms.fcc_fourier'],
     package_data={
         '': ['*.pyx']
-    }
+    },
+    keywords=["wave propagation", "parabolic equation", "troposphere", "underwater acoustics", "diffraction", "refraction"]
 )
