@@ -409,3 +409,8 @@ def gauss_hill_func(height_m, length_m, x0_m):
 
 def evaporation_duct(height, z_grid_m, m_0=320, z_0=1.5e-4):
     return m_0 + 0.125*(z_grid_m - height*np.log(1 + z_grid_m / z_0))
+
+
+def surface_duct(height_m, z_grid_m, strength, m_0=320):
+    profile1d = interp1d(x=[0, height_m, 2*height_m], y=[m_0, m_0-strength, m_0-strength + height_m/EARTH_RADIUS*1E6], fill_value="extrapolate")
+    return profile1d(z_grid_m)
