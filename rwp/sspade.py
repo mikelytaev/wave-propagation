@@ -15,6 +15,7 @@ class RWPSSpadeComputationalParams:
     dz_m: float = None
     rational_approx_order = (7, 8)
     precision: float = 0.01
+    storage: HelmholtzPropagatorStorage = None
 
 
 def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> Field:
@@ -24,7 +25,8 @@ def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationa
         max_range_m=params.max_range_m,
         comp_params=HelmholtzPropagatorComputationalParams(
             exp_pade_order=params.rational_approx_order,
-            max_height_m=params.max_height_m
+            max_height_m=params.max_height_m,
+            storage=params.storage
         )
     )
     return propagator.calculate()
