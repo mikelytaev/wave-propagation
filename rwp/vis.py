@@ -61,6 +61,14 @@ class FieldVisualiser:
         plt.xlim([self.x_grid[0], self.x_grid[-1]])
         return plt
 
+    def plot_hors(self, *heights_m):
+        plt.figure(figsize=(6, 3.2))
+        for height in heights_m:
+            plt.plot(self.x_grid, self.field[:, abs(self.z_grid - height).argmin()], label=f'{height} (m)', **next(self.lines_iter))
+        plt.legend()
+        plt.xlim([self.x_grid[0], self.x_grid[-1]])
+        return plt
+
     def plot_hor_over_terrain(self, z0, *others):
         plt.figure(figsize=(6, 3.2))
         for a in (self,) + others:
