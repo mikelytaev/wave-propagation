@@ -23,7 +23,7 @@ class FieldVisualiser:
         {'color': 'black'}
     )
 
-    def __init__(self, field: Field, env: Troposphere, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)), label='', x_mult=1.0, bw=False):
+    def __init__(self, field: Field, env: Troposphere, trans_func=lambda v: 10 * cm.log10(1e-16 + abs(v)), label='', x_mult=1.0, bw=False, lang='en'):
         trans_func = np.vectorize(trans_func)
         self.field = trans_func(field.field).real
         self.x_grid, self.z_grid = field.x_grid, field.z_grid
@@ -33,6 +33,7 @@ class FieldVisualiser:
         self.label = label
         self.x_grid = self.x_grid * x_mult
         self.x_mult = x_mult
+        self.lang = lang
         if bw:
             self.lines_iter = cycle(self.bw_lines)
         else:
@@ -64,7 +65,11 @@ class FieldVisualiser:
     def plot_hors(self, *heights_m):
         plt.figure(figsize=(6, 3.2))
         for height in heights_m:
-            plt.plot(self.x_grid, self.field[:, abs(self.z_grid - height).argmin()], label=f'{height} (m)', **next(self.lines_iter))
+            if self.lang == 'ru':
+                label = f'{height} м'
+            else:
+                label = f'{height} (m)'
+            plt.plot(self.x_grid, self.field[:, abs(self.z_grid - height).argmin()], label=label, **next(self.lines_iter))
         plt.legend()
         plt.xlim([self.x_grid[0], self.x_grid[-1]])
         return plt
