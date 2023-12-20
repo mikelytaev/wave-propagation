@@ -23,6 +23,12 @@ class Field:
         else:
             self.field = np.zeros((x_grid.size, z_grid.size), dtype=complex)
 
+    def normalize(self):
+        if self.log10:
+            self.field -= np.max(self.field)
+        else:
+            self.field /= np.max(np.abs(self.field))
+
     def value(self, x, z):
         return self.field[abs(self.x_grid - x).argmin(), abs(self.z_grid - z).argmin()]
 
