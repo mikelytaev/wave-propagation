@@ -40,11 +40,11 @@ class FieldVisualiser:
             self.lines_iter = cycle(self.color_lines)
         self.env = env
 
-    def plot2d(self, min, max, show_terrain=False):
+    def plot2d(self, min, max, show_terrain=False, cmap='jet'):
         norm = Normalize(min, max)
         extent = [self.x_grid[0], self.x_grid[-1], self.z_grid[0], self.z_grid[-1]]
         plt.figure(figsize=(6, 3.2))
-        plt.imshow(self.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap('jet'))
+        plt.imshow(self.field.T[::-1, :], extent=extent, norm=norm, aspect='auto', cmap=plt.get_cmap(cmap))
         plt.colorbar(fraction=0.046, pad=0.04)
         if show_terrain:
             terrain_grid = np.array([self.env.terrain.elevation(v) for v in self.x_grid / self.x_mult])

@@ -8,6 +8,10 @@ from copy import deepcopy
 import logging
 
 
+class SSPadeZOrder(Enum):
+    second = 0,
+    fourth = 1,
+    joined = 2
 @dataclass
 class RWPSSpadeComputationalParams:
     max_range_m: float
@@ -18,9 +22,18 @@ class RWPSSpadeComputationalParams:
     rational_approx_order = (7, 8)
     precision: float = 0.01
     storage: Optional[HelmholtzPropagatorStorage] = None
+    dx_computational_grid_wl: Optional[float] = None
+    dz_computational_grid_wl: Optional[float] = None
+    z_order: SSPadeZOrder = SSPadeZOrder.fourth
 
 
 def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> Field:
+    if params.z_order == SSPadeZOrder.second:
+        z_order = 2
+    elif params.z_order == SSPadeZOrder.fourth:
+        z_order = 4
+    else:
+        z_order = 5
     propagator = TroposphericRadioWaveSSPadePropagator(
         antenna=antenna,
         env=env,
@@ -28,7 +41,10 @@ def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationa
         comp_params=HelmholtzPropagatorComputationalParams(
             exp_pade_order=params.rational_approx_order,
             max_height_m=params.max_height_m,
-            storage=params.storage
+            storage=params.storage,
+            dx_wl=params.dx_computational_grid_wl,
+            dz_wl=params.dz_computational_grid_wl,
+            z_order=z_order
         )
     )
     return propagator.calculate()
