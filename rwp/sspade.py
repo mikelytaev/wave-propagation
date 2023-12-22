@@ -12,6 +12,8 @@ class SSPadeZOrder(Enum):
     second = 0,
     fourth = 1,
     joined = 2
+
+
 @dataclass
 class RWPSSpadeComputationalParams:
     max_range_m: float
@@ -56,6 +58,7 @@ class TroposphericRadioWaveSSPadePropagator:
                  comp_params: HelmholtzPropagatorComputationalParams = None):
         self.src = deepcopy(antenna)
         self.env = deepcopy(env)
+        self.src.height_m += self.env.terrain.elevation(0)
         if comp_params:
             self.comp_params = deepcopy(comp_params)
         else:
