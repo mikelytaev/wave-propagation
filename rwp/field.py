@@ -25,9 +25,9 @@ class Field:
 
     def normalize(self):
         if self.log10:
-            self.field -= np.max(self.field)
+            self.field -= np.max(self.field[1::, :])
         else:
-            self.field /= np.max(np.abs(self.field))
+            self.field /= np.max(np.abs(self.field[1::, :]))
 
     def value(self, x, z):
         return self.field[abs(self.x_grid - x).argmin(), abs(self.z_grid - z).argmin()]

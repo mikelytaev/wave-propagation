@@ -27,6 +27,7 @@ class RWPSSpadeComputationalParams:
     dx_computational_grid_wl: Optional[float] = None
     dz_computational_grid_wl: Optional[float] = None
     z_order: SSPadeZOrder = SSPadeZOrder.fourth
+    max_propagation_angle_deg: Optional[float] = None
 
 
 def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> Field:
@@ -46,7 +47,8 @@ def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationa
             storage=params.storage,
             dx_wl=params.dx_computational_grid_wl,
             dz_wl=params.dz_computational_grid_wl,
-            z_order=z_order
+            z_order=z_order,
+            max_propagation_angle=params.max_propagation_angle_deg
         )
     )
     return propagator.calculate()
