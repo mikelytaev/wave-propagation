@@ -23,11 +23,11 @@ class Field:
         else:
             self.field = np.zeros((x_grid.size, z_grid.size), dtype=complex)
 
-    def normalize(self):
+    def normalize_loss(self):
         if self.log10:
-            self.field -= np.max(self.field[1::, :])
+            self.field -= np.min(self.field[1::, :])
         else:
-            self.field /= np.max(np.abs(self.field[1::, :]))
+            self.field /= np.min(np.abs(self.field[1::, :]))
 
     def value(self, x, z):
         return self.field[abs(self.x_grid - x).argmin(), abs(self.z_grid - z).argmin()]
@@ -44,6 +44,7 @@ class Field:
     def path_loss(self, gamma=0):
         res = deepcopy(self)
         wavelength = 3e8 / self.freq_hz
+        res.log10 = True
         res.field = -20*np.log10(abs(self.field + 2e-16)) + 20*np.log10(4*np.pi) + \
              10*np.tile(np.log10(self.x_grid+2e-16), (self.z_grid.shape[0], 1)).transpose() - 30*np.log10(wavelength) + \
                     gamma * np.tile(self.x_grid, (self.z_grid.shape[0], 1)).transpose() * 1e-3
