@@ -1,5 +1,6 @@
 import cmath as cm
 import math as fm
+from abc import ABC, abstractmethod
 from enum import Enum
 
 import numpy as np
@@ -421,3 +422,10 @@ def trilinear_duct(height1_m, height2_m, m_0, m_1, m_2, z_grid_m):
         x=[0, height1_m, height2_m, 2*height2_m],
         y=[m_0, m_1, m_2, m_2 + height2_m/EARTH_RADIUS*1E6], fill_value="extrapolate")
     return profile1d(z_grid_m)
+
+
+class RandomProfile(ABC):
+
+    @abstractmethod
+    def get_instance(self):
+        pass

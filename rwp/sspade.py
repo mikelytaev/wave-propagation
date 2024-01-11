@@ -37,6 +37,11 @@ def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationa
         z_order = 4
     else:
         z_order = 5
+
+    if isinstance(env.M_profile, RandomProfile):
+        env = deepcopy(env)
+        env.M_profile = env.M_profile.get_instance()
+
     propagator = TroposphericRadioWaveSSPadePropagator(
         antenna=antenna,
         env=env,
