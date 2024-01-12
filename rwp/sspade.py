@@ -2,7 +2,7 @@ from typing import Optional
 
 from rwp.antennas import *
 from rwp.environment import *
-from rwp.field import Field
+from rwp.field import Field, RandomField
 from propagators.sspade import *
 from copy import deepcopy
 import logging
@@ -28,6 +28,7 @@ class RWPSSpadeComputationalParams:
     dz_computational_grid_wl: Optional[float] = None
     z_order: SSPadeZOrder = SSPadeZOrder.fourth
     max_propagation_angle_deg: Optional[float] = None
+    max_monte_carlo_iterations: Optional[int] = None
 
 
 def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> Field:
@@ -40,7 +41,7 @@ def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationa
 
     if isinstance(env.M_profile, RandomProfile):
         env = deepcopy(env)
-        env.M_profile = env.M_profile.get_instance()
+        env.M_profile = env.M_profile.get_mean()
 
     propagator = TroposphericRadioWaveSSPadePropagator(
         antenna=antenna,
@@ -57,6 +58,22 @@ def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationa
         )
     )
     return propagator.calculate()
+
+
+def rwp_ss_pade_r(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> RandomField:
+    random_field = RandomField()
+    iterations_num = params.max_monte_carlo_iterations or 10
+    for i in range(0, iterations_num):
+        logging.info(f'Monte carlo simulation: {i / iterations_num * 100}%')
+        if isinstance(env.M_profile, RandomProfile):
+            env_copy = deepcopy(env)
+            env_copy.M_profile = env.M_profile.get_sample()
+        else:
+            env_copy = env
+        random_field.add_sample(rwp_ss_pade(antenna=antenna, env=env_copy, params=params))
+        if i == iterations_num - 1:
+            logging.info(f'Monte carlo simulation: {100}%')
+    return random_field
 
 
 class TroposphericRadioWaveSSPadePropagator:

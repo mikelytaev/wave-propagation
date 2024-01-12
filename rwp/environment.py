@@ -7,6 +7,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from operator import itemgetter
 
+from scipy.stats._distn_infrastructure import rv_frozen
+
 EARTH_RADIUS = 6371000
 
 VACUUM_PERMITTIVITY = 8.854187817e-12
@@ -427,5 +429,68 @@ def trilinear_duct(height1_m, height2_m, m_0, m_1, m_2, z_grid_m):
 class RandomProfile(ABC):
 
     @abstractmethod
-    def get_instance(self):
+    def get_sample(self):
         pass
+
+    def get_mean(self):
+        pass
+
+
+class RandomSurfaceDuct(RandomProfile):
+
+    def __init__(self, height: rv_frozen, m0: rv_frozen, m1: rv_frozen, slope: rv_frozen):
+        self.height = height
+        self.m0 = m0
+        self.m1 = m1
+        self.slope = slope
+
+    def get_sample(self):
+        height_s = self.height.rvs()
+        m0 = self.m0.rvs()
+        m1 = self.m1.rvs()
+        slope = self.slope.rvs()
+
+        profile1d = interp1d(x=[0, height_s, 2 * height_s], y=[m0, m1, m1 + height_s * slope], fill_value="extrapolate")
+        return lambda _, z: profile1d(z)
+
+    def get_mean(self):
+        height_s = self.height.mean()
+        m0 = self.m0.mean()
+        m1 = self.m1.mean()
+        slope = self.slope.mean()
+
+        profile1d = interp1d(x=[0, height_s, 2 * height_s], y=[m0, m1, m1 + height_s * slope], fill_value="extrapolate")
+        return lambda _, z: profile1d(z)
+
+
+class RandomTrilinearDuct(RandomProfile):
+
+    def __init__(self, m0: rv_frozen, z1: rv_frozen, m1: rv_frozen, z2: rv_frozen, m2: rv_frozen, slope: rv_frozen):
+        self.z1 = z1
+        self.z2 = z2
+        self.m0 = m0
+        self.m1 = m1
+        self.m2 = m2
+        self.slope = slope
+
+    def get_sample(self):
+        z1 = self.z1.rvs()
+        z2 = self.z2.rvs()
+        m0 = self.m0.rvs()
+        m1 = self.m1.rvs()
+        m2 = self.m2.rvs()
+        slope = self.slope.rvs()
+
+        profile1d = interp1d(x=[0, z1, z2, 2*z2], y=[m0, m1, m2, m2 + z2 * slope], fill_value="extrapolate")
+        return lambda _, z: profile1d(z)
+
+    def get_mean(self):
+        z1 = self.z1.mean()
+        z2 = self.z2.mean()
+        m0 = self.m0.mean()
+        m1 = self.m1.mean()
+        m2 = self.m2.mean()
+        slope = self.slope.mean()
+
+        profile1d = interp1d(x=[0, z1, z2, 2*z2], y=[m0, m1, m2, m2 + z2 * slope], fill_value="extrapolate")
+        return lambda _, z: profile1d(z)
