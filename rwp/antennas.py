@@ -24,6 +24,13 @@ class Source:
         pass
 
 
+class PointSource(Source):
+
+    def __init__(self, height_m: float, freq_hz: float, value: complex = 1, polarz='H'):
+        super().__init__(height_m=height_m, freq_hz=freq_hz, polarz=polarz)
+        self.value = value
+
+
 class GaussAntenna(Source):
 
     def __init__(self, *, freq_hz=None, wavelength=None, height, beam_width, elevation_angle, polarz):

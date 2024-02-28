@@ -7,8 +7,8 @@ import math as fm
 
 class KnifeEdgeDiffractionCalculator:
 
-    def __init__(self, src: Source, env: Troposphere, max_range_m, min_range_m=0, dx_m=1, max_propagation_angle=90, x_grid_m=None,
-                 z_grid_m=None, p_grid_size=None):
+    def __init__(self, src: Source, env: Troposphere, max_range_m, min_range_m=0, dx_m=1, max_propagation_angle=90,
+                 x_grid_m=None, z_grid_m=None, p_grid_size=None):
         if not env.is_homogeneous():
             raise Exception("Tropospheric refraction not yet supported")
         if src.polarz.upper() == 'V' and len(env.knife_edges) > 0:
@@ -16,7 +16,7 @@ class KnifeEdgeDiffractionCalculator:
 
         max_height_m = env.z_max
         max_p_k0 = fm.sin(max_propagation_angle / 180 * cm.pi)
-        p_grid_size = p_grid_size or fm.ceil(max(min_range_m, max_range_m) * 3.5 / src.wavelength * max_p_k0) # empirical
+        p_grid_size = p_grid_size or fm.ceil(max(abs(min_range_m), abs(max_range_m)) * 3.5 / src.wavelength * max_p_k0) # empirical
         self.src = src
         width = 4e-5
         eps_r = 1e7
@@ -42,10 +42,19 @@ class KnifeEdgeDiffractionCalculator:
                     q = -4 * src.k0 * np.cos(z_spectral_points * src.height_m) * np.exp(
                         -(z_spectral_points * ww) ** 2 / 4) / cm.sqrt(2 * cm.pi)
                 return q
+        elif isinstance(src, PointSource):
+            def fur_q_func(z_spectral_points):
+                return (1 / cm.sqrt(2*cm.pi) *
+                        (np.exp(-1j * src.height_m * z_spectral_points) +
+                         polarz_sign * np.exp(1j * src.height_m * z_spectral_points))) * src.value
         else:
             def fur_q_func(z_spectral_points):
-                return 1 / cm.sqrt(2*cm.pi) * (np.exp(-1j * src.height_m * z_spectral_points) + polarz_sign * np.exp(1j * src.height_m * z_spectral_points))
-        self.ts = ThinScattering(wavelength=src.wavelength, fur_q_func=fur_q_func, bodies=bodies, params=params, save_debug=False)
+                return (1 / cm.sqrt(2*cm.pi) *
+                        (np.exp(-1j * src.height_m * z_spectral_points) +
+                         polarz_sign * np.exp(1j * src.height_m * z_spectral_points)))
+
+        self.ts = ThinScattering(wavelength=src.wavelength, fur_q_func=fur_q_func, bodies=bodies, params=params,
+                                 save_debug=False)
 
     def calculate(self):
         f = self.ts.calculate()
