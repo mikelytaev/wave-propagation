@@ -55,6 +55,10 @@ class Field:
 
         return res
 
+    def argmax(self) -> "(x,z)":
+        x_i, z_i = np.unravel_index(np.argmax(self.field), self.field.shape)
+        return self.x_grid[x_i], self.z_grid[z_i]
+
 
 class RandomField:
 
