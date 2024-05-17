@@ -1,4 +1,6 @@
 import cmath as cm
+from typing import List
+
 import numpy as np
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
@@ -22,6 +24,13 @@ class Source:
 
     def aperture(self, z_grid: np.ndarray):
         pass
+
+
+class VerticalArray(Source):
+
+    def __init__(self, heights_m: List[float], freq_hz=None, wavelength=None, polarz='H'):
+        super().__init__(0, freq_hz, wavelength, polarz)
+        self.heights_m = heights_m
 
 
 class PointSource(Source):

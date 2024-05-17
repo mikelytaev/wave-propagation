@@ -8,7 +8,7 @@ import math as fm
 
 class Field:
     def __init__(self, x_grid, z_grid, freq_hz, prop_factor=None):
-        self.x_grid, self.z_grid = x_grid, z_grid
+        self.x_grid, self.z_grid = deepcopy(x_grid), deepcopy(z_grid)
         self.freq_hz = freq_hz
         self.wavelength = 3e8 / self.freq_hz
         self.precision = 1e-10

@@ -52,6 +52,6 @@ def mv_mfp(measures: List[Measure], fields: List[np.ndarray]) -> np.ndarray:
             w = np.array([f[ind_i, ind_j] for f in fields]) / normalizer[ind_i, ind_j]
             w = w.reshape(len(w), 1)
             t = np.matmul(np.matmul(w.reshape(1, len(w)).conj(), k_inv), w)
-            res[ind_i, ind_j] = (1 / t) / (1 / np.matmul(w.reshape(1, len(w)).conj(), w))
+            res[ind_i, ind_j] = (1 / t)
 
     return res

@@ -1,3 +1,4 @@
+from propagators.utils import is_list
 from rwp.antennas import *
 from rwp.environment import *
 from propagators.ts import *
@@ -42,11 +43,13 @@ class KnifeEdgeDiffractionCalculator:
                     q = -4 * src.k0 * np.cos(z_spectral_points * src.height_m) * np.exp(
                         -(z_spectral_points * ww) ** 2 / 4) / cm.sqrt(2 * cm.pi)
                 return q
-        elif isinstance(src, PointSource):
-            def fur_q_func(z_spectral_points):
-                return (1 / cm.sqrt(2*cm.pi) *
-                        (np.exp(-1j * src.height_m * z_spectral_points) +
-                         polarz_sign * np.exp(1j * src.height_m * z_spectral_points))) * src.value
+        elif isinstance(src, VerticalArray):
+            fur_q_func = [
+                lambda z_spectral_points: (1 / cm.sqrt(2 * cm.pi) *
+                        (np.exp(-1j * height * z_spectral_points) +
+                         polarz_sign * np.exp(1j * height * z_spectral_points)))
+                for height in src.heights_m
+            ]
         else:
             def fur_q_func(z_spectral_points):
                 return (1 / cm.sqrt(2*cm.pi) *
@@ -59,6 +62,15 @@ class KnifeEdgeDiffractionCalculator:
     def calculate(self):
         f = self.ts.calculate()
         z_ind = self.ts.z_computational_grid >= 0
-        field = Field(x_grid=self.ts.x_computational_grid, z_grid=self.ts.z_computational_grid[z_ind], freq_hz=300e6)
-        field.field[:, :] = f[:, z_ind]
-        return field
+        if self.ts.rhs_num() == 1:
+            field = Field(x_grid=self.ts.x_computational_grid, z_grid=self.ts.z_computational_grid[z_ind], freq_hz=300e6)
+            field.field[:, :] = f[:, z_ind]
+            return field
+        else:
+            fields = []
+            for src_i in range(self.ts.rhs_num()):
+                field = Field(x_grid=self.ts.x_computational_grid, z_grid=self.ts.z_computational_grid[z_ind],
+                              freq_hz=300e6)
+                field.field[:, :] = f[src_i][:, z_ind]
+                fields += [field]
+            return fields
