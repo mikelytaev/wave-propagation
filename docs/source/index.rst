@@ -36,7 +36,8 @@ Key features
 
 Acknowledgements
 ==================
-The library is supported by the Russian Science Foundation grant number `21-71-00039 <https://rscf.ru/en/project/21-71-00039/>`_.
+The library is supported by the Russian Science Foundation grants `21-71-00039 <https://rscf.ru/en/project/21-71-00039/>`_ and
+`23-71-01069 <https://rscf.ru/en/project/23-71-01069/>`_.
 
 
 Indices and tables

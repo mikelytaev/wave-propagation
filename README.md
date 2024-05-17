@@ -22,7 +22,8 @@
 
 ## Acknowledgements
 
-The library is supported by the Russian Science Foundation grant number [21-71-00039](https://rscf.ru/en/project/21-71-00039/).
+The library is supported by the Russian Science Foundation grants [21-71-00039](https://rscf.ru/en/project/21-71-00039/)
+and [23-71-01069](https://rscf.ru/en/project/23-71-01069/).
 
 ## Contacts
 
