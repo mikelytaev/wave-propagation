@@ -21,7 +21,7 @@ def pade_sqrt(z, a_n, b_n, alpha=0):
     return cm.exp(1j*alpha/2) * (1 + sum([a * ((1 + z) * cm.exp(-1j*alpha) - 1) / (1 + b * ((1 + z) * cm.exp(-1j*alpha) - 1)) for (a, b) in zip(a_n, b_n)]))
 
 
-def pade_propagator_coefs(*, pade_order, diff2, k0, dx, spe=False, alpha=0, a0=0.0):
+def pade_propagator_coefs(*, pade_order, diff2=lambda x: x, k0, dx, spe=False, alpha=0, a0=0.0):
     """
     Pade approximation of the exponential propagator of the form \prod_{l=1}^{p}\frac{1+a_{l}L}{1+b_{l}L}
     :param pade_order: order of Pade approximation, tuple, for ex (7, 8)
