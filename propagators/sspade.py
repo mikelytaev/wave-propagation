@@ -214,8 +214,8 @@ class HelmholtzPadeSolver:
 
         if self.params.exp_pade_coefs is None:
             self.params.exp_pade_coefs, self.params.exp_pade_a0_coef = pade_propagator_coefs(pade_order=self.params.exp_pade_order, diff2=diff2,
-                                                               k0=self.k0, dx=self.dx_m, spe=self.params.standard_pe,
-                                                               alpha=self.params.sqrt_alpha)
+                                                                                             beta=self.k0, dx=self.dx_m, spe=self.params.standard_pe,
+                                                                                             alpha_deg=self.params.sqrt_alpha)
 
         self.lower_bc = None
         self.upper_bc = None

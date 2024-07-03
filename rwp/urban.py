@@ -99,7 +99,7 @@ class FDUrbanPropagator:
             self.abs_mult = np.ones((self.n_y, self.n_z))
 
         self.pade_coefs = pade_propagator_coefs(pade_order=self.comp_params.pade_order, diff2=lambda s: s,
-                                                k0=self.k0, dx=self.dx, spe=self.comp_params.spe)
+                                                beta=self.k0, dx=self.dx, spe=self.comp_params.spe)
 
         self.matrix_z = 1 / (self.k0 * self.dz) ** 2 * (
                 np.diag(np.ones(self.n_z - 1), -1) - 2 * np.diag(np.ones(self.n_z)) + np.diag(np.ones(self.n_z - 1), 1))

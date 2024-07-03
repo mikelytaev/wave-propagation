@@ -52,7 +52,7 @@ def precision_step(k0, xi_bounds, k_z_max, dxs_m: np.array, dzs_wl: np.array, pa
     res = np.zeros((len(dxs_m), len(dzs_wl)))
     xi_grid = np.linspace(xi_bounds[0], xi_bounds[1], 100)
     for dx_i, dx_m in enumerate(dxs_m):
-        coefs, c0 = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_m, a0=((xi_bounds[0]+xi_bounds[1])/2 if shift_pade else 0))
+        coefs, c0 = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, beta=k0, dx=dx_m, a0=((xi_bounds[0] + xi_bounds[1]) / 2 if shift_pade else 0))
         pade_coefs_num = np.array([a[0] for a in coefs])
         pade_coefs_den = np.array([a[1] for a in coefs])
         for dz_i, dz_m in enumerate(dzs_wl):

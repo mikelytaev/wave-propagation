@@ -30,6 +30,7 @@ def uwa_ss_pade(src: Source, env: UnderwaterEnvironment, params: UWASSpadeComput
     )
     return propagator.calculate()
 
+
 class UnderwaterAcousticsSSPadePropagator:
 
     def __init__(self, src: Source, env: UnderwaterEnvironment, max_range_m,

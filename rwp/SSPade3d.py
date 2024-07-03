@@ -79,7 +79,7 @@ class Pade3dPropagator:
             self.abs_mult = np.ones((self.n_y, self.n_z))
 
         self.pade_coefs = pade_propagator_coefs(pade_order=self.comp_params.pade_order, diff2=lambda s: s,
-                                                k0=self.k0, dx=self.dx, spe=self.comp_params.spe)
+                                                beta=self.k0, dx=self.dx, spe=self.comp_params.spe)
 
     def _ADI_2d_propagate(self, a, b, het, phi, y_left_bound, y_right_bound, z_left_bound, z_right_bound, iter_num=1):
         dz_2 = 1 / (self.k0 * self.dz) ** 2 * \

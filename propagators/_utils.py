@@ -21,15 +21,15 @@ def pade_sqrt(z, a_n, b_n, alpha=0):
     return cm.exp(1j*alpha/2) * (1 + sum([a * ((1 + z) * cm.exp(-1j*alpha) - 1) / (1 + b * ((1 + z) * cm.exp(-1j*alpha) - 1)) for (a, b) in zip(a_n, b_n)]))
 
 
-def pade_propagator_coefs(*, pade_order, diff2=lambda x: x, k0, dx, spe=False, alpha=0, a0=0.0):
+def pade_propagator_coefs(*, pade_order, diff2=lambda x: x, beta, dx, spe=False, alpha_deg=0, a0=0.0):
     """
     Pade approximation of the exponential propagator of the form \prod_{l=1}^{p}\frac{1+a_{l}L}{1+b_{l}L}
     :param pade_order: order of Pade approximation, tuple, for ex (7, 8)
     :param diff2:
-    :param k0: wavenumber
+    :param beta: propagation constant
     :param dx: longitudinal grid step (m)
     :param spe: use standard narrow angle parabolic equation (Schröder's equation)
-    :param alpha: rotation angle, see F. A. Milinazzo et. al. Rational square-root approximations for parabolic equation algorithms. 1997. Acoustical Society of America.
+    :param alpha_deg: rotation angle, see F. A. Milinazzo et. al. Rational square-root approximations for parabolic equation algorithms. 1997. Acoustical Society of America.
     :return: [(a_1, b_1), (a_2, b_2),...(a_p, b_p)], if pade_order[0]!=pade_order[1] extra coefs. are filled with 0
     """
 
@@ -37,17 +37,17 @@ def pade_propagator_coefs(*, pade_order, diff2=lambda x: x, k0, dx, spe=False, a
     if spe:
         def sqrt_1plus(x):
             return 1 + x / 2
-    elif alpha == 0:
+    elif alpha_deg == 0:
         def sqrt_1plus(x):
             return mpmath.mp.sqrt(1 + x)
     else:
         a_n, b_n = pade_sqrt_coefs(pade_order[1])
 
         def sqrt_1plus(x):
-            return pade_sqrt(x, a_n, b_n, alpha)
+            return pade_sqrt(x, a_n, b_n, alpha_deg)
 
     def propagator_func(s):
-        return mpmath.mp.exp(1j * k0 * dx * (sqrt_1plus(diff2(s)) - 1))
+        return mpmath.mp.exp(1j * beta * dx * (sqrt_1plus(diff2(s)) - 1))
 
     t = mpmath.taylor(propagator_func, a0, pade_order[0] + pade_order[1] + 2)
     p, q = mpmath.pade(t, pade_order[0], pade_order[1])
@@ -149,12 +149,12 @@ def optimal_params_m(max_angle_deg, max_distance_wl, threshold, dx_wl=None, dz_w
         for dx_wl in dxs:
             updated = False
             if z_order <= 4:
-                coefs, c0 = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, k0=k0, dx=dx_wl, spe=False)
+                coefs, c0 = pade_propagator_coefs(pade_order=pade_order, diff2=lambda x: x, beta=k0, dx=dx_wl, spe=False)
             for dz_wl in dzs:
                 if z_order > 4:
                     coefs, c0 = pade_propagator_coefs(pade_order=pade_order,
-                                                  diff2=lambda s: mpmath.acosh(1 + (k0 * dz_wl) ** 2 * s / 2) ** 2 / (k0 * dz_wl) ** 2,
-                                                  k0=k0, dx=dx_wl, spe=False)
+                                                      diff2=lambda s: mpmath.acosh(1 + (k0 * dz_wl) ** 2 * s / 2) ** 2 / (k0 * dz_wl) ** 2,
+                                                      beta=k0, dx=dx_wl, spe=False)
 
                 errors = []
                 for al in np.linspace(0, max_angle_deg, 20):
@@ -317,16 +317,16 @@ def d_k_x(*, k_z, dx, dz, pade_order, z_order, alpha=0):
         diff2 = lambda s: s
 
     if hasattr(k_z, "__len__") and not hasattr(dx, "__len__") and not hasattr(dz, "__len__"):
-        coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx, alpha=alpha)
+        coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, beta=k0, dx=dx, alpha_deg=alpha)
         return np.array([discrete_k_x(k=k0, dx=dx, dz=dz, pade_coefs=coefs, kz=kz, order=z_order) for kz in k_z])
 
     if not hasattr(k_z, "__len__") and hasattr(dx, "__len__") and not hasattr(dz, "__len__"):
         res = []
         for dx_val in dx:
-            coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx_val, alpha=alpha)
+            coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, beta=k0, dx=dx_val, alpha_deg=alpha)
             res += [discrete_k_x(k=k0, dx=dx_val, dz=dz, pade_coefs=coefs, kz=k_z, order=z_order)]
         return np.array(res)
 
     if not hasattr(k_z, "__len__") and not hasattr(dx, "__len__") and hasattr(dz, "__len__"):
-        coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, k0=k0, dx=dx, alpha=alpha)
+        coefs = pade_propagator_coefs(pade_order=pade_order, diff2=diff2, beta=k0, dx=dx, alpha_deg=alpha)
         return np.array([discrete_k_x(k=k0, dx=dx, dz=v, pade_coefs=coefs, kz=k_z, order=z_order) for v in dz])
