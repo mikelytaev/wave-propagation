@@ -20,6 +20,12 @@
 * Greene and Claerbout approximations with linear shift map method ([link](https://ieeexplore.ieee.org/abstract/document/8023886))
 * Visualization of the wave fields
 
+## Installation
+
+```
+pip install pywaveprop
+```
+
 ## Acknowledgements
 
 The library is supported by the Russian Science Foundation grants [21-71-00039](https://rscf.ru/en/project/21-71-00039/)
