@@ -4,10 +4,15 @@ from jax import tree_util
 import jax
 import lineax
 from jax import numpy as jnp
+
+from experimental.grid_optimizer import get_optimal_grid
+from experimental.utils import bessel_ratio_4th_order
 from propagators._utils import pade_propagator_coefs
 from transforms.fcc_fourier import FCCAdaptiveFourier
 import numpy as np
 import cmath as cm
+
+import math as fm
 
 
 @dataclass
@@ -187,7 +192,65 @@ def sqr_eq(a, b, c):
     return jax.lax.select(abs(c1) > abs(c2), c2, c1)
 
 
+@dataclass
+class HelmholtzMeshParams2D:
+    x_size_m: float
+    z_size_m: float
+    dx_output_m: float = None
+    x_n_upper_bound: int = None
+    dz_output_m: float = None
+    z_n_upper_bound: int = None
+
+    def __post_init__(self):
+        if self.x_n_upper_bound is None and self.dx_output_m is None:
+            raise ValueError("one of x_n_upper_bound or dx_output_m should be specified")
+        if self.x_n_upper_bound is not None and self.dx_output_m is not None:
+            raise ValueError("Only one of x_n_upper_bound or dx_output_m should be specified, not both")
+        if self.z_n_upper_bound is None and self.dz_output_m is None:
+            raise ValueError("one of z_n_upper_bound or dz_output_m should be specified")
+        if self.z_n_upper_bound is not None and self.dz_output_m is not None:
+            raise ValueError("Only one of z_n_upper_bound or dz_output_m should be specified, not both")
+
+
 class RationalHelmholtzPropagator:
+
+    @classmethod
+    def create(cls, freq_hz: float, wave_speed, kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D, rho=None,):
+        dx_max = mesh_params.dx_output_m or mesh_params.x_size_m / (round(mesh_params.x_n_upper_bound / 2) - 1)
+        dz_max = mesh_params.dz_output_m or mesh_params.z_size_m / (round(mesh_params.z_n_upper_bound / 2) - 1)
+
+        beta, dx_computational_m, dz_computational_m = get_optimal_grid(
+            kz_max, k_bounds[0], k_bounds[1], precision / mesh_params.x_size_m,
+            dx_max=dx_max,
+            dz_max=dz_max)
+
+        if mesh_params.dx_output_m:
+            x_output_step = fm.ceil(mesh_params.dx_output_m / dx_computational_m)
+        if mesh_params.dz_output_m:
+            z_output_step = fm.ceil(mesh_params.dz_output_m / dz_computational_m)
+        if mesh_params.x_n_upper_bound:
+            x_output_step = fm.floor(mesh_params.dx_output_m / dx_computational_m)
+        if mesh_params.z_n_upper_bound:
+            z_output_step = fm.floor(mesh_params.dz_output_m / dz_computational_m)
+
+        dx_computational_m = mesh_params.dx_output_m / x_output_step
+        dz_computational_m = mesh_params.dz_output_m / z_output_step
+
+        print(f'beta: {beta}, dx: {dx_computational_m}, dz: {dz_computational_m}')
+
+        return cls(
+            order=(7, 8),
+            beta=beta,
+            dx_m=dx_computational_m,
+            dz_m=dz_computational_m,
+            x_n=fm.ceil(mesh_params.x_size_m / dx_computational_m) + 1,
+            z_n=fm.ceil(mesh_params.z_size_m / dz_computational_m) + 1,
+            x_grid_scale=x_output_step,
+            z_grid_scale=z_output_step,
+            freq_hz=freq_hz,
+            wave_speed=wave_speed,
+            rho=rho
+        )
 
     def __init__(self, order: tuple[int, int], beta: float, dx_m: float, dz_m: float, x_n: int, z_n: int,
                  x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed,
@@ -215,7 +278,7 @@ class RationalHelmholtzPropagator:
         self.rho = rho
         self._prepare_het_arrays()
         self.lower_nlbc_coefs = None  # lower_nlbc_coefs if lower_nlbc_coefs is not None else self._calc_nlbc(self.het[0])
-        self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_nlbc(self.het[-1])
+        self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_nlbc(self.het[-1], (self.het[-1] - self.het[-2])/self.dz_m)
 
     def _prepare_het_arrays(self):
         self.het = jnp.array((2 * jnp.pi * self.freq_hz / self.wave_speed.on_regular_grid(
@@ -265,14 +328,27 @@ class RationalHelmholtzPropagator:
         unf = cls(wave_speed=dynamic[0], rho=dynamic[1], **static)
         return unf
 
-    def _calc_nlbc(self, beta):
-        return jnp.zeros((self.x_n, self.coefs.shape[0], self.coefs.shape[0]), dtype=complex)
-        def diff_eq_solution_ratio(s):
-            a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
-            a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
-            c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
-            mu = sqr_eq(a_1, c, a_m1)
-            return 1 / mu
+    def _calc_nlbc(self, beta, gamma=0.0):
+
+        if abs(gamma) < 10*jnp.finfo(complex).eps:
+            inv_z_transform_rtol = 1e-7
+            def diff_eq_solution_ratio(s):
+                a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
+                a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
+                c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
+                mu = sqr_eq(a_1, c, a_m1)
+                return 1 / mu
+        else:
+            inv_z_transform_rtol = 1e-11
+            b = self.alpha * gamma * self.dz_m * (self.beta * self.dz_m) ** 2
+            d = gamma * self.dz_m * (self.beta * self.dz_m) ** 2 - 2 * b
+
+            def diff_eq_solution_ratio(s):
+                a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta) - b
+                a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta) + b
+                c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
+                return bessel_ratio_4th_order(a_m1, a_1, b, c, d, self.z_n - 1, inv_z_transform_rtol)
+
 
         num_roots, den_roots = self.coefs[:, 0], self.coefs[:, 1]
         m_size = self.coefs.shape[0]
@@ -386,8 +462,7 @@ class RationalHelmholtzPropagator:
         def body_fun(ind, val):
             return val + a[ind] @ b[i-ind]
 
-        #return jax.lax.fori_loop(1, i, body_fun, jnp.zeros(max(self.order), dtype=complex))
-        return jnp.zeros(max(self.order), dtype=complex)
+        return jax.lax.fori_loop(1, len(a), body_fun, jnp.zeros(max(self.order), dtype=complex))
 
     @jax.jit
     def compute(self, initial):

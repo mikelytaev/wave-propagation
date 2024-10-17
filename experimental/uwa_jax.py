@@ -9,11 +9,13 @@ import jax
 import numpy as np
 from jax import tree_util
 from jax import numpy as jnp
+from numpyro import param
 from scipy.optimize import differential_evolution
+from torchmetrics.functional import precision
 
 from experimental.grid_optimizer import get_optimal_grid
 from experimental.helmholtz_jax import AbstractWaveSpeedModel, LinearSlopeWaveSpeedModel, \
-    RationalHelmholtzPropagator, RegularGrid
+    RationalHelmholtzPropagator, RegularGrid, HelmholtzMeshParams2D
 from uwa.field import AcousticPressureField
 
 
@@ -27,6 +29,17 @@ class ComputationalParams:
     x_output_points: int = None
     z_output_points: int = None
     precision: float = 0.01
+
+    def __post_init__(self):
+        if self.x_output_points is None and self.dx_m is None:
+            raise ValueError("x output grid (x_output_points or dx_m) is not specified!")
+        if self.x_output_points is not None and self.dx_m is not None:
+            raise ValueError("only one x output grid parameter (x_output_points or dx_m) should be specified!")
+
+        if self.z_output_points is None and self.dz_m is None:
+            raise ValueError("z output grid (z_output_points or dz_m) is not specified!")
+        if self.z_output_points is not None and self.dz_m is not None:
+            raise ValueError("only one z output grid parameter (z_output_points or dz_m) should be specified!")
 
 
 class GaussSourceModel:
@@ -206,54 +219,16 @@ tree_util.register_pytree_node(ProxyRhoModel,
                                ProxyRhoModel._tree_unflatten)
 
 
-def check_computational_params(params: ComputationalParams):
-    if params.x_output_points is None and params.dx_m is None:
-        raise ValueError("x output grid (x_output_points or dx_m) is not specified!")
-    if params.x_output_points is not None and params.dx_m is not None:
-        raise ValueError("only one x output grid parameter (x_output_points or dx_m) should be specified!")
-
-    if params.z_output_points is None and params.dz_m is None:
-        raise ValueError("z output grid (z_output_points or dz_m) is not specified!")
-    if params.z_output_points is not None and params.dz_m is not None:
-        raise ValueError("only one z output grid parameter (z_output_points or dz_m) should be specified!")
-
-
 def minmax_k(src: GaussSourceModel, env: UnderwaterEnvironmentModel):
-    k_func = lambda z: 2 * fm.pi * src.freq_hz / env.ssp(z)
-    result_ga = differential_evolution(
-        func=k_func,
-        bounds=[(0, 1000)],
-        popsize=30,
-        disp=False,
-        recombination=1,
-        strategy='randtobest1exp',
-        tol=1e-5,
-        maxiter=10000,
-        polish=False
-    )
-    k_min = result_ga.fun
-
-    k_func = lambda z: -2 * fm.pi * src.freq_hz / env.ssp(z)
-    result_ga = differential_evolution(
-        func=k_func,
-        bounds=[(0, 1000)],
-        popsize=30,
-        disp=False,
-        recombination=1,
-        strategy='randtobest1exp',
-        tol=1e-5,
-        maxiter=10000,
-        polish=False
-    )
-    k_max = -result_ga.fun
-
+    z_grid = jnp.linspace(0.0, env.max_depth_m(), 1000)
+    k_func_arr = 2 * fm.pi * src.freq_hz / env.ssp(z_grid)
+    k_min = min(k_func_arr)
+    k_max = max(k_func_arr)
     print(f'k_min: {k_min}, k_max: {k_max}')
     return k_min, k_max
 
 
 def uwa_get_model(src: GaussSourceModel, env: UnderwaterEnvironmentModel, params: ComputationalParams) -> RationalHelmholtzPropagator:
-    check_computational_params(params)
-
     params = deepcopy(params)
 
     max_angle_deg = src.max_angle_deg()
@@ -267,57 +242,22 @@ def uwa_get_model(src: GaussSourceModel, env: UnderwaterEnvironmentModel, params
     else:
         params.max_depth_m = max_bottom_height * 1.1
 
-    k_min, k_max = minmax_k(src, env)
-
-    if params.x_output_points:
-        params.dx_m = params.max_range_m / (params.x_output_points - 1)
-    if params.z_output_points:
-        params.dz_m = params.max_depth_m / (params.z_output_points - 1)
-    beta, dx_computational, dz_computational = get_optimal_grid(
-        kz_max, k_min, k_max, params.precision / params.max_range_m,
-        dx_max=params.dx_m,
-        dz_max=params.dz_m)
-    if params.dx_m:
-        dx_computational = params.dx_m / fm.ceil(params.dx_m / dx_computational)
-    if params.dz_m:
-        dz_computational = params.dz_m / fm.ceil(params.dz_m / dx_computational)
-
-    params.max_range_m = fm.ceil(params.max_range_m / dx_computational) * dx_computational
-    params.max_depth_m = fm.ceil(params.max_depth_m / dz_computational) * dz_computational
-
-    if not params.x_output_points:
-        params.x_output_points = round(params.max_range_m / params.dx_m) + 1
-    if not params.z_output_points:
-        params.z_output_points = round(params.max_depth_m / params.dz_m) + 1
-
-    x_grid_scale = round(params.dx_m / dx_computational)
-    z_grid_scale = round(params.dz_m / dz_computational)
-    x_computational_points = params.x_output_points * x_grid_scale
-    z_computational_points = params.z_output_points * z_grid_scale
-
-    x_computational_grid = jnp.linspace(0, params.max_range_m, x_computational_points)
-    z_computational_grid = jnp.linspace(0, params.max_depth_m, z_computational_points)
-
-    x_output_grid = jnp.linspace(0, params.max_range_m, params.x_output_points)
-    z_output_grid = jnp.linspace(0, params.max_depth_m, params.z_output_points)
-
-    print(f'beta: {beta}, dx: {dx_computational}, dz: {dz_computational}')
-
-    model = RationalHelmholtzPropagator(
-        beta=beta,
-        dx_m=dx_computational,
-        dz_m=dz_computational,
-        x_n=len(x_computational_grid),
-        z_n=len(z_computational_grid),
-        x_grid_scale=x_grid_scale,
-        z_grid_scale=z_grid_scale,
-        order=(7, 8),
+    return RationalHelmholtzPropagator.create(
+        freq_hz=src.freq_hz,
         wave_speed=ProxyWaveSpeedModel(env),
         rho=ProxyRhoModel(env),
-        freq_hz=src.freq_hz
+        kz_max=kz_max,
+        k_bounds=minmax_k(src, env),
+        precision=params.precision,
+        mesh_params=HelmholtzMeshParams2D(
+            x_size_m=params.max_range_m,
+            z_size_m=params.max_depth_m,
+            dx_output_m=params.dx_m,
+            x_n_upper_bound=params.x_output_points,
+            dz_output_m=params.dz_m,
+            z_n_upper_bound=params.z_output_points,
+        ),
     )
-
-    return model
 
 
 def uwa_forward_task(src: GaussSourceModel, env: UnderwaterEnvironmentModel, params: ComputationalParams) -> AcousticPressureField:
