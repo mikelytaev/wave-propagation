@@ -98,8 +98,8 @@ class _OptTable:
     @classmethod
     def load(cls):
         import os
-        if os.path.exists('../experiments/optimization/node/grid_optimizer.dump'):
-            with open('../experiments/optimization/node/grid_optimizer.dump', 'rb') as f:
+        if os.path.exists('grid_optimizer.dump'):
+            with open('grid_optimizer.dump', 'rb') as f:
                 return pickle.load(f)
         else:
             new_optimizer = _OptTable()
@@ -108,7 +108,7 @@ class _OptTable:
             return new_optimizer
 
     def save(self):
-        with open('../experiments/optimization/node/grid_optimizer.dump', 'wb') as f:
+        with open('grid_optimizer.dump', 'wb') as f:
             pickle.dump(self, f)
 
     def get_optimal(self, kz_max, k_min, k_max, required_prec, dx_max=None, dz_max=None) -> (float, float, float): # beta, dx, dz

@@ -34,7 +34,7 @@ setup(
     ],
     ext_modules=extensions,
     zip_safe=False,
-    packages=['propagators', 'rwp', 'uwa', 'transforms', 'transforms.fcc_fourier'],
+    packages=['propagators', 'rwp', 'uwa', 'transforms', 'transforms.fcc_fourier', 'experimental'],
     package_data={
         '': ['*.pyx']
     },

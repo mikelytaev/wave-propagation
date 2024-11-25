@@ -278,7 +278,7 @@ class RationalHelmholtzPropagator:
         self.rho = rho
         self._prepare_het_arrays()
         self.lower_nlbc_coefs = None  # lower_nlbc_coefs if lower_nlbc_coefs is not None else self._calc_nlbc(self.het[0])
-        self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_nlbc(self.het[-1], (self.het[-1] - self.het[-2])/self.dz_m)
+        self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_nlbc(self.het[-1], 0*(self.het[-1] - self.het[-2])/self.dz_m)
 
     def _prepare_het_arrays(self):
         self.het = jnp.array((2 * jnp.pi * self.freq_hz / self.wave_speed.on_regular_grid(
@@ -373,7 +373,6 @@ class RationalHelmholtzPropagator:
                 res = vr.dot(r).dot(jnp.linalg.inv(vr))
                 return res.reshape(m_size ** 2)
 
-        inv_z_transform_rtol = 1e-5
         fcca = FCCAdaptiveFourier(2 * cm.pi, -np.arange(0, self.x_n), rtol=inv_z_transform_rtol)
 
         coefs = (tau ** np.repeat(np.arange(0, self.x_n)[:, np.newaxis], m_size ** 2, axis=1) / (2 * cm.pi) *
@@ -468,7 +467,7 @@ class RationalHelmholtzPropagator:
     def compute(self, initial):
         self._prepare_het_arrays()
 
-        results = jnp.empty(shape=(self.x_n // self.x_grid_scale, self.z_n // self.z_grid_scale), dtype=complex)
+        results = jnp.empty(shape=(self.x_n // self.x_grid_scale + 1, (self.z_n - 1) // self.z_grid_scale + 1), dtype=complex)
         results = results.at[0, :].set(initial[::self.z_grid_scale])
 
         def body_fun(i, val):
