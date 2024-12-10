@@ -211,6 +211,12 @@ class PiecewiseLinearNProfileModel(AbstractNProfileModel):
         self.z_grid_m = z_grid_m
         self.N_vals = N_vals
 
+    @staticmethod
+    def create_from_M_profile(z_grid_m: jax.Array, M_vals: jax.Array):
+        slope = (M_vals[-1] - M_vals[-2]) / (z_grid_m[-1] - z_grid_m[-2])
+        N_vals = M_vals - z_grid_m*slope
+        return PiecewiseLinearNProfileModel(z_grid_m, N_vals)
+
     def __call__(self, z):
         return jnp.interp(z, self.z_grid_m, self.N_vals,
                           left='extrapolate', right='extrapolate')
