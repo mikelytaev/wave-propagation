@@ -10,7 +10,7 @@ from jax import tree_util
 
 
 @dataclass
-class ComputationalParams:
+class RWPComputationalParams:
     max_range_m: float
     max_height_m: float = None
     rational_approx_order = (7, 8)
@@ -32,7 +32,7 @@ class ComputationalParams:
             raise ValueError("only one z output grid parameter (z_output_points or dz_m) should be specified!")
 
 
-class GaussSourceModel:
+class RWPGaussSourceModel:
 
     def __init__(self, *, freq_hz, height_m, beam_width_deg, elevation_angle_deg=0, multiplier=1.0):
         self.freq_hz = freq_hz
@@ -63,15 +63,18 @@ class GaussSourceModel:
         return cls(height_m=dynamic[0], beam_width_deg=dynamic[1], elevation_angle_deg=dynamic[2], multiplier=dynamic[3], **static)
 
 
-tree_util.register_pytree_node(GaussSourceModel,
-                               GaussSourceModel._tree_flatten,
-                               GaussSourceModel._tree_unflatten)
+tree_util.register_pytree_node(RWPGaussSourceModel,
+                               RWPGaussSourceModel._tree_flatten,
+                               RWPGaussSourceModel._tree_unflatten)
 
 
 class AbstractNProfileModel:
 
     def __call__(self, z):
         pass
+
+    def M_Profile(self, z, M_0=320.0, r_e=6371000):
+        return self(z) + M_0 + (1 / r_e) * 1E6 * z
 
     def max_height_m(self):
         pass
@@ -296,7 +299,7 @@ tree_util.register_pytree_node(ProxyWaveSpeedModel,
                                ProxyWaveSpeedModel._tree_unflatten)
 
 
-def minmax_k(src: GaussSourceModel, env: TroposphereModel):
+def minmax_k(src: RWPGaussSourceModel, env: TroposphereModel):
     z_grid = jnp.linspace(0.0, env.max_height_m(), 1000)
     k_func_arr = 2 * fm.pi * src.freq_hz / env.wave_speed_profile(z_grid)
     k_min = min(k_func_arr)
@@ -305,7 +308,7 @@ def minmax_k(src: GaussSourceModel, env: TroposphereModel):
     return k_min, k_max
 
 
-def create_rwp_model(src: GaussSourceModel, env: TroposphereModel, params: ComputationalParams) -> RationalHelmholtzPropagator:
+def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RWPComputationalParams) -> RationalHelmholtzPropagator:
     params = deepcopy(params)
 
     max_angle_deg = src.max_angle_deg()

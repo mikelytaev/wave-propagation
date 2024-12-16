@@ -9,18 +9,14 @@ import jax
 import numpy as np
 from jax import tree_util
 from jax import numpy as jnp
-from numpyro import param
-from scipy.optimize import differential_evolution
-from torchmetrics.functional import precision
 
-from experimental.grid_optimizer import get_optimal_grid
 from experimental.helmholtz_jax import AbstractWaveSpeedModel, LinearSlopeWaveSpeedModel, \
     RationalHelmholtzPropagator, RegularGrid, HelmholtzMeshParams2D
 from uwa.field import AcousticPressureField
 
 
 @dataclass
-class ComputationalParams:
+class UWAComputationalParams:
     max_range_m: float
     max_depth_m: float = None
     rational_approx_order = (7, 8)
@@ -42,7 +38,7 @@ class ComputationalParams:
             raise ValueError("only one z output grid parameter (z_output_points or dz_m) should be specified!")
 
 
-class GaussSourceModel:
+class UWAGaussSourceModel:
 
     def __init__(self, *, freq_hz, depth_m, beam_width_deg, elevation_angle_deg=0, multiplier=1.0):
         self.freq_hz = freq_hz
@@ -219,7 +215,7 @@ tree_util.register_pytree_node(ProxyRhoModel,
                                ProxyRhoModel._tree_unflatten)
 
 
-def minmax_k(src: GaussSourceModel, env: UnderwaterEnvironmentModel):
+def minmax_k(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel):
     z_grid = jnp.linspace(0.0, env.max_depth_m(), 1000)
     k_func_arr = 2 * fm.pi * src.freq_hz / env.ssp(z_grid)
     k_min = min(k_func_arr)
@@ -228,7 +224,7 @@ def minmax_k(src: GaussSourceModel, env: UnderwaterEnvironmentModel):
     return k_min, k_max
 
 
-def uwa_get_model(src: GaussSourceModel, env: UnderwaterEnvironmentModel, params: ComputationalParams) -> RationalHelmholtzPropagator:
+def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, params: UWAComputationalParams) -> RationalHelmholtzPropagator:
     params = deepcopy(params)
 
     max_angle_deg = src.max_angle_deg()
@@ -260,7 +256,7 @@ def uwa_get_model(src: GaussSourceModel, env: UnderwaterEnvironmentModel, params
     )
 
 
-def uwa_forward_task(src: GaussSourceModel, env: UnderwaterEnvironmentModel, params: ComputationalParams) -> AcousticPressureField:
+def uwa_forward_task(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, params: UWAComputationalParams) -> AcousticPressureField:
     model = uwa_get_model(src, env, params)
     c0 = float(env.ssp(jnp.array([src.depth_m]))[0])
     k0 = 2 * fm.pi * src.freq_hz / c0
@@ -270,8 +266,8 @@ def uwa_forward_task(src: GaussSourceModel, env: UnderwaterEnvironmentModel, par
                                  field=f)
 
 
-tree_util.register_pytree_node(GaussSourceModel,
-                               GaussSourceModel._tree_flatten,
-                               GaussSourceModel._tree_unflatten)
+tree_util.register_pytree_node(UWAGaussSourceModel,
+                               UWAGaussSourceModel._tree_flatten,
+                               UWAGaussSourceModel._tree_unflatten)
 
 
