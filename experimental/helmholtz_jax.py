@@ -62,6 +62,43 @@ class AbstractWaveSpeedModel:
     def on_regular_grid(self, z_grid: RegularGrid):
         return self(z_grid.array_grid(0, 100000000))
 
+    def support(self):
+        pass
+
+
+class AbstractTerrainModel:
+
+    def __call__(self, x):
+        pass
+
+    def on_regular_grid(self, x_grid: RegularGrid):
+        return self(x_grid.array_grid(0, 100000000))
+
+
+class PiecewiseLinearTerrainModel(AbstractTerrainModel):
+
+    def __init__(self, x_grid_m: jax.Array, height: jax.Array):
+        self.x_grid_m = x_grid_m
+        self.height = height
+
+    def __call__(self, x):
+        return jnp.interp(x, self.x_grid_m, self.height,
+                          left='extrapolate', right='extrapolate')
+
+    def _tree_flatten(self):
+        dynamic = (self.x_grid_m, self.height)
+        static = {}
+        return dynamic, static
+
+    @classmethod
+    def _tree_unflatten(cls, static, dynamic):
+        return cls(x_grid_m=dynamic[0], height=dynamic[1])
+
+
+tree_util.register_pytree_node(PiecewiseLinearTerrainModel,
+                               PiecewiseLinearTerrainModel._tree_flatten,
+                               PiecewiseLinearTerrainModel._tree_unflatten)
+
 
 class ConstWaveSpeedModel(AbstractWaveSpeedModel):
 
@@ -114,6 +151,9 @@ class PiecewiseLinearWaveSpeedModel(AbstractWaveSpeedModel):
     def __call__(self, z):
         return jnp.interp(z, self.z_grid_m, self.sound_speed,
                           left='extrapolate', right='extrapolate')
+
+    def support(self):
+        return 0.0, self.z_grid_m[-1]
 
     def _tree_flatten(self):
         dynamic = (self.z_grid_m, self.sound_speed)
@@ -215,7 +255,8 @@ class HelmholtzMeshParams2D:
 class RationalHelmholtzPropagator:
 
     @classmethod
-    def create(cls, freq_hz: float, wave_speed, kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D, rho=None,):
+    def create(cls, freq_hz: float, wave_speed, kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D,
+               rho=None, lower_terrain=None):
         dx_max = mesh_params.dx_output_m or mesh_params.x_size_m / (round(mesh_params.x_n_upper_bound / 2) - 1)
         dz_max = mesh_params.dz_output_m or mesh_params.z_size_m / (round(mesh_params.z_n_upper_bound / 2) - 1)
 
@@ -236,6 +277,16 @@ class RationalHelmholtzPropagator:
         dx_computational_m = mesh_params.dx_output_m / x_output_step
         dz_computational_m = mesh_params.dz_output_m / z_output_step
 
+        x_n = fm.ceil(mesh_params.x_size_m / dx_computational_m) + 1
+        z_n = fm.ceil(mesh_params.z_size_m / dz_computational_m) + 1
+        x_c_grid = jnp.arange(0, x_n) * dx_computational_m
+
+        lower_terrain_mask = np.ones(shape=(x_n, z_n), dtype=complex)
+        if lower_terrain is not None:
+            t = np.array(np.round((lower_terrain(x_c_grid)) / dz_computational_m), dtype=int)
+            for i in range(x_n):
+                lower_terrain_mask[i, 0:t[i]] = 0.0
+
         print(f'beta: {beta}, dx: {dx_computational_m}, dz: {dz_computational_m}')
 
         return cls(
@@ -243,18 +294,19 @@ class RationalHelmholtzPropagator:
             beta=beta,
             dx_m=dx_computational_m,
             dz_m=dz_computational_m,
-            x_n=fm.ceil(mesh_params.x_size_m / dx_computational_m) + 1,
-            z_n=fm.ceil(mesh_params.z_size_m / dz_computational_m) + 1,
+            x_n=x_n,
+            z_n=z_n,
             x_grid_scale=x_output_step,
             z_grid_scale=z_output_step,
             freq_hz=freq_hz,
             wave_speed=wave_speed,
-            rho=rho
+            rho=rho,
+            lower_terrain_mask=jnp.array(lower_terrain_mask)
         )
 
     def __init__(self, order: tuple[int, int], beta: float, dx_m: float, dz_m: float, x_n: int, z_n: int,
-                 x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed,
-                 rho=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None):
+                 x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed, lower_terrain_mask,
+                 rho=None, lower_terrain=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None):
         self.order = order
         self.beta = beta
         self.dx_m = dx_m
@@ -279,6 +331,8 @@ class RationalHelmholtzPropagator:
         self._prepare_het_arrays()
         self.lower_nlbc_coefs = None  # lower_nlbc_coefs if lower_nlbc_coefs is not None else self._calc_nlbc(self.het[0])
         self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_nlbc(self.het[-1], 0*(self.het[-1] - self.het[-2])/self.dz_m)
+
+        self.lower_terrain_mask = lower_terrain_mask
 
     def _prepare_het_arrays(self):
         self.het = jnp.array((2 * jnp.pi * self.freq_hz / self.wave_speed.on_regular_grid(
@@ -319,7 +373,8 @@ class RationalHelmholtzPropagator:
             'z_grid_scale': self.z_grid_scale,
             'freq_hz': self.freq_hz,
             'lower_nlbc_coefs': self.lower_nlbc_coefs,
-            'upper_nlbc_coefs': self.upper_nlbc_coefs
+            'upper_nlbc_coefs': self.upper_nlbc_coefs,
+            'lower_terrain_mask': self.lower_terrain_mask
         }
         return dynamic, static
 
@@ -474,6 +529,7 @@ class RationalHelmholtzPropagator:
             y0, res, upper_field = val
             upper_convolution = self._convolution(self.upper_nlbc_coefs, upper_field, i)
             y1, upper_field_i = self._step(y0, upper_convolution)
+            y1 = y1 * self.lower_terrain_mask[i]
             res = jax.lax.cond(i % self.x_grid_scale == 0, lambda: res.at[i // self.x_grid_scale, :].set(y1[::self.z_grid_scale]), lambda: res)
             upper_field = upper_field.at[i].set(upper_field_i)
             return y1, res, upper_field

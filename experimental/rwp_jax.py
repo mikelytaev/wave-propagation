@@ -246,6 +246,7 @@ class TroposphereModel:
     N_profile: AbstractNProfileModel = EmptyNProfileModel()
     M0: float = 320
     slope: float = (1 / 6371000) * 1E6
+    terrain: AbstractTerrainModel = None
 
     def M_profile(self, z):
         return self.N_profile(z) + self.M0 + self.slope*z
@@ -334,5 +335,6 @@ def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
             x_n_upper_bound=params.x_output_points,
             dz_output_m=params.dz_m,
             z_n_upper_bound=params.z_output_points,
-        )
+        ),
+        lower_terrain=env.terrain
     )
