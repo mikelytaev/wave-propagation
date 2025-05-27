@@ -1,5 +1,5 @@
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from experimental.helmholtz_jax import RegularGrid, AbstractWaveSpeedModel, RationalHelmholtzPropagator, \
     HelmholtzMeshParams2D
@@ -243,7 +243,7 @@ tree_util.register_pytree_node(PiecewiseLinearNProfileModel,
 
 @dataclass
 class TroposphereModel:
-    N_profile: AbstractNProfileModel = EmptyNProfileModel()
+    N_profile: AbstractNProfileModel = field(default_factory=EmptyNProfileModel)
     M0: float = 320
     slope: float = (1 / 6371000) * 1E6
     terrain: AbstractTerrainModel = None

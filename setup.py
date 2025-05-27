@@ -30,7 +30,10 @@ setup(
         'scipy',
         'mpmath',
         'matplotlib',
-        'cython'
+        'cython',
+        'jax',
+        'lineax',
+        'flax'
     ],
     ext_modules=extensions,
     zip_safe=False,
