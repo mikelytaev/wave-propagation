@@ -65,6 +65,67 @@ class AbstractWaveSpeedModel:
     def support(self):
         pass
 
+    def __add__(self, other):
+        return SumWaveSpeedModel(self, other)
+
+    def __mul__(self, other):
+        return MultWaveSpeedModel(self, other)
+
+
+@dataclass
+class SumWaveSpeedModel(AbstractWaveSpeedModel):
+    left: AbstractWaveSpeedModel
+    right: AbstractWaveSpeedModel
+
+    def __call__(self, z):
+        return self.left(z) + self.right(z)
+
+    def support(self):
+        l = max(self.left.support()[0], self.right.support()[0])
+        r = min(self.left.support()[1], self.right.support()[1])
+        if l > r:
+            raise ValueError('Support error')
+        return l, r
+
+    def _tree_flatten(self):
+        dynamic = (self.left, self.right)
+        static = {}
+        return dynamic, static
+
+    @classmethod
+    def _tree_unflatten(cls, static, dynamic):
+        return cls(left=dynamic[0], right=dynamic[1])
+
+tree_util.register_pytree_node(SumWaveSpeedModel,
+                               SumWaveSpeedModel._tree_flatten,
+                               SumWaveSpeedModel._tree_unflatten)
+
+
+@dataclass
+class MultWaveSpeedModel(AbstractWaveSpeedModel):
+    profile: AbstractWaveSpeedModel
+    scalar: float
+
+    def __call__(self, z):
+        return self.scalar*self.profile(z)
+
+    def support(self):
+        return self.profile.support()
+
+    def _tree_flatten(self):
+        dynamic = (self.profile, self.scalar)
+        static = {}
+        return dynamic, static
+
+    @classmethod
+    def _tree_unflatten(cls, static, dynamic):
+        return cls(profile=dynamic[0], scalar=dynamic[1])
+
+tree_util.register_pytree_node(MultWaveSpeedModel,
+                               MultWaveSpeedModel._tree_flatten,
+                               MultWaveSpeedModel._tree_unflatten)
+
+
 
 class AbstractTerrainModel:
 
