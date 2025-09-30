@@ -1,10 +1,6 @@
 import unittest
 
 from propagators.sspade import *
-from uwa.source import GaussSource
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
 
 __author__ = 'Lytaev Mikhail (mikelytaev@gmail.com)'
 
