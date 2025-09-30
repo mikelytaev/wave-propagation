@@ -303,7 +303,10 @@ class Troposphere:
 
     def n2m1_profile(self, x: float, z: np.ndarray, freq_hz):
         if self.M_profile is None:
-            return 2 * z / self.Earth_radius + self.vegetation_profile(x, z, freq_hz)
+            if not fm.isinf(self.Earth_radius):
+                return 2 * z / self.Earth_radius + self.vegetation_profile(x, z, freq_hz)
+            else:
+                return self.vegetation_profile(x, z, freq_hz)
         return 2 * self.M_profile(x, z) * 1e-6 + self.vegetation_profile(x, z, freq_hz)
 
     def is_homogeneous(self):

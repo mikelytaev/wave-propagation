@@ -133,6 +133,9 @@ class TroposphericRadioWaveSSPadePropagator:
         else:
             rho = lambda x, z: z*0+1
 
+        if not self.comp_params.max_height_m:
+            self.comp_params.max_height_m = self.env.z_max
+
         if self.env.is_flat:
             upper_bc = TransparentBC(self.env.n2m1_profile(0, self.comp_params.max_height_m, self.src.freq_hz) + 1)
         else:
@@ -173,7 +176,7 @@ class TroposphericRadioWaveSSPadePropagator:
                                              lower_bc=lower_bc,
                                              upper_bc=upper_bc,
                                              z_min=0,
-                                             z_max=comp_params.max_height_m,
+                                             z_max=self.comp_params.max_height_m,
                                              n2minus1=n2m1,
                                              use_n2minus1=not self.env.is_homogeneous(),
                                              rho=rho,
