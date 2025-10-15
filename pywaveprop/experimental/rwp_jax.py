@@ -13,6 +13,7 @@ from jax import tree_util
 class RWPComputationalParams:
     max_range_m: float
     max_height_m: float = None
+    max_angle_deg: float = None
     rational_approx_order = (7, 8)
     dx_m: float = None
     dz_m: float = None
@@ -296,7 +297,7 @@ def minmax_k(src: RWPGaussSourceModel, env: TroposphereModel):
 def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RWPComputationalParams) -> RationalHelmholtzPropagator:
     params = deepcopy(params)
 
-    max_angle_deg = src.max_angle_deg()
+    max_angle_deg = params.max_angle_deg or src.max_angle_deg()
     k0 = 2 * jnp.pi * src.freq_hz / 3E8
     kz_max = k0 * jnp.sin(jnp.radians(max_angle_deg))
 
