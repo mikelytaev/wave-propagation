@@ -96,16 +96,6 @@ class AbstractTerrainModel:
 
 
 @dataclass
-class LinearTerrainModel(AbstractTerrainModel):
-    z_grid_m: jax.Array
-    height_vals: jax.Array
-
-    def __call__(self, z):
-        return jnp.interp(z, self.z_grid_m, self.height_vals,
-                          left='extrapolate', right='extrapolate')
-
-
-@dataclass
 class SumNProfileModel(AbstractNProfileModel):
     left: AbstractNProfileModel
     right: AbstractNProfileModel
