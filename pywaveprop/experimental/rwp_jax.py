@@ -2,7 +2,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from pywaveprop.experimental.helmholtz_jax import RegularGrid, AbstractWaveSpeedModel, RationalHelmholtzPropagator, \
-    HelmholtzMeshParams2D
+    HelmholtzMeshParams2D, AbstractTerrainModel
 import jax
 import jax.numpy as jnp
 import math as fm
@@ -87,12 +87,6 @@ class AbstractNProfileModel:
 
     def __mul__(self, other):
         return MultNProfileModel(self, other)
-
-
-class AbstractTerrainModel:
-
-    def __call__(self, z):
-        pass
 
 
 @dataclass
