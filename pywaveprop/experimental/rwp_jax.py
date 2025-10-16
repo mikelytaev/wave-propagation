@@ -14,7 +14,7 @@ class RWPComputationalParams:
     max_range_m: float
     max_height_m: float = None
     max_angle_deg: float = None
-    rational_approx_order = (7, 8)
+    rational_approx_order = None
     dx_m: float = None
     dz_m: float = None
     x_output_points: int = None

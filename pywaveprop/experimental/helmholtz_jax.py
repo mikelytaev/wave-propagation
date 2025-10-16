@@ -321,28 +321,50 @@ class RationalHelmholtzPropagator:
         dx_max = mesh_params.dx_output_m or mesh_params.x_size_m / (round(mesh_params.x_n_upper_bound / 2) - 1)
         dz_max = mesh_params.dz_output_m or mesh_params.z_size_m / (round(mesh_params.z_n_upper_bound / 2) - 1)
 
-        beta, dx_computational_m, dz_computational_m = get_optimal_grid(
-            kz_max, k_bounds[0], k_bounds[1], precision / mesh_params.x_size_m,
-            dx_max=dx_max,
-            dz_max=dz_max)
+        if rational_approx_order == None:
+            orders = [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8),]
+        else:
+            orders = [rational_approx_order]
 
-        if mesh_params.dx_output_m:
-            x_output_step = fm.ceil(mesh_params.dx_output_m / dx_computational_m)
-        if mesh_params.dz_output_m:
-            z_output_step = fm.ceil(mesh_params.dz_output_m / dz_computational_m)
-        if mesh_params.x_n_upper_bound:
-            x_output_step = fm.floor(mesh_params.dx_output_m / dx_computational_m)
-        if mesh_params.z_n_upper_bound:
-            z_output_step = fm.floor(mesh_params.dz_output_m / dz_computational_m)
+        cur_best = fm.inf
+        for order in orders:
+            beta_t, dx_computational_m_t, dz_computational_m_t = get_optimal_grid(
+                kz_max, k_bounds[0], k_bounds[1], precision / mesh_params.x_size_m,
+                dx_max=dx_max,
+                dz_max=dz_max,
+                propagator_order=order
+            )
 
-        dx_computational_m = mesh_params.dx_output_m / x_output_step
-        dz_computational_m = mesh_params.dz_output_m / z_output_step
+            if mesh_params.dx_output_m:
+                x_output_step_t = fm.ceil(mesh_params.dx_output_m / dx_computational_m_t)
+            if mesh_params.dz_output_m:
+                z_output_step_t = fm.ceil(mesh_params.dz_output_m / dz_computational_m_t)
+            if mesh_params.x_n_upper_bound:
+                x_output_step_t = fm.floor(mesh_params.dx_output_m / dx_computational_m_t)
+            if mesh_params.z_n_upper_bound:
+                z_output_step_t = fm.floor(mesh_params.dz_output_m / dz_computational_m_t)
 
-        x_n = fm.ceil(mesh_params.x_size_m / dx_computational_m) + 1
-        z_n = fm.ceil(mesh_params.z_size_m / dz_computational_m) + 1
-        x_c_grid = jnp.arange(0, x_n) * dx_computational_m
+            dx_computational_m_t = mesh_params.dx_output_m / x_output_step_t
+            dz_computational_m_t = mesh_params.dz_output_m / z_output_step_t
 
-        print(f'beta: {beta}, dx: {dx_computational_m}, dz: {dz_computational_m}')
+            x_n_t = fm.ceil(mesh_params.x_size_m / dx_computational_m_t) + 1
+            z_n_t = fm.ceil(mesh_params.z_size_m / dz_computational_m_t) + 1
+
+            if x_n_t*z_n_t*order[1] < cur_best:
+                cur_best = x_n_t*z_n_t*order[1]
+                x_n = x_n_t
+                z_n = z_n_t
+                x_output_step = x_output_step_t
+                z_output_step = z_output_step_t
+                beta = beta_t
+                dx_computational_m = dx_computational_m_t
+                dz_computational_m = dz_computational_m_t
+                rational_approx_order = order
+
+        print(f'rational_approx_order: {rational_approx_order}, '
+              f'beta: {beta}, '
+              f'dx: {dx_computational_m}, '
+              f'dz: {dz_computational_m}')
 
         return cls(
             order=rational_approx_order,

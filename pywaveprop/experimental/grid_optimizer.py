@@ -24,6 +24,13 @@ def fourth_order_error_kz(k_z: float, dz: float):
     return abs(d - (-k_z**2))
 
 
+def error_kz(k_z: float, dz: float, z_order):
+    if z_order == 4:
+        return fourth_order_error_kz(k_z, dz)
+    else:
+        return second_order_error_kz(k_z, dz)
+
+
 def rational_approx_error(beta_dx: float, xi: np.array, rational_coefs, c0=1.0+0j):
     product = c0
     xi = xi + 0j
@@ -70,8 +77,8 @@ def func_binary_search(f, x_min, x_max, val, rel_prec):
 
 class _OptTable:
 
-    def __init__(self, order=(7, 8)):
-        self.order = order
+    def __init__(self, propagator_order=(7, 8)):
+        self.propagator_order = propagator_order
         self.t_betas = np.concatenate((
             [0.01, 0.05],
             np.linspace(0.1, 1, 10),
@@ -87,7 +94,7 @@ class _OptTable:
 
     def compute(self):
         for i_t_beta, t_beta in enumerate(self.t_betas):
-                coefs, _ = pade_propagator_coefs(pade_order=self.order, beta=t_beta, dx=1)
+                coefs, _ = pade_propagator_coefs(pade_order=self.propagator_order, beta=t_beta, dx=1)
                 for i_prec, prec in enumerate(self.precs):
                     self.xi_a[i_t_beta, i_prec] = func_binary_search(
                         lambda xi: rational_approx_error(t_beta, xi, coefs), -1, 0, prec, 1e-3)
@@ -98,18 +105,23 @@ class _OptTable:
     @classmethod
     def load(cls):
         import os
-        if os.path.exists('grid_optimizer.dump'):
-            with open('grid_optimizer.dump', 'rb') as f:
+        filename = 'grid_optimizer.dump'
+        if os.path.exists(filename):
+            with open(filename, 'rb') as f:
                 return pickle.load(f)
         else:
-            new_optimizer = _OptTable()
-            new_optimizer.compute()
-            new_optimizer.save()
-            return new_optimizer
+            # Initialize with default order
+            tables = {(7, 8): _OptTable(propagator_order=(7, 8))}
+            tables[(7, 8)].compute()
+            with open(filename, 'wb') as f:
+                pickle.dump(tables, f)
+            return tables
 
-    def save(self):
-        with open('grid_optimizer.dump', 'wb') as f:
-            pickle.dump(self, f)
+    @staticmethod
+    def save(tables_dict):
+        filename = 'grid_optimizer.dump'
+        with open(filename, 'wb') as f:
+            pickle.dump(tables_dict, f)
 
     def get_optimal(self, kz_max, k_min, k_max, required_prec, dx_max=None, dz_max=None) -> (float, float, float): # beta, dx, dz
         dz_max = dz_max if dz_max else 5.0
@@ -145,8 +157,18 @@ class _OptTable:
         return beta, dx, dz
 
 
-table = _OptTable.load()
+_tables_cache = _OptTable.load()
 
 
-def get_optimal_grid(kz_max, k_min, k_max, required_prec, dx_max=None, dz_max=None) -> (float, float, float): # beta, dx, dz
-    return table.get_optimal(kz_max, k_min, k_max, required_prec, dx_max, dz_max)
+def get_optimal_grid(kz_max, k_min, k_max, required_prec, dx_max=None, dz_max=None, propagator_order=(7, 8)) -> (float, float, float): # beta, dx, dz
+    global _tables_cache
+    
+    if propagator_order not in _tables_cache:
+        # Compute and cache the new propagator order
+        new_table = _OptTable(propagator_order=propagator_order)
+        new_table.compute()
+        _tables_cache[propagator_order] = new_table
+        _OptTable.save(_tables_cache)
+    
+    opt_table = _tables_cache[propagator_order]
+    return opt_table.get_optimal(kz_max, k_min, k_max, required_prec, dx_max, dz_max)
