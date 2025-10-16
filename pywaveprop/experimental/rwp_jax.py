@@ -308,6 +308,7 @@ def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
         params.max_height_m = max_height_m * 1.1
 
     return RationalHelmholtzPropagator.create(
+        rational_approx_order=params.rational_approx_order,
         freq_hz=src.freq_hz,
         wave_speed=ProxyWaveSpeedModel(env),
         kz_max=kz_max,

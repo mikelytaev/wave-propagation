@@ -317,7 +317,7 @@ class RationalHelmholtzPropagator:
 
     @classmethod
     def create(cls, freq_hz: float, wave_speed, kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D,
-               rho=None, lower_terrain=None):
+               rho=None, lower_terrain=None, rational_approx_order=(7, 8)):
         dx_max = mesh_params.dx_output_m or mesh_params.x_size_m / (round(mesh_params.x_n_upper_bound / 2) - 1)
         dz_max = mesh_params.dz_output_m or mesh_params.z_size_m / (round(mesh_params.z_n_upper_bound / 2) - 1)
 
@@ -345,7 +345,7 @@ class RationalHelmholtzPropagator:
         print(f'beta: {beta}, dx: {dx_computational_m}, dz: {dz_computational_m}')
 
         return cls(
-            order=(7, 8),
+            order=rational_approx_order,
             beta=beta,
             dx_m=dx_computational_m,
             dz_m=dz_computational_m,
