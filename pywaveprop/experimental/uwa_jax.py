@@ -19,7 +19,7 @@ from pywaveprop.uwa.field import AcousticPressureField
 class UWAComputationalParams:
     max_range_m: float
     max_depth_m: float = None
-    rational_approx_order = (7, 8)
+    rational_approx_order = None
     dx_m: float = None
     dz_m: float = None
     x_output_points: int = None
@@ -245,6 +245,7 @@ def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, par
         kz_max=kz_max,
         k_bounds=minmax_k(src, env),
         precision=params.precision,
+        rational_approx_order=params.rational_approx_order,
         mesh_params=HelmholtzMeshParams2D(
             x_size_m=params.max_range_m,
             z_size_m=params.max_depth_m,
