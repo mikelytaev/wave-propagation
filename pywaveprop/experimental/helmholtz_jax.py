@@ -335,6 +335,9 @@ class RationalHelmholtzPropagator:
                 propagator_order=order
             )
 
+            if fm.isnan(beta_t):
+                continue
+
             if mesh_params.dx_output_m:
                 x_output_step_t = fm.ceil(mesh_params.dx_output_m / dx_computational_m_t)
             if mesh_params.dz_output_m:
