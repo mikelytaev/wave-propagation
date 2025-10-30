@@ -4,6 +4,7 @@ from pywaveprop.rwp.antennas import *
 from pywaveprop.rwp.environment import *
 from pywaveprop.rwp.field import Field, RandomField
 from pywaveprop.propagators.sspade import *
+from pywaveprop.propagators._utils import reflection_coef
 from copy import deepcopy
 import logging
 
@@ -121,9 +122,6 @@ class TroposphericRadioWaveSSPadePropagator:
         elif self.comp_params.terrain_method == TerrainMethod.no:
             if self.env.rms_m:
                 logging.error("rms not yet supported")
-                mbf = MillerBrownFactor(8)
-                reflection_coefficient = lambda theta, k_z=0: mbf.factor(theta, k0, self.env.rms_m) * reflection_coef(1, ground_eps_r, 90 - theta,
-                                                                              self.src.polarz)
             else:
                 reflection_coefficient = lambda theta, k_z=0: reflection_coef(1, ground_eps_r, 90 - theta, self.src.polarz)
             lower_bc = AngleDependentBC(reflection_coefficient)
