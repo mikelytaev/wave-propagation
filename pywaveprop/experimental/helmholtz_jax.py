@@ -6,7 +6,8 @@ import lineax
 from jax import numpy as jnp
 
 from pywaveprop.experimental.grid_optimizer import get_optimal_grid
-from pywaveprop.experimental.utils import bessel_ratio_4th_order
+from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
+from pywaveprop.experimental.utils import bessel_ratio_4th_order, sqr_eq
 from pywaveprop.propagators._utils import pade_propagator_coefs
 from pywaveprop.transforms.fcc_fourier import FCCAdaptiveFourier
 import numpy as np
@@ -285,34 +286,6 @@ class StaircaseRhoModel(AbstractRhoModel):
         return cls(heights=dynamic[0], vals=dynamic[1])
 
 
-
-@jax.jit
-def sqr_eq(a, b, c):
-    c1 = (-b + jnp.sqrt(b**2 - 4 * a * c + 0j)) / (2 * a)
-    c2 = (-b - jnp.sqrt(b ** 2 - 4 * a * c + 0j)) / (2 * a)
-    return jax.lax.select(abs(c1) > abs(c2), c2, c1)
-
-
-@dataclass
-class HelmholtzMeshParams2D:
-    x_size_m: float
-    z_size_m: float
-    dx_output_m: float = None
-    x_n_upper_bound: int = None
-    dz_output_m: float = None
-    z_n_upper_bound: int = None
-
-    def __post_init__(self):
-        if self.x_n_upper_bound is None and self.dx_output_m is None:
-            raise ValueError("one of x_n_upper_bound or dx_output_m should be specified")
-        if self.x_n_upper_bound is not None and self.dx_output_m is not None:
-            raise ValueError("Only one of x_n_upper_bound or dx_output_m should be specified, not both")
-        if self.z_n_upper_bound is None and self.dz_output_m is None:
-            raise ValueError("one of z_n_upper_bound or dz_output_m should be specified")
-        if self.z_n_upper_bound is not None and self.dz_output_m is not None:
-            raise ValueError("Only one of z_n_upper_bound or dz_output_m should be specified, not both")
-
-
 class RationalHelmholtzPropagator:
 
     @classmethod
@@ -340,15 +313,16 @@ class RationalHelmholtzPropagator:
 
             if mesh_params.dx_output_m:
                 x_output_step_t = fm.ceil(mesh_params.dx_output_m / dx_computational_m_t)
+                dx_computational_m_t = mesh_params.dx_output_m / x_output_step_t
             if mesh_params.dz_output_m:
                 z_output_step_t = fm.ceil(mesh_params.dz_output_m / dz_computational_m_t)
+                dz_computational_m_t = mesh_params.dz_output_m / z_output_step_t
             if mesh_params.x_n_upper_bound:
-                x_output_step_t = fm.floor(mesh_params.dx_output_m / dx_computational_m_t)
+                x_output_step_t = fm.floor(dx_max / dx_computational_m_t)
+                dx_computational_m_t = dx_max / x_output_step_t
             if mesh_params.z_n_upper_bound:
-                z_output_step_t = fm.floor(mesh_params.dz_output_m / dz_computational_m_t)
-
-            dx_computational_m_t = mesh_params.dx_output_m / x_output_step_t
-            dz_computational_m_t = mesh_params.dz_output_m / z_output_step_t
+                z_output_step_t = fm.floor(dz_max / dz_computational_m_t)
+                dz_computational_m_t = dz_max / z_output_step_t
 
             x_n_t = fm.ceil(mesh_params.x_size_m / dx_computational_m_t) + 1
             z_n_t = fm.ceil(mesh_params.z_size_m / dz_computational_m_t) + 1

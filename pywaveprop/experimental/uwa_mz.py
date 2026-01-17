@@ -13,33 +13,11 @@ from jax import numpy as jnp
 from pywaveprop.experimental.helmholtz_jax import AbstractWaveSpeedModel, LinearSlopeWaveSpeedModel, \
     RationalHelmholtzPropagator, RegularGrid
 from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
+from pywaveprop.experimental.uwa_utils import UWAComputationalParams
 from pywaveprop.uwa.field import AcousticPressureField
 
 
-@dataclass
-class UWAComputationalParams:
-    max_range_m: float
-    max_depth_m: float = None
-    rational_approx_order = None
-    dx_m: float = None
-    dz_m: float = None
-    x_output_points: int = None
-    z_output_points: int = None
-    precision: float = 0.01
-
-    def __post_init__(self):
-        if self.x_output_points is None and self.dx_m is None:
-            raise ValueError("x output grid (x_output_points or dx_m) is not specified!")
-        if self.x_output_points is not None and self.dx_m is not None:
-            raise ValueError("only one x output grid parameter (x_output_points or dx_m) should be specified!")
-
-        if self.z_output_points is None and self.dz_m is None:
-            raise ValueError("z output grid (z_output_points or dz_m) is not specified!")
-        if self.z_output_points is not None and self.dz_m is not None:
-            raise ValueError("only one z output grid parameter (z_output_points or dz_m) should be specified!")
-
-
-class UWAGaussSourceModel:
+class UWAGaussSource:
 
     def __init__(self, *, freq_hz, depth_m, beam_width_deg, elevation_angle_deg=0, multiplier=1.0):
         self.freq_hz = freq_hz
@@ -51,47 +29,19 @@ class UWAGaussSourceModel:
     def aperture(self, k0, z):
         elevation_angle_rad = fm.radians(self.elevation_angle_deg)
         ww = cm.sqrt(2 * cm.log(2)) / (k0 * cm.sin(fm.radians(self.beam_width_deg) / 2))
-        return jnp.array(self.multiplier / (cm.sqrt(cm.pi) * ww) * jnp.exp(-1j * k0 * jnp.sin(elevation_angle_rad) * z)
+        return np.array(self.multiplier / (cm.sqrt(cm.pi) * ww) * jnp.exp(-1j * k0 * np.sin(elevation_angle_rad) * z)
                          * jnp.exp(-((z - self.depth_m) / ww) ** 2), dtype=complex)
 
     def max_angle_deg(self):
         return self.beam_width_deg + abs(self.elevation_angle_deg)
 
-    def _tree_flatten(self):
-        dynamic = (self.depth_m, self.beam_width_deg, self.elevation_angle_deg, self.multiplier)
-        static = {
-            'freq_hz': self.freq_hz
-        }
-        return dynamic, static
-
-    @classmethod
-    def _tree_unflatten(cls, static, dynamic):
-        return cls(depth_m=dynamic[0], beam_width_deg=dynamic[1], elevation_angle_deg=dynamic[2], multiplier=dynamic[3], **static)
-
 
 @dataclass
-class UnderwaterLayerModel:
+class UnderwaterLayer:
     height_m: float
     sound_speed_profile_m_s: AbstractWaveSpeedModel = LinearSlopeWaveSpeedModel(c0=1500, slope_degrees=0)
     density: float = 1.0
     attenuation_dm_lambda: float = 0.0
-
-    def _tree_flatten(self):
-        dynamic = (self.sound_speed_profile_m_s, self.density, self.attenuation_dm_lambda)
-        static = {
-            'height_m': self.height_m,
-        }
-        return dynamic, static
-
-    @classmethod
-    def _tree_unflatten(cls, static, dynamic):
-        unf = cls(sound_speed_profile_m_s=dynamic[0], density=dynamic[1], attenuation_dm_lambda=dynamic[2], **static)
-        return unf
-
-
-tree_util.register_pytree_node(UnderwaterLayerModel,
-                               UnderwaterLayerModel._tree_flatten,
-                               UnderwaterLayerModel._tree_unflatten)
 
 
 @dataclass

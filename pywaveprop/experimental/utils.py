@@ -1,4 +1,5 @@
 import jax
+from jax import numpy as jnp
 
 
 @jax.jit
@@ -33,3 +34,10 @@ def bessel_ratio_4th_order(a_m1: complex, a_1: complex, b: complex, c: complex, 
     _, _, h_n, _, _ = jax.lax.while_loop(cond_fun, body_fun, (i, delta, h_n, C_n, D_n))
 
     return h_n
+
+
+@jax.jit
+def sqr_eq(a, b, c):
+    c1 = (-b + jnp.sqrt(b**2 - 4 * a * c + 0j)) / (2 * a)
+    c2 = (-b - jnp.sqrt(b ** 2 - 4 * a * c + 0j)) / (2 * a)
+    return jax.lax.select(abs(c1) > abs(c2), c2, c1)

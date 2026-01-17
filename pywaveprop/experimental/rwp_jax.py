@@ -2,7 +2,8 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from pywaveprop.experimental.helmholtz_jax import RegularGrid, AbstractWaveSpeedModel, RationalHelmholtzPropagator, \
-    HelmholtzMeshParams2D, AbstractTerrainModel
+    AbstractTerrainModel
+from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
 import jax
 import jax.numpy as jnp
 import math as fm
