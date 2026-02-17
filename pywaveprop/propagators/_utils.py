@@ -23,7 +23,7 @@ def pade_sqrt(z, a_n, b_n, alpha=0):
 
 def pade_propagator_coefs(*, pade_order, diff2=lambda x: x, beta, dx, spe=False, alpha_deg=0, a0=0.0):
     """
-    Pade approximation of the exponential propagator of the form \prod_{l=1}^{p}\frac{1+a_{l}L}{1+b_{l}L}
+    Pade approximation of the exponential propagator of the form \\prod_{l=1}^{p}\\frac{1+a_{l}L}{1+b_{l}L}
     :param pade_order: order of Pade approximation, tuple, for ex (7, 8)
     :param diff2:
     :param beta: propagation constant

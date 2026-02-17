@@ -10,8 +10,7 @@ import numpy as np
 from jax import tree_util
 from jax import numpy as jnp
 
-from pywaveprop.experimental.helmholtz_jax import AbstractWaveSpeedModel, LinearSlopeWaveSpeedModel, \
-    RationalHelmholtzPropagator, RegularGrid
+from pywaveprop.experimental.helmholtz_mz import RationalHelmholtzPropagator
 from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
 from pywaveprop.experimental.uwa_utils import UWAComputationalParams
 from pywaveprop.uwa.field import AcousticPressureField
@@ -45,38 +44,37 @@ class UnderwaterLayer:
 
 
 @dataclass
-class UnderwaterEnvironmentModel:
-    layers: List[UnderwaterLayerModel] = None
+class UnderwaterEnvironment:
+    layers: List[UnderwaterLayer]
 
-    def ssp(self, z_grid: jax.Array):
+    def ssp(self, z_grid: np.ndarray):
         cur_depth = 0.0
-        res = jnp.empty(shape=z_grid.shape, dtype=float)
+        res = np.empty(shape=z_grid.shape, dtype=float)
         for layer in self.layers:
             layer_height = layer.height_m if layer != self.layers[-1] else np.inf
             local_filter = (cur_depth <= z_grid) & (z_grid < cur_depth + layer_height)
             local_z = z_grid[local_filter] - cur_depth
-            res = res.at[local_filter].set(layer.sound_speed_profile_m_s(local_z))
+            res[local_filter] = layer.sound_speed_profile_m_s(local_z)
             cur_depth += layer_height
         return res
 
-    @partial(jax.jit, static_argnums=(1,))
     def ssp_jit(self, z_grid: RegularGrid):
         cur_depth = 0.0
-        res = jnp.empty(shape=z_grid.n, dtype=float)
+        res = np.empty(shape=z_grid.n, dtype=float)
         for layer in self.layers:
             layer_height = layer.height_m if layer != self.layers[-1] else 1E6
             a_i, b_i = z_grid.interval_indexes(cur_depth, cur_depth + layer_height)
-            res = res.at[a_i:b_i].set(layer.sound_speed_profile_m_s(z_grid.array_grid(a_i, b_i) - cur_depth))
+            res[a_i:b_i] = layer.sound_speed_profile_m_s(z_grid.array_grid(a_i, b_i) - cur_depth)
             cur_depth += layer_height
         return res
 
-    def rho(self, z_grid: jax.Array):
+    def rho(self, z_grid: np.ndarray):
         cur_depth = 0.0
-        res = jnp.empty(shape=z_grid.shape, dtype=float)
+        res = np.empty(shape=z_grid.shape, dtype=float)
         for layer in self.layers:
             layer_height = layer.height_m if layer != self.layers[-1] else np.inf
             local_filter = (cur_depth <= z_grid) & (z_grid < cur_depth + layer_height)
-            res = res.at[local_filter].set(layer.density)
+            res[local_filter] = layer.density
             cur_depth += layer_height
         return res
 
@@ -94,79 +92,9 @@ class UnderwaterEnvironmentModel:
     def max_depth_m(self):
         return sum([layer.height_m for layer in self.layers[:-1]])
 
-    def _tree_flatten(self):
-        dynamic = (self.layers,)
-        static = {
-
-        }
-        return dynamic, static
-
-    @classmethod
-    def _tree_unflatten(cls, static, dynamic):
-        unf = cls(dynamic[0])
-        return unf
 
 
-tree_util.register_pytree_node(UnderwaterEnvironmentModel,
-                               UnderwaterEnvironmentModel._tree_flatten,
-                               UnderwaterEnvironmentModel._tree_unflatten)
-
-
-class ProxyWaveSpeedModel(AbstractWaveSpeedModel):
-
-    def __init__(self, uwem: UnderwaterEnvironmentModel):
-        self.uwem = uwem
-
-    def __call__(self, z):
-        return self.uwem.ssp(z)
-
-    def on_regular_grid(self, z_grid: RegularGrid):
-        return self.uwem.ssp_jit(z_grid)
-
-    def _tree_flatten(self):
-        dynamic = (self.uwem,)
-        static = {}
-        return dynamic, static
-
-    @classmethod
-    def _tree_unflatten(cls, static, dynamic):
-        unf = cls(uwem=dynamic[0], **static)
-        return unf
-
-
-tree_util.register_pytree_node(ProxyWaveSpeedModel,
-                               ProxyWaveSpeedModel._tree_flatten,
-                               ProxyWaveSpeedModel._tree_unflatten)
-
-
-class ProxyRhoModel(AbstractWaveSpeedModel):
-
-    def __init__(self, uwem: UnderwaterEnvironmentModel):
-        self.uwem = uwem
-
-    def __call__(self, z):
-        return self.uwem.rho(z)
-
-    def on_regular_grid(self, z_grid: RegularGrid):
-        return self.uwem.rho_jit(z_grid)
-
-    def _tree_flatten(self):
-        dynamic = (self.uwem,)
-        static = {}
-        return dynamic, static
-
-    @classmethod
-    def _tree_unflatten(cls, static, dynamic):
-        unf = cls(uwem=dynamic[0], **static)
-        return unf
-
-
-tree_util.register_pytree_node(ProxyRhoModel,
-                               ProxyRhoModel._tree_flatten,
-                               ProxyRhoModel._tree_unflatten)
-
-
-def minmax_k(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel):
+def minmax_k(src: UWAGaussSource, env: UnderwaterEnvironment):
     z_grid = jnp.linspace(0.0, env.max_depth_m(), 1000)
     k_func_arr = 2 * fm.pi * src.freq_hz / env.ssp(z_grid)
     k_min = min(k_func_arr)
@@ -175,7 +103,7 @@ def minmax_k(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel):
     return k_min, k_max
 
 
-def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, params: UWAComputationalParams) -> RationalHelmholtzPropagator:
+def uwa_get_model(src: UWAGaussSource, env: UnderwaterEnvironment, params: UWAComputationalParams) -> RationalHelmholtzPropagator:
     params = deepcopy(params)
 
     max_angle_deg = src.max_angle_deg()
@@ -191,8 +119,8 @@ def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, par
 
     return RationalHelmholtzPropagator.create(
         freq_hz=src.freq_hz,
-        wave_speed=ProxyWaveSpeedModel(env),
-        rho=ProxyRhoModel(env),
+        wave_speed=lambda z: env.ssp(z),
+        rho=lambda z: env.rho(z),
         kz_max=kz_max,
         k_bounds=minmax_k(src, env),
         precision=params.precision,

@@ -165,7 +165,7 @@ class FCCAdaptiveFourier:
     def transform(self, f, x_a, x_b):
         """
         compute the Fourier transformation of function f:
-        \frac{1}{\sqrt{2\pi}}\int\limits_{x_{a}}^{x_{b}}f(x)e^{-ik_{x}x}dx
+        \\frac{1}{\\sqrt{2\\pi}}\\int\\limits_{x_{a}}^{x_{b}}f(x)e^{-ik_{x}x}dx
         :param f: np.array vector valued function
         :param x_a: left integration bound, (x_b - x_a) = domain_size
         :param x_b: right integration bound, (x_b - x_a) = domain_size

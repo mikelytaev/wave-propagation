@@ -232,21 +232,23 @@ tree_util.register_pytree_node(PiecewiseLinearWaveSpeedModel,
                                PiecewiseLinearWaveSpeedModel._tree_unflatten)
 
 
-class BasisWaveSpeedModel(AbstractWaveSpeedModel):
+class EOFWaveSpeedModel(AbstractWaveSpeedModel):
 
-    def __init__(self, basis_z_grid_m: jax.Array, basis_vals: jax.Array, coefs: jax.Array):
-        self.basis_z_grid_m = basis_z_grid_m
-        self.basis_vals = basis_vals
-        self.coefs = coefs
+    def __init__(self, eof_z_grid_m: jax.Array, mean_profile: jax.Array, eof_modes: jax.Array, coefs: jax.Array=None):
+        self.eof_z_grid_m = eof_z_grid_m
+        self.mean_profile = mean_profile
+        self.eof_modes = eof_modes
+        self.coefs = coefs if (coefs != None) else jnp.zeros(eof_modes.shape[1], dtype=complex)
 
     def __call__(self, z: jax.Array):
-        return jnp.interp(z, self.basis_z_grid_m, self.basis_vals @ self.coefs)
+        return jnp.interp(z, self.eof_z_grid_m, self.mean_profile + self.eof_modes @ self.coefs)
 
     def _tree_flatten(self):
         dynamic = (self.coefs,)
         static = {
-            "basis_z_grid_m": self.basis_z_grid_m,
-            "basis_vals": self.basis_vals
+            "eof_z_grid_m": self.eof_z_grid_m,
+            "eof_modes": self.eof_modes,
+            "mean_profile": self.mean_profile,
         }
         return dynamic, static
 
@@ -255,9 +257,9 @@ class BasisWaveSpeedModel(AbstractWaveSpeedModel):
         return cls(coefs=dynamic[0], **static)
 
 
-tree_util.register_pytree_node(BasisWaveSpeedModel,
-                               BasisWaveSpeedModel._tree_flatten,
-                               BasisWaveSpeedModel._tree_unflatten)
+tree_util.register_pytree_node(EOFWaveSpeedModel,
+                               EOFWaveSpeedModel._tree_flatten,
+                               EOFWaveSpeedModel._tree_unflatten)
 
 
 class AbstractRhoModel:
