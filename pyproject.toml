@@ -1,0 +1,32 @@
+[project]
+name = "pywaveprop"
+version = "1.0.0"
+description = "Wave propagation framework"
+license = "MIT"
+authors = [{ name = "Mikhail Lytaev", email = "mikelytaev@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "mpmath",
+    "matplotlib",
+    "jax",
+    "lineax",
+    "flax",
+]
+
+[project.urls]
+Homepage = "https://github.com/mikelytaev/wave-propagation"
+
+[build-system]
+requires = ["setuptools>=64", "wheel", "numpy>=1.25", "cython>=3.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pywaveprop*"]
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py", "tests.py"]
+testpaths = ["tests"]

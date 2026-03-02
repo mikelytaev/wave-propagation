@@ -1,0 +1,4 @@
+pywaveprop.egg-info/
+*.so
+*.c
+__pycache__/
