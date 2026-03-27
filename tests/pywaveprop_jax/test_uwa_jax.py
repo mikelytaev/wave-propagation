@@ -17,7 +17,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from pywaveprop.experimental.uwa_jax import (
+from pywaveprop.uwa_jax import (
     UWAGaussSourceModel,
     UnderwaterLayerModel,
     UnderwaterEnvironmentModel,
@@ -27,8 +27,8 @@ from pywaveprop.experimental.uwa_jax import (
     uwa_forward_task,
     minmax_k,
 )
-from pywaveprop.experimental.uwa_utils import UWAComputationalParams
-from pywaveprop.experimental.helmholtz_jax import (
+from pywaveprop.uwa_utils import UWAComputationalParams
+from pywaveprop.helmholtz_jax import (
     ConstWaveSpeedModel,
     LinearSlopeWaveSpeedModel,
     PiecewiseLinearWaveSpeedModel,

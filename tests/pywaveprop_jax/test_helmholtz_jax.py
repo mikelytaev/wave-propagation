@@ -17,7 +17,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from pywaveprop.experimental.helmholtz_jax import (
+from pywaveprop.helmholtz_jax import (
     RegularGrid,
     ConstWaveSpeedModel,
     LinearSlopeWaveSpeedModel,
@@ -30,8 +30,8 @@ from pywaveprop.experimental.helmholtz_jax import (
     RationalHelmholtzPropagator,
     AbstractWaveSpeedModel,
 )
-from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
-from pywaveprop.experimental.utils import bessel_ratio_4th_order, sqr_eq
+from pywaveprop.helmholtz_common import HelmholtzMeshParams2D
+from pywaveprop.jax_utils import bessel_ratio_4th_order, sqr_eq
 
 
 class TestRegularGrid(unittest.TestCase):

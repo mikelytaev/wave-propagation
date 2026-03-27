@@ -13,31 +13,31 @@ JAX-based modules (primary)
 Helmholtz propagator
 --------------------
 
-.. automodule:: pywaveprop.experimental.helmholtz_jax
+.. automodule:: pywaveprop.helmholtz_jax
    :members:
 
 Tropospheric radio wave propagation
 ------------------------------------
 
-.. automodule:: pywaveprop.experimental.rwp_jax
+.. automodule:: pywaveprop.rwp_jax
    :members:
 
-.. automodule:: pywaveprop.experimental.rwp_field
+.. automodule:: pywaveprop.rwp_field
    :members:
 
 Underwater acoustics
 --------------------
 
-.. automodule:: pywaveprop.experimental.uwa_jax
+.. automodule:: pywaveprop.uwa_jax
    :members:
 
 Computational parameters
 ------------------------
 
-.. automodule:: pywaveprop.experimental.helmholtz_common
+.. automodule:: pywaveprop.helmholtz_common
    :members:
 
-.. automodule:: pywaveprop.experimental.uwa_utils
+.. automodule:: pywaveprop.uwa_utils
    :members:
 
 Legacy modules (deprecated)

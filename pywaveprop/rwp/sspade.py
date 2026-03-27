@@ -2,7 +2,7 @@
 Legacy NumPy/Cython-based tropospheric radio wave propagation module.
 
 .. deprecated:: 2.0.0
-    This module is deprecated. Use :mod:`pywaveprop.experimental.rwp_jax` instead,
+    This module is deprecated. Use :mod:`pywaveprop.rwp_jax` instead,
     which provides GPU acceleration via JAX.
 
     Migration example::
@@ -12,7 +12,7 @@ Legacy NumPy/Cython-based tropospheric radio wave propagation module.
         field = rwp_ss_pade(antenna, env, params)
 
         # New API:
-        from pywaveprop.experimental.rwp_jax import rwp_forward_task, RWPComputationalParams
+        from pywaveprop.rwp_jax import rwp_forward_task, RWPComputationalParams
         field = rwp_forward_task(src, env, params)
 """
 from typing import Optional
@@ -28,7 +28,7 @@ import logging
 
 _DEPRECATION_MSG = (
     "{name} is deprecated and will be removed in a future version. "
-    "Use the JAX-based implementation from pywaveprop.experimental.rwp_jax instead."
+    "Use the JAX-based implementation from pywaveprop.rwp_jax instead."
 )
 
 
@@ -58,7 +58,7 @@ class RWPSSpadeComputationalParams:
 def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> Field:
     """
     .. deprecated:: 2.0.0
-        Use :func:`pywaveprop.experimental.rwp_jax.rwp_forward_task` instead.
+        Use :func:`pywaveprop.rwp_jax.rwp_forward_task` instead.
     """
     warnings.warn(
         _DEPRECATION_MSG.format(name="rwp_ss_pade"),
@@ -121,7 +121,7 @@ def rwp_ss_pade_r(antenna: Source, env: Troposphere, params: RWPSSpadeComputatio
 class TroposphericRadioWaveSSPadePropagator:
     """
     .. deprecated:: 2.0.0
-        Use :func:`pywaveprop.experimental.rwp_jax.rwp_forward_task` instead.
+        Use :func:`pywaveprop.rwp_jax.rwp_forward_task` instead.
     """
 
     def __init__(self, *, antenna: Source, env: Troposphere, max_range_m: float,

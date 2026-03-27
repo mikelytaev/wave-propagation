@@ -38,7 +38,7 @@ Quick start
 
 Tropospheric radio wave propagation::
 
-    from pywaveprop.experimental.rwp_jax import (
+    from pywaveprop.rwp_jax import (
         RWPGaussSourceModel, RWPComputationalParams,
         TroposphereModel, EvaporationDuctModel, rwp_forward_task,
     )
@@ -50,12 +50,12 @@ Tropospheric radio wave propagation::
 
 Underwater acoustics::
 
-    from pywaveprop.experimental.uwa_jax import (
+    from pywaveprop.uwa_jax import (
         UWAGaussSourceModel, UnderwaterLayerModel,
         UnderwaterEnvironmentModel, uwa_forward_task,
     )
-    from pywaveprop.experimental.uwa_utils import UWAComputationalParams
-    from pywaveprop.experimental.helmholtz_jax import ConstWaveSpeedModel
+    from pywaveprop.uwa_utils import UWAComputationalParams
+    from pywaveprop.helmholtz_jax import ConstWaveSpeedModel
 
     src = UWAGaussSourceModel(freq_hz=500, depth_m=50, beam_width_deg=30)
     env = UnderwaterEnvironmentModel(layers=[

@@ -3,10 +3,10 @@ from multiZ.mdual import *
 import math as fm
 import cmath as cm
 
-from pywaveprop.experimental.grid_optimizer import get_optimal_grid
-from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
+from pywaveprop.grid_optimizer import get_optimal_grid
+from pywaveprop.helmholtz_common import HelmholtzMeshParams2D
 from pywaveprop.propagators._utils import pade_propagator_coefs
-from pywaveprop.experimental.utils import sqr_eq, bessel_ratio_4th_order
+from pywaveprop.jax_utils import sqr_eq, bessel_ratio_4th_order
 import jax
 import jax.numpy as jnp
 

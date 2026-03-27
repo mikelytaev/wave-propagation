@@ -2,7 +2,7 @@
 Legacy NumPy/Cython-based Helmholtz propagator.
 
 .. deprecated:: 2.0.0
-    This module is deprecated. Use :mod:`pywaveprop.experimental.helmholtz_jax`
+    This module is deprecated. Use :mod:`pywaveprop.helmholtz_jax`
     (the JAX-based implementation) instead, which provides GPU acceleration
     and automatic differentiation support.
 """
@@ -32,7 +32,7 @@ from pywaveprop.propagators.contfrac import bessel_ratio_4th_order
 
 _DEPRECATION_MSG = (
     "{cls} is deprecated and will be removed in a future version. "
-    "Use the JAX-based implementation from pywaveprop.experimental.helmholtz_jax instead. "
+    "Use the JAX-based implementation from pywaveprop.helmholtz_jax instead. "
     "See the migration guide in the documentation."
 )
 
@@ -201,7 +201,7 @@ class HelmholtzField:
 class HelmholtzPadeSolver:
     """
     .. deprecated:: 2.0.0
-        Use :class:`pywaveprop.experimental.helmholtz_jax.RationalHelmholtzPropagator` instead.
+        Use :class:`pywaveprop.helmholtz_jax.RationalHelmholtzPropagator` instead.
     """
 
     def __init__(self, env: HelmholtzEnvironment, wavelength, freq_hz, params: HelmholtzPropagatorComputationalParams):

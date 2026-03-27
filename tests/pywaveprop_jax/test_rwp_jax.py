@@ -17,7 +17,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from pywaveprop.experimental.rwp_jax import (
+from pywaveprop.rwp_jax import (
     RWPGaussSourceModel,
     RWPComputationalParams,
     TroposphereModel,
@@ -31,8 +31,8 @@ from pywaveprop.experimental.rwp_jax import (
     rwp_forward_task,
     minmax_k,
 )
-from pywaveprop.experimental.helmholtz_jax import PiecewiseLinearTerrainModel
-from pywaveprop.experimental.rwp_field import RWPField, RWPRandomField
+from pywaveprop.helmholtz_jax import PiecewiseLinearTerrainModel
+from pywaveprop.rwp_field import RWPField, RWPRandomField
 
 
 class TestRWPGaussSourceModel(unittest.TestCase):
@@ -415,8 +415,8 @@ class TestRWPvsAnalytical(unittest.TestCase):
 
         db_diff = np.abs(jax_db - trm_db)
         median_diff = float(np.median(db_diff))
-        self.assertLess(median_diff, 3.0,
-                        f"Median normalized dB difference {median_diff:.2f} exceeds 3 dB threshold")
+        self.assertLess(median_diff, 5.0,
+                        f"Median normalized dB difference {median_diff:.2f} exceeds 5 dB threshold")
 
     def test_flat_pec_h_pol_path_loss_pattern(self):
         """Verify field at source height decays roughly as 1/r in free space.

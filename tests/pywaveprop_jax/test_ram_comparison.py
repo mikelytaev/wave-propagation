@@ -159,12 +159,12 @@ class TestJAXvsRAM(unittest.TestCase):
 
         # --- Run JAX ---
         import jax.numpy as jnp
-        from pywaveprop.experimental.uwa_jax import (
+        from pywaveprop.uwa_jax import (
             UWAGaussSourceModel, UnderwaterLayerModel,
             UnderwaterEnvironmentModel, uwa_forward_task,
         )
-        from pywaveprop.experimental.uwa_utils import UWAComputationalParams
-        from pywaveprop.experimental.helmholtz_jax import ConstWaveSpeedModel
+        from pywaveprop.uwa_utils import UWAComputationalParams
+        from pywaveprop.helmholtz_jax import ConstWaveSpeedModel
 
         jax_src = UWAGaussSourceModel(
             freq_hz=freq_hz, depth_m=src_depth,

@@ -11,8 +11,8 @@ from jax import tree_util
 from jax import numpy as jnp
 
 from pywaveprop.experimental.helmholtz_mz import RationalHelmholtzPropagator
-from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
-from pywaveprop.experimental.uwa_utils import UWAComputationalParams
+from pywaveprop.helmholtz_common import HelmholtzMeshParams2D
+from pywaveprop.uwa_utils import UWAComputationalParams
 from pywaveprop.uwa.field import AcousticPressureField
 
 

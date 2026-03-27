@@ -1,0 +1,7 @@
+.venv
+__pycache__
+*.pyc
+grid_optimizer.dump
+build/
+*.so
+*.c

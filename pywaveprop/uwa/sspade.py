@@ -2,7 +2,7 @@
 Legacy NumPy/Cython-based underwater acoustics propagation module.
 
 .. deprecated:: 2.0.0
-    This module is deprecated. Use :mod:`pywaveprop.experimental.uwa_jax` instead,
+    This module is deprecated. Use :mod:`pywaveprop.uwa_jax` instead,
     which provides GPU acceleration via JAX.
 
     Migration example::
@@ -12,8 +12,8 @@ Legacy NumPy/Cython-based underwater acoustics propagation module.
         field = uwa_ss_pade(src, env, params)
 
         # New API:
-        from pywaveprop.experimental.uwa_jax import uwa_forward_task
-        from pywaveprop.experimental.uwa_utils import UWAComputationalParams
+        from pywaveprop.uwa_jax import uwa_forward_task
+        from pywaveprop.uwa_utils import UWAComputationalParams
         field = uwa_forward_task(src, env, params)
 """
 import warnings
@@ -27,7 +27,7 @@ from pywaveprop.uwa._optimization.utils import get_optimal
 
 _DEPRECATION_MSG = (
     "{name} is deprecated and will be removed in a future version. "
-    "Use the JAX-based implementation from pywaveprop.experimental.uwa_jax instead."
+    "Use the JAX-based implementation from pywaveprop.uwa_jax instead."
 )
 
 
@@ -45,7 +45,7 @@ class UWASSpadeComputationalParams:
 def uwa_ss_pade(src: Source, env: UnderwaterEnvironment, params: UWASSpadeComputationalParams) -> AcousticPressureField:
     """
     .. deprecated:: 2.0.0
-        Use :func:`pywaveprop.experimental.uwa_jax.uwa_forward_task` instead.
+        Use :func:`pywaveprop.uwa_jax.uwa_forward_task` instead.
     """
     warnings.warn(
         _DEPRECATION_MSG.format(name="uwa_ss_pade"),
@@ -68,7 +68,7 @@ def uwa_ss_pade(src: Source, env: UnderwaterEnvironment, params: UWASSpadeComput
 class UnderwaterAcousticsSSPadePropagator:
     """
     .. deprecated:: 2.0.0
-        Use :func:`pywaveprop.experimental.uwa_jax.uwa_forward_task` instead.
+        Use :func:`pywaveprop.uwa_jax.uwa_forward_task` instead.
     """
 
     def __init__(self, src: Source, env: UnderwaterEnvironment, max_range_m,
