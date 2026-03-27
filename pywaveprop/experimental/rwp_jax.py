@@ -1,11 +1,19 @@
+"""
+JAX-based tropospheric radio wave propagation module.
+
+This is the primary implementation of the tropospheric radio wave propagation
+solver using JAX for GPU-accelerated computation.
+"""
 from copy import deepcopy
 from dataclasses import dataclass, field
 
 from pywaveprop.experimental.helmholtz_jax import RegularGrid, AbstractWaveSpeedModel, RationalHelmholtzPropagator, \
-    AbstractTerrainModel
+    AbstractTerrainModel, PiecewiseLinearTerrainModel
 from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
+from pywaveprop.experimental.rwp_field import RWPField
 import jax
 import jax.numpy as jnp
+import numpy as np
 import math as fm
 from jax import tree_util
 
@@ -286,8 +294,9 @@ tree_util.register_pytree_node(ProxyWaveSpeedModel,
                                ProxyWaveSpeedModel._tree_unflatten)
 
 
-def minmax_k(src: RWPGaussSourceModel, env: TroposphereModel):
-    z_grid = jnp.linspace(0.0, env.max_height_m(), 1000)
+def minmax_k(src: RWPGaussSourceModel, env: TroposphereModel, max_height_m: float = None):
+    height = max_height_m or max(env.max_height_m(), 300.0)
+    z_grid = jnp.linspace(0.0, height, 1000)
     k_func_arr = 2 * fm.pi * src.freq_hz / env.wave_speed_profile(z_grid)
     k_min = min(k_func_arr)
     k_max = max(k_func_arr)
@@ -296,6 +305,22 @@ def minmax_k(src: RWPGaussSourceModel, env: TroposphereModel):
 
 
 def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RWPComputationalParams) -> RationalHelmholtzPropagator:
+    """Create a JAX-based rational Helmholtz propagator configured for tropospheric RWP.
+
+    Parameters
+    ----------
+    src : RWPGaussSourceModel
+        Source/antenna model.
+    env : TroposphereModel
+        Tropospheric environment model.
+    params : RWPComputationalParams
+        Computational parameters.
+
+    Returns
+    -------
+    RationalHelmholtzPropagator
+        Configured propagator ready for computation.
+    """
     params = deepcopy(params)
 
     max_angle_deg = params.max_angle_deg or src.max_angle_deg()
@@ -306,14 +331,23 @@ def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
     if params.max_height_m:
         params.max_height_m = max(params.max_height_m, max_height_m*1.1)
     else:
-        params.max_height_m = max_height_m * 1.1
+        params.max_height_m = max(max_height_m * 1.1, 300.0)
+
+    k_min, k_max = minmax_k(src, env, max_height_m=params.max_height_m)
+    k_min = float(k_min)
+    k_max = float(k_max)
+    # Ensure minimum spread in k_bounds for nearly homogeneous media
+    k_center = (k_min + k_max) / 2
+    if (k_max - k_min) / k_center < 1e-3:
+        k_min = k_center * 0.999
+        k_max = k_center * 1.001
 
     return RationalHelmholtzPropagator.create(
         rational_approx_order=params.rational_approx_order,
         freq_hz=src.freq_hz,
         wave_speed=ProxyWaveSpeedModel(env),
-        kz_max=kz_max,
-        k_bounds=minmax_k(src, env),
+        kz_max=float(kz_max),
+        k_bounds=(k_min, k_max),
         precision=params.precision,
         mesh_params=HelmholtzMeshParams2D(
             x_size_m=params.max_range_m,
@@ -324,4 +358,34 @@ def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
             z_n_upper_bound=params.z_output_points,
         ),
         lower_terrain=env.terrain
+    )
+
+
+def rwp_forward_task(src: RWPGaussSourceModel, env: TroposphereModel, params: RWPComputationalParams) -> RWPField:
+    """Compute tropospheric radio wave propagation using the JAX-based solver.
+
+    This is the primary high-level function for tropospheric RWP computation.
+
+    Parameters
+    ----------
+    src : RWPGaussSourceModel
+        Source/antenna model with frequency, height, and beam parameters.
+    env : TroposphereModel
+        Tropospheric environment model with N-profile and optional terrain.
+    params : RWPComputationalParams
+        Computational parameters including grid size and precision.
+
+    Returns
+    -------
+    RWPField
+        Computed electromagnetic field with methods for path_loss, horizontal extraction, etc.
+    """
+    model = create_rwp_model(src, env, params)
+    init = src.aperture(model.z_computational_grid())
+    f = model.compute(init)
+    return RWPField(
+        x_grid=model.x_output_grid(),
+        z_grid=model.z_output_grid(),
+        freq_hz=src.freq_hz,
+        field=f,
     )

@@ -8,7 +8,7 @@ def f_m(a: complex, b: complex, c: complex, d: complex, m: int):
 
 @jax.jit
 def bessel_ratio_4th_order(a_m1: complex, a_1: complex, b: complex, c: complex, d: complex, m: int, tol: float):
-    tol /= 1e6
+    tol = jnp.maximum(tol / 1e6, 1e-14)
     h_n = -f_m(c, d, a_m1, b, m)
     D_n = 0.0
     C_n = h_n

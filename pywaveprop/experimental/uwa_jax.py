@@ -1,3 +1,9 @@
+"""
+JAX-based underwater acoustics propagation module.
+
+This is the primary implementation of the underwater acoustics solver
+using JAX for GPU-accelerated computation.
+"""
 import cmath as cm
 import math as fm
 from copy import deepcopy
@@ -11,7 +17,7 @@ from jax import tree_util
 from jax import numpy as jnp
 
 from pywaveprop.experimental.helmholtz_jax import AbstractWaveSpeedModel, LinearSlopeWaveSpeedModel, \
-    RationalHelmholtzPropagator, RegularGrid
+    RationalHelmholtzPropagator, RegularGrid, PiecewiseLinearTerrainModel
 from pywaveprop.experimental.helmholtz_common import HelmholtzMeshParams2D
 from pywaveprop.experimental.uwa_utils import UWAComputationalParams
 from pywaveprop.uwa.field import AcousticPressureField
@@ -75,6 +81,7 @@ tree_util.register_pytree_node(UnderwaterLayerModel,
 @dataclass
 class UnderwaterEnvironmentModel:
     layers: List[UnderwaterLayerModel] = None
+    bathymetry: PiecewiseLinearTerrainModel = None
 
     def ssp(self, z_grid: jax.Array):
         cur_depth = 0.0
@@ -123,15 +130,13 @@ class UnderwaterEnvironmentModel:
         return sum([layer.height_m for layer in self.layers[:-1]])
 
     def _tree_flatten(self):
-        dynamic = (self.layers,)
-        static = {
-
-        }
+        dynamic = (self.layers, self.bathymetry)
+        static = {}
         return dynamic, static
 
     @classmethod
     def _tree_unflatten(cls, static, dynamic):
-        unf = cls(dynamic[0])
+        unf = cls(layers=dynamic[0], bathymetry=dynamic[1])
         return unf
 
 
@@ -204,6 +209,22 @@ def minmax_k(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel):
 
 
 def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, params: UWAComputationalParams) -> RationalHelmholtzPropagator:
+    """Create a JAX-based rational Helmholtz propagator configured for underwater acoustics.
+
+    Parameters
+    ----------
+    src : UWAGaussSourceModel
+        Acoustic source model.
+    env : UnderwaterEnvironmentModel
+        Underwater environment with layered sound speed profile.
+    params : UWAComputationalParams
+        Computational parameters.
+
+    Returns
+    -------
+    RationalHelmholtzPropagator
+        Configured propagator ready for computation.
+    """
     params = deepcopy(params)
 
     max_angle_deg = src.max_angle_deg()
@@ -221,6 +242,7 @@ def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, par
         freq_hz=src.freq_hz,
         wave_speed=ProxyWaveSpeedModel(env),
         rho=ProxyRhoModel(env),
+        upper_terrain=env.bathymetry,
         kz_max=kz_max,
         k_bounds=minmax_k(src, env),
         precision=params.precision,
@@ -237,6 +259,24 @@ def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, par
 
 
 def uwa_forward_task(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, params: UWAComputationalParams) -> AcousticPressureField:
+    """Compute underwater acoustic propagation using the JAX-based solver.
+
+    This is the primary high-level function for underwater acoustics computation.
+
+    Parameters
+    ----------
+    src : UWAGaussSourceModel
+        Acoustic source model with frequency, depth, and beam parameters.
+    env : UnderwaterEnvironmentModel
+        Layered underwater environment with sound speed profiles and densities.
+    params : UWAComputationalParams
+        Computational parameters including grid size and precision.
+
+    Returns
+    -------
+    AcousticPressureField
+        Computed acoustic pressure field.
+    """
     model = uwa_get_model(src, env, params)
     c0 = float(env.ssp(jnp.array([src.depth_m]))[0])
     k0 = 2 * fm.pi * src.freq_hz / c0

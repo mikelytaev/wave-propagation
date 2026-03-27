@@ -1,4 +1,22 @@
+"""
+Legacy NumPy/Cython-based tropospheric radio wave propagation module.
+
+.. deprecated:: 2.0.0
+    This module is deprecated. Use :mod:`pywaveprop.experimental.rwp_jax` instead,
+    which provides GPU acceleration via JAX.
+
+    Migration example::
+
+        # Old API:
+        from pywaveprop.rwp.sspade import rwp_ss_pade, RWPSSpadeComputationalParams
+        field = rwp_ss_pade(antenna, env, params)
+
+        # New API:
+        from pywaveprop.experimental.rwp_jax import rwp_forward_task, RWPComputationalParams
+        field = rwp_forward_task(src, env, params)
+"""
 from typing import Optional
+import warnings
 
 from pywaveprop.rwp.antennas import *
 from pywaveprop.rwp.environment import *
@@ -7,6 +25,11 @@ from pywaveprop.propagators.sspade import *
 from pywaveprop.propagators._utils import reflection_coef
 from copy import deepcopy
 import logging
+
+_DEPRECATION_MSG = (
+    "{name} is deprecated and will be removed in a future version. "
+    "Use the JAX-based implementation from pywaveprop.experimental.rwp_jax instead."
+)
 
 
 class SSPadeZOrder(Enum):
@@ -33,6 +56,15 @@ class RWPSSpadeComputationalParams:
 
 
 def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> Field:
+    """
+    .. deprecated:: 2.0.0
+        Use :func:`pywaveprop.experimental.rwp_jax.rwp_forward_task` instead.
+    """
+    warnings.warn(
+        _DEPRECATION_MSG.format(name="rwp_ss_pade"),
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if params.z_order == SSPadeZOrder.second:
         z_order = 2
     elif params.z_order == SSPadeZOrder.fourth:
@@ -62,6 +94,15 @@ def rwp_ss_pade(antenna: Source, env: Troposphere, params: RWPSSpadeComputationa
 
 
 def rwp_ss_pade_r(antenna: Source, env: Troposphere, params: RWPSSpadeComputationalParams) -> RandomField:
+    """
+    .. deprecated:: 2.0.0
+        Use the JAX-based implementation instead.
+    """
+    warnings.warn(
+        _DEPRECATION_MSG.format(name="rwp_ss_pade_r"),
+        DeprecationWarning,
+        stacklevel=2,
+    )
     random_field = RandomField()
     iterations_num = params.max_monte_carlo_iterations or 10
     for i in range(0, iterations_num):
@@ -78,9 +119,18 @@ def rwp_ss_pade_r(antenna: Source, env: Troposphere, params: RWPSSpadeComputatio
 
 
 class TroposphericRadioWaveSSPadePropagator:
+    """
+    .. deprecated:: 2.0.0
+        Use :func:`pywaveprop.experimental.rwp_jax.rwp_forward_task` instead.
+    """
 
     def __init__(self, *, antenna: Source, env: Troposphere, max_range_m: float,
                  comp_params: HelmholtzPropagatorComputationalParams = None):
+        warnings.warn(
+            _DEPRECATION_MSG.format(name="TroposphericRadioWaveSSPadePropagator"),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.src = deepcopy(antenna)
         self.env = deepcopy(env)
         self.src.height_m += self.env.terrain.elevation(0)

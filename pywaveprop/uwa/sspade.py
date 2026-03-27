@@ -1,8 +1,33 @@
+"""
+Legacy NumPy/Cython-based underwater acoustics propagation module.
+
+.. deprecated:: 2.0.0
+    This module is deprecated. Use :mod:`pywaveprop.experimental.uwa_jax` instead,
+    which provides GPU acceleration via JAX.
+
+    Migration example::
+
+        # Old API:
+        from pywaveprop.uwa.sspade import uwa_ss_pade, UWASSpadeComputationalParams
+        field = uwa_ss_pade(src, env, params)
+
+        # New API:
+        from pywaveprop.experimental.uwa_jax import uwa_forward_task
+        from pywaveprop.experimental.uwa_utils import UWAComputationalParams
+        field = uwa_forward_task(src, env, params)
+"""
+import warnings
+
 from pywaveprop.uwa.field import *
 from pywaveprop.uwa.source import *
 from pywaveprop.propagators.sspade import *
 from copy import deepcopy
 from pywaveprop.uwa._optimization.utils import get_optimal
+
+_DEPRECATION_MSG = (
+    "{name} is deprecated and will be removed in a future version. "
+    "Use the JAX-based implementation from pywaveprop.experimental.uwa_jax instead."
+)
 
 
 @dataclass
@@ -17,6 +42,15 @@ class UWASSpadeComputationalParams:
 
 
 def uwa_ss_pade(src: Source, env: UnderwaterEnvironment, params: UWASSpadeComputationalParams) -> AcousticPressureField:
+    """
+    .. deprecated:: 2.0.0
+        Use :func:`pywaveprop.experimental.uwa_jax.uwa_forward_task` instead.
+    """
+    warnings.warn(
+        _DEPRECATION_MSG.format(name="uwa_ss_pade"),
+        DeprecationWarning,
+        stacklevel=2,
+    )
     propagator = UnderwaterAcousticsSSPadePropagator(
         src=src,
         env=env,
@@ -31,9 +65,18 @@ def uwa_ss_pade(src: Source, env: UnderwaterEnvironment, params: UWASSpadeComput
 
 
 class UnderwaterAcousticsSSPadePropagator:
+    """
+    .. deprecated:: 2.0.0
+        Use :func:`pywaveprop.experimental.uwa_jax.uwa_forward_task` instead.
+    """
 
     def __init__(self, src: Source, env: UnderwaterEnvironment, max_range_m,
                  comp_params=HelmholtzPropagatorComputationalParams(), max_depth_m=None, c0=None, lower_bc=None):
+        warnings.warn(
+            _DEPRECATION_MSG.format(name="UnderwaterAcousticsSSPadePropagator"),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.uwa_env = deepcopy(env)
         self.comp_params = deepcopy(comp_params)
         self.src = deepcopy(src)

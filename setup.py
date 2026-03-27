@@ -1,45 +1,67 @@
+import os
 from setuptools import setup
 from setuptools.extension import Extension
-import numpy
 
-USE_CYTHON = True
-ext = '.pyx' if USE_CYTHON else '.c'
+# Cython extensions are optional (legacy implementation)
+USE_CYTHON = os.environ.get('PYWAVEPROP_USE_CYTHON', '0') == '1'
 
-extensions = [Extension("propagators.contfrac", ["propagators/contfrac"+ext], include_dirs=['.', numpy.get_include()]),
-              Extension("propagators._cn_utils", ["propagators/_cn_utils"+ext], include_dirs=['.', numpy.get_include()]),
-              Extension("propagators.dispersion_relations", ["propagators/dispersion_relations"+ext], include_dirs=['.'])
-              ]
-
+extensions = []
 if USE_CYTHON:
+    import numpy
+    ext = '.pyx'
+    extensions = [
+        Extension("propagators.contfrac", ["propagators/contfrac"+ext], include_dirs=['.', numpy.get_include()]),
+        Extension("propagators._cn_utils", ["propagators/_cn_utils"+ext], include_dirs=['.', numpy.get_include()]),
+        Extension("propagators.dispersion_relations", ["propagators/dispersion_relations"+ext], include_dirs=['.'])
+    ]
     from Cython.Build import cythonize
     extensions = cythonize(extensions, language_level="3")
 
 setup(
     name='pywaveprop',
-    version='1.0.0',
+    version='2.0.0',
     url='https://github.com/mikelytaev/wave-propagation',
     license='MIT',
     author='Mikhail Lytaev',
     author_email='mikelytaev@gmail.com',
-    description='Wave propagation framework',
+    description='Wave propagation framework (JAX-based)',
+    long_description=open('README.md').read() if os.path.exists('README.md') else '',
+    long_description_content_type='text/markdown',
+    python_requires='>=3.10',
     setup_requires=[
-        'numpy'
+        'numpy',
     ],
     install_requires=[
         'numpy',
         'scipy',
         'mpmath',
         'matplotlib',
-        'cython',
         'jax',
+        'jaxlib',
         'lineax',
-        'flax'
+        'flax',
     ],
+    extras_require={
+        'legacy': ['cython'],
+        'gpu': ['jax[cuda12]'],
+    },
     ext_modules=extensions,
     zip_safe=False,
-    packages=['propagators', 'rwp', 'uwa', 'transforms', 'transforms.fcc_fourier', 'experimental'],
+    packages=[
+        'pywaveprop',
+        'pywaveprop.propagators',
+        'pywaveprop.rwp',
+        'pywaveprop.uwa',
+        'pywaveprop.uwa._optimization',
+        'pywaveprop.transforms',
+        'pywaveprop.transforms.fcc_fourier',
+        'pywaveprop.experimental',
+    ],
     package_data={
         '': ['*.pyx']
     },
-    keywords=["wave propagation", "parabolic equation", "troposphere", "underwater acoustics", "diffraction", "refraction"]
+    keywords=[
+        "wave propagation", "parabolic equation", "troposphere",
+        "underwater acoustics", "diffraction", "refraction", "jax",
+    ],
 )

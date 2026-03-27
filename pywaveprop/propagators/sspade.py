@@ -1,7 +1,16 @@
+"""
+Legacy NumPy/Cython-based Helmholtz propagator.
+
+.. deprecated:: 2.0.0
+    This module is deprecated. Use :mod:`pywaveprop.experimental.helmholtz_jax`
+    (the JAX-based implementation) instead, which provides GPU acceleration
+    and automatic differentiation support.
+"""
 import logging
 import pickle
 import types
 import time
+import warnings
 
 import math as fm
 import cmath as cm
@@ -20,6 +29,12 @@ import pyximport
 pyximport.install(setup_args={"include_dirs": np.get_include()}, language_level=3)
 from pywaveprop.propagators._cn_utils import *
 from pywaveprop.propagators.contfrac import bessel_ratio_4th_order
+
+_DEPRECATION_MSG = (
+    "{cls} is deprecated and will be removed in a future version. "
+    "Use the JAX-based implementation from pywaveprop.experimental.helmholtz_jax instead. "
+    "See the migration guide in the documentation."
+)
 
 SSPE_MAX_ANGLE = 85
 
@@ -184,8 +199,17 @@ class HelmholtzField:
 
 
 class HelmholtzPadeSolver:
+    """
+    .. deprecated:: 2.0.0
+        Use :class:`pywaveprop.experimental.helmholtz_jax.RationalHelmholtzPropagator` instead.
+    """
 
     def __init__(self, env: HelmholtzEnvironment, wavelength, freq_hz, params: HelmholtzPropagatorComputationalParams):
+        warnings.warn(
+            _DEPRECATION_MSG.format(cls="HelmholtzPadeSolver"),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.env = env
         self.params = params
         self.wavelength = wavelength

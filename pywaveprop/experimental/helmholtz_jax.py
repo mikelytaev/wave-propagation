@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from jax import tree_util
 import jax
+jax.config.update("jax_enable_x64", True)
 import lineax
 from jax import numpy as jnp
 
@@ -292,9 +293,21 @@ class RationalHelmholtzPropagator:
 
     @classmethod
     def create(cls, freq_hz: float, wave_speed, kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D,
-               rho=None, lower_terrain=None, rational_approx_order=(7, 8)):
+               rho=None, lower_terrain=None, upper_terrain=None, rational_approx_order=(7, 8)):
+        # Convert to float to avoid issues with JAX arrays in NumPy-based optimizer
+        kz_max = float(kz_max)
+        k_bounds = (float(k_bounds[0]), float(k_bounds[1]))
+        precision = float(precision)
+
         dx_max = mesh_params.dx_output_m or mesh_params.x_size_m / (round(mesh_params.x_n_upper_bound / 2) - 1)
         dz_max = mesh_params.dz_output_m or mesh_params.z_size_m / (round(mesh_params.z_n_upper_bound / 2) - 1)
+
+        # Constrain dz so that beta*dz < 2 for NLBC stability.
+        # The nonlocal BC requires a fine enough z-grid for the discrete
+        # Green's function (bessel ratio) to converge properly.
+        beta_est = (k_bounds[0] + k_bounds[1]) / 2
+        dz_nlbc_max = 2.0 / beta_est
+        dz_max = min(dz_max, dz_nlbc_max)
 
         if rational_approx_order == None:
             orders = [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8),]
@@ -340,6 +353,12 @@ class RationalHelmholtzPropagator:
                 dz_computational_m = dz_computational_m_t
                 rational_approx_order = order
 
+        if cur_best == fm.inf:
+            raise ValueError(
+                f"Grid optimization failed: could not find valid grid parameters. "
+                f"Check k_bounds ({k_bounds}), kz_max ({kz_max}), and precision ({precision})."
+            )
+
         print(f'rational_approx_order: {rational_approx_order}, '
               f'beta: {beta}, '
               f'dx: {dx_computational_m}, '
@@ -357,12 +376,13 @@ class RationalHelmholtzPropagator:
             freq_hz=freq_hz,
             wave_speed=wave_speed,
             rho=rho,
-            lower_terrain=lower_terrain
+            lower_terrain=lower_terrain,
+            upper_terrain=upper_terrain
         )
 
     def __init__(self, order: tuple[int, int], beta: float, dx_m: float, dz_m: float, x_n: int, z_n: int,
                  x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed, lower_terrain_mask=None,
-                 rho=None, lower_terrain=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None):
+                 rho=None, lower_terrain=None, upper_terrain=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None):
         self.order = order
         self.beta = beta
         self.dx_m = dx_m
@@ -385,18 +405,27 @@ class RationalHelmholtzPropagator:
         self.wave_speed = wave_speed
         self.rho = rho
         self.lower_terrain = lower_terrain
+        self.upper_terrain = upper_terrain
         if lower_terrain_mask is not None:
             self.lower_terrain_mask = lower_terrain_mask
         else:
             self.lower_terrain_mask = jnp.ones(shape=(self.x_n, self.z_n), dtype=complex)
         self._prepare_het_arrays()
-        self.lower_nlbc_coefs = None  # lower_nlbc_coefs if lower_nlbc_coefs is not None else self._calc_nlbc(self.het[0])
-        self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_nlbc(self.het[-1], 0*(self.het[-1] - self.het[-2])/self.dz_m)
+        self.lower_nlbc_coefs = None
+        gamma = (self.het[-1] - self.het[-2]) / self.dz_m
+        # beta_param is the exterior het value at the boundary, adjusted for
+        # the linear slope: beta = (n^2 - 1) - gamma*z_max.
+        # Since het is already n^2/n_ref^2 - 1 and het[0]=0, this simplifies to:
+        beta_nlbc = self.het[-1] - gamma * (self.z_n - 1) * self.dz_m
+        self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_nlbc(beta_nlbc, gamma)
 
 
     def _prepare_het_arrays(self):
-        self.het = jnp.array((2 * jnp.pi * self.freq_hz / self.wave_speed.on_regular_grid(
-            RegularGrid(start=0, dx=self.dz_m, n=self.z_n))) ** 2 / self.beta ** 2 - 1.0, dtype=complex)
+        k_arr = 2 * jnp.pi * self.freq_hz / self.wave_speed.on_regular_grid(
+            RegularGrid(start=0, dx=self.dz_m, n=self.z_n))
+        het_raw = jnp.array(k_arr ** 2 / self.beta ** 2 - 1.0, dtype=complex)
+        # Normalize so het[0]=0: the reference wavenumber corresponds to z=0.
+        self.het = het_raw - het_raw[0]
 
         if self.rho is not None:
             self.rho_v = self.rho.on_regular_grid(RegularGrid(start=0, dx=self.dz_m, n=self.z_n))
@@ -408,15 +437,20 @@ class RationalHelmholtzPropagator:
             self.rho_v_min = jnp.ones(self.z_n - 2)
             self.rho_v_pls = jnp.ones(self.z_n - 2)
 
-        if self.lower_terrain is not None:
-            terrain_heights = jnp.round(self.lower_terrain.on_regular_grid(
-                RegularGrid(start=0, dx=self.dx_m, n=self.x_n)) / self.dz_m)
-            # Create a grid of z indices: shape (x_n, z_n)
+        if self.lower_terrain is not None or self.upper_terrain is not None:
             z_indices = jnp.arange(self.z_n)[jnp.newaxis, :]
-            # Broadcast terrain heights to compare: shape (x_n, 1)
-            terrain_heights_broadcast = terrain_heights[:, jnp.newaxis]
-            # Mask is 0 where z_index < terrain_height, 1 otherwise
-            self.lower_terrain_mask = jnp.where(z_indices < terrain_heights_broadcast, 0.0 + 0.0j, 1.0 + 0.0j)
+            mask = jnp.ones(shape=(self.x_n, self.z_n), dtype=complex)
+            if self.lower_terrain is not None:
+                heights = jnp.round(self.lower_terrain.on_regular_grid(
+                    RegularGrid(start=0, dx=self.dx_m, n=self.x_n)) / self.dz_m)
+                # Zero out z_index < terrain_height (below ground in RWP)
+                mask = mask * jnp.where(z_indices < heights[:, jnp.newaxis], 0.0 + 0.0j, 1.0 + 0.0j)
+            if self.upper_terrain is not None:
+                heights = jnp.round(self.upper_terrain.on_regular_grid(
+                    RegularGrid(start=0, dx=self.dx_m, n=self.x_n)) / self.dz_m)
+                # Zero out z_index >= terrain_height (below bottom in UWA)
+                mask = mask * jnp.where(z_indices >= heights[:, jnp.newaxis], 0.0 + 0.0j, 1.0 + 0.0j)
+            self.lower_terrain_mask = mask
         else:
             self.lower_terrain_mask = jnp.ones(shape=(self.x_n, self.z_n), dtype=complex)
 
@@ -433,7 +467,8 @@ class RationalHelmholtzPropagator:
         return self.z_computational_grid()[::self.z_grid_scale]
 
     def _tree_flatten(self):
-        dynamic = (self.wave_speed, self.rho, self.lower_terrain)
+        dynamic = (self.wave_speed, self.rho, self.lower_terrain, self.upper_terrain,
+                   self.lower_nlbc_coefs, self.upper_nlbc_coefs, self.lower_terrain_mask)
         static = {
             'order': self.order,
             'beta': self.beta,
@@ -445,15 +480,15 @@ class RationalHelmholtzPropagator:
             'x_grid_scale': self.x_grid_scale,
             'z_grid_scale': self.z_grid_scale,
             'freq_hz': self.freq_hz,
-            'lower_nlbc_coefs': self.lower_nlbc_coefs,
-            'upper_nlbc_coefs': self.upper_nlbc_coefs,
-            'lower_terrain_mask': self.lower_terrain_mask
         }
         return dynamic, static
 
     @classmethod
     def _tree_unflatten(cls, static, dynamic):
-        unf = cls(wave_speed=dynamic[0], rho=dynamic[1], lower_terrain=dynamic[2], **static)
+        unf = cls(wave_speed=dynamic[0], rho=dynamic[1], lower_terrain=dynamic[2],
+                  upper_terrain=dynamic[3],
+                  lower_nlbc_coefs=dynamic[4], upper_nlbc_coefs=dynamic[5],
+                  lower_terrain_mask=dynamic[6], **static)
         return unf
 
     def _calc_nlbc(self, beta, gamma=0.0):
@@ -487,18 +522,30 @@ class RationalHelmholtzPropagator:
                 t = tau * jnp.exp(1j * t)
                 return diff_eq_solution_ratio(((1 - t) / (-num_roots[0] + den_roots[0] * t)))
         else:
-            @jax.jit
+            # Use scipy.linalg.funm for robust matrix function evaluation.
+            # This avoids eigenvector discontinuity issues that cause FCC
+            # adaptive integration to fail.
+            from scipy import linalg as sla
+
+            num_roots_np = np.array(num_roots)
+            den_roots_np = np.array(den_roots)
+
+            def _scalar_diff_eq(s):
+                s = np.asarray(s)
+                if s.ndim == 0:
+                    return complex(diff_eq_solution_ratio(jnp.asarray(s)))
+                return np.array([complex(diff_eq_solution_ratio(jnp.asarray(si))) for si in s])
+
             def nlbc_transformed(f):
-                t = tau * jnp.exp(1j * f)
-                matrix_a = jnp.diag(den_roots, 0) - jnp.diag(num_roots[1:], -1)
-                matrix_a = matrix_a.at[0, -1].add(-num_roots[0])
-                matrix_a = matrix_a.at[0, 0].set(matrix_a[0, 0] * t)
-                matrix_b = jnp.diag(-jnp.ones(m_size), 0) + jnp.diag(jnp.ones(m_size - 1), -1) + 0j
-                matrix_b = matrix_b.at[0, -1].set(1.0)
-                matrix_b = matrix_b.at[0, 0].multiply(t)
-                w, vr = jnp.linalg.eig(jnp.linalg.inv(matrix_a) @ matrix_b)
-                r = jnp.diag(jnp.array([diff_eq_solution_ratio(a) for a in w]))
-                res = vr.dot(r).dot(jnp.linalg.inv(vr))
+                t = tau * np.exp(1j * f)
+                matrix_a = np.diag(den_roots_np, 0) - np.diag(num_roots_np[1:], -1)
+                matrix_a[0, -1] += -num_roots_np[0]
+                matrix_a[0, 0] *= t
+                matrix_b = np.diag(-np.ones(m_size)) + np.diag(np.ones(m_size - 1), -1) + 0j
+                matrix_b[0, -1] = 1.0
+                matrix_b[0, 0] *= t
+                M = np.linalg.solve(matrix_a, matrix_b)
+                res = sla.funm(M, _scalar_diff_eq)
                 return res.reshape(m_size ** 2)
 
         fcca = FCCAdaptiveFourier(2 * cm.pi, -np.arange(0, self.x_n), rtol=inv_z_transform_rtol)
@@ -587,7 +634,10 @@ class RationalHelmholtzPropagator:
     def _convolution(self, a, b, i):
 
         def body_fun(ind, val):
-            return val + a[ind] @ b[i-ind]
+            # Only accumulate for ind <= i-1 (historical steps).
+            # For ind > i, b[i-ind] wraps to uninitialized entries.
+            contrib = a[ind] @ b[i-ind]
+            return val + jnp.where(ind < i, contrib, 0.0)
 
         return jax.lax.fori_loop(1, len(a), body_fun, jnp.zeros(max(self.order), dtype=complex))
 
