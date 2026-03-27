@@ -83,25 +83,40 @@ class UnderwaterEnvironmentModel:
     layers: List[UnderwaterLayerModel] = None
     bathymetry: PiecewiseLinearTerrainModel = None
 
+    @staticmethod
+    def _effective_speed(c_real, attenuation_dm_lambda):
+        """Return complex effective sound speed incorporating attenuation.
+
+        attenuation_dm_lambda is attenuation in dB per wavelength.
+        The conversion follows: c_eff = c / (1 + j*eta*alpha) where
+        eta = 1/(40*pi*log10(e)).  When alpha=0 the result is real-valued.
+        """
+        eta = 1.0 / (40.0 * np.pi * np.log10(np.e))
+        return c_real / (1.0 + 1j * eta * attenuation_dm_lambda)
+
     def ssp(self, z_grid: jax.Array):
         cur_depth = 0.0
-        res = jnp.empty(shape=z_grid.shape, dtype=float)
+        res = jnp.empty(shape=z_grid.shape, dtype=complex)
         for layer in self.layers:
             layer_height = layer.height_m if layer != self.layers[-1] else np.inf
             local_filter = (cur_depth <= z_grid) & (z_grid < cur_depth + layer_height)
             local_z = z_grid[local_filter] - cur_depth
-            res = res.at[local_filter].set(layer.sound_speed_profile_m_s(local_z))
+            c = layer.sound_speed_profile_m_s(local_z)
+            c_eff = self._effective_speed(c, layer.attenuation_dm_lambda)
+            res = res.at[local_filter].set(c_eff)
             cur_depth += layer_height
         return res
 
     @partial(jax.jit, static_argnums=(1,))
     def ssp_jit(self, z_grid: RegularGrid):
         cur_depth = 0.0
-        res = jnp.empty(shape=z_grid.n, dtype=float)
+        res = jnp.empty(shape=z_grid.n, dtype=complex)
         for layer in self.layers:
             layer_height = layer.height_m if layer != self.layers[-1] else 1E6
             a_i, b_i = z_grid.interval_indexes(cur_depth, cur_depth + layer_height)
-            res = res.at[a_i:b_i].set(layer.sound_speed_profile_m_s(z_grid.array_grid(a_i, b_i) - cur_depth))
+            c = layer.sound_speed_profile_m_s(z_grid.array_grid(a_i, b_i) - cur_depth)
+            c_eff = self._effective_speed(c, layer.attenuation_dm_lambda)
+            res = res.at[a_i:b_i].set(c_eff)
             cur_depth += layer_height
         return res
 
@@ -201,9 +216,9 @@ tree_util.register_pytree_node(ProxyRhoModel,
 
 def minmax_k(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel):
     z_grid = jnp.linspace(0.0, env.max_depth_m(), 1000)
-    k_func_arr = 2 * fm.pi * src.freq_hz / env.ssp(z_grid)
-    k_min = min(k_func_arr)
-    k_max = max(k_func_arr)
+    k_func_arr = jnp.abs(2 * fm.pi * src.freq_hz / env.ssp(z_grid))
+    k_min = float(min(k_func_arr))
+    k_max = float(max(k_func_arr))
     print(f'k_min: {k_min}, k_max: {k_max}')
     return k_min, k_max
 
@@ -228,7 +243,7 @@ def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, par
     params = deepcopy(params)
 
     max_angle_deg = src.max_angle_deg()
-    c0 = float(env.ssp(jnp.array([src.depth_m]))[0])
+    c0 = float(jnp.real(env.ssp(jnp.array([src.depth_m]))[0]))
     k0 = 2 * fm.pi * src.freq_hz / c0
     kz_max = k0 * fm.sin(fm.radians(max_angle_deg))
 
@@ -278,7 +293,7 @@ def uwa_forward_task(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, 
         Computed acoustic pressure field.
     """
     model = uwa_get_model(src, env, params)
-    c0 = float(env.ssp(jnp.array([src.depth_m]))[0])
+    c0 = float(jnp.real(env.ssp(jnp.array([src.depth_m]))[0]))
     k0 = 2 * fm.pi * src.freq_hz / c0
     init = src.aperture(k0, model.z_computational_grid())
     f = model.compute(init)
