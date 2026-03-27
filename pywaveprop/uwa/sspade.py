@@ -20,6 +20,7 @@ import warnings
 
 from pywaveprop.uwa.field import *
 from pywaveprop.uwa.source import *
+from pywaveprop.uwa.environment import *
 from pywaveprop.propagators.sspade import *
 from copy import deepcopy
 from pywaveprop.uwa._optimization.utils import get_optimal
