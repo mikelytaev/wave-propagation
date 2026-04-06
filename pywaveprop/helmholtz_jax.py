@@ -423,9 +423,7 @@ class RationalHelmholtzPropagator:
     def _prepare_het_arrays(self):
         k_arr = 2 * jnp.pi * self.freq_hz / self.wave_speed.on_regular_grid(
             RegularGrid(start=0, dx=self.dz_m, n=self.z_n))
-        het_raw = jnp.array(k_arr ** 2 / self.beta ** 2 - 1.0, dtype=complex)
-        # Normalize so het[0]=0: the reference wavenumber corresponds to z=0.
-        self.het = het_raw - het_raw[0]
+        self.het = jnp.array(k_arr ** 2 / self.beta ** 2 - 1.0, dtype=complex)
 
         if self.rho is not None:
             self.rho_v = self.rho.on_regular_grid(RegularGrid(start=0, dx=self.dz_m, n=self.z_n))

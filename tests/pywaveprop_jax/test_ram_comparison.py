@@ -207,9 +207,16 @@ class TestJAXvsRAM(unittest.TestCase):
         diff_old_ram = np.abs(ram_norm[ram_ref+5:-5] - old_on_ram_norm[ram_ref+5:-5])
         med_old_ram = float(np.median(diff_old_ram))
 
-        print(f"\nRAM comparison (shallow water, 25 Hz, isovelocity):")
+        # --- Compare JAX vs RAM directly ---
+        jax_on_ram = np.interp(ram_ranges, jax_ranges, jax_tl)
+        jax_on_ram_norm = jax_on_ram - jax_on_ram[ram_ref]
+        diff_jax_ram = np.abs(ram_norm[ram_ref+5:-5] - jax_on_ram_norm[ram_ref+5:-5])
+        med_jax_ram = float(np.median(diff_jax_ram))
+
+        print(f"\nRAM comparison (shallow water, 100 Hz, isovelocity):")
         print(f"  Old code vs RAM: median {med_old_ram:.1f} dB")
         print(f"  JAX vs old code: median {med_jax_old:.1f} dB")
+        print(f"  JAX vs RAM:      median {med_jax_ram:.1f} dB")
 
         # JAX and old code use the same source model but different grids
         # and Padé orders, so moderate differences are expected
@@ -218,6 +225,10 @@ class TestJAXvsRAM(unittest.TestCase):
         # Old code vs RAM should be reasonable (different source models)
         self.assertLess(med_old_ram, 6.0,
                         f"Old code vs RAM median diff {med_old_ram:.1f} dB too large")
+        # JAX (Gaussian beam) vs RAM (point source) — larger tolerance
+        # because the source model difference is not normalised away
+        self.assertLess(med_jax_ram, 8.0,
+                        f"JAX vs RAM median diff {med_jax_ram:.1f} dB too large")
 
 
 if __name__ == '__main__':
