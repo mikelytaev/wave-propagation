@@ -289,10 +289,9 @@ class TestUWAForwardTask(unittest.TestCase):
         env = UnderwaterEnvironmentModel(layers=[water, sediment])
         params = UWAComputationalParams(
             max_range_m=5000.0,
-            x_output_points=50,
-            z_output_points=50,
+            dx_m=10.0,
+            dz_m=1.0,
         )
-        params.rational_approx_order = (1, 2)
         result = uwa_forward_task(src, env, params)
         self.assertIsInstance(result, AcousticPressureField)
         self.assertGreater(len(result.x_grid), 0)
@@ -319,10 +318,9 @@ class TestUWAForwardTask(unittest.TestCase):
         env = UnderwaterEnvironmentModel(layers=[water, sediment])
         params = UWAComputationalParams(
             max_range_m=5000.0,
-            x_output_points=50,
-            z_output_points=50,
+            dx_m=10.0,
+            dz_m=1.0,
         )
-        params.rational_approx_order = (1, 2)
         result = uwa_forward_task(src, env, params)
         self.assertIsInstance(result, AcousticPressureField)
         self.assertTrue(np.all(np.isfinite(np.asarray(result.field))))
@@ -351,10 +349,9 @@ class TestUWAForwardTask(unittest.TestCase):
         env = UnderwaterEnvironmentModel(layers=[water, sediment])
         params = UWAComputationalParams(
             max_range_m=10000.0,
-            x_output_points=50,
-            z_output_points=50,
+            dx_m=50.0,
+            dz_m=5.0,
         )
-        params.rational_approx_order = (1, 2)
         result = uwa_forward_task(src, env, params)
         self.assertIsInstance(result, AcousticPressureField)
         self.assertTrue(np.all(np.isfinite(np.asarray(result.field))))
@@ -380,10 +377,9 @@ class TestUWAForwardTask(unittest.TestCase):
         env = UnderwaterEnvironmentModel(layers=[water, sediment])
         params = UWAComputationalParams(
             max_range_m=5000.0,
-            x_output_points=50,
-            z_output_points=50,
+            dx_m=10.0,
+            dz_m=1.0,
         )
-        params.rational_approx_order = (1, 2)
         result = uwa_forward_task(src, env, params)
         x, z, val = result.nearest_value(2500.0, 50.0)
         self.assertIsNotNone(val)
