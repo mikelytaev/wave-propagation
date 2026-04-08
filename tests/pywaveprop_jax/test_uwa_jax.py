@@ -358,6 +358,66 @@ class TestUWAForwardTask(unittest.TestCase):
         # Field should not be identically zero
         self.assertGreater(float(np.max(np.abs(np.asarray(result.field)))), 0)
 
+    def test_output_points_more_efficient_than_dx_m(self):
+        """x_n_upper_bound/z_n_upper_bound let the optimizer pick a grid that
+        does not need to evenly divide a fixed output spacing.
+
+        With dx_m=20, dx_computational must be 20/N for integer N — so the
+        optimizer is forced to refine to 10 m even when ~20 m would suffice.
+        With x_output_points giving the same dx_max, the optimizer can use
+        the natural ~20 m step directly, halving the work.
+        """
+        src = UWAGaussSourceModel(
+            freq_hz=100.0,
+            depth_m=50.0,
+            beam_width_deg=30.0,
+        )
+        water = UnderwaterLayerModel(
+            height_m=200.0,
+            sound_speed_profile_m_s=ConstWaveSpeedModel(c0=1500.0),
+            density=1.0,
+        )
+        sediment = UnderwaterLayerModel(
+            height_m=100.0,
+            sound_speed_profile_m_s=ConstWaveSpeedModel(c0=1700.0),
+            density=1.8,
+        )
+        env = UnderwaterEnvironmentModel(layers=[water, sediment])
+
+        # Case A: strict dx_m=20 forces dx_comp = 20/N
+        params_dx = UWAComputationalParams(
+            max_range_m=5000.0,
+            dx_m=20.0,
+            dz_m=1.0,
+        )
+        params_dx.rational_approx_order = (7, 8)
+        model_dx = uwa_get_model(src, env, params_dx)
+
+        # Case B: x_output_points=500 gives dx_max=20 but lets optimizer
+        # pick any dx_comp <= 20, not just divisors
+        params_pts = UWAComputationalParams(
+            max_range_m=5000.0,
+            x_output_points=500,
+            z_output_points=600,
+        )
+        params_pts.rational_approx_order = (7, 8)
+        model_pts = uwa_get_model(src, env, params_pts)
+
+        # Both should have similar dx_max ≈ 20 m, but the points-bounded
+        # version should use a coarser computational grid (fewer x_n)
+        self.assertLess(
+            model_pts.x_n, model_dx.x_n,
+            f"x_output_points should give fewer grid points "
+            f"({model_pts.x_n}) than dx_m ({model_dx.x_n})"
+        )
+        # And the computational dx is NOT an integer divisor of any "round" output dx
+        self.assertNotAlmostEqual(model_pts.dx_m, model_dx.dx_m, places=2)
+        # Both should still produce finite, sensible results
+        result_dx = uwa_forward_task(src, env, params_dx)
+        result_pts = uwa_forward_task(src, env, params_pts)
+        self.assertTrue(np.all(np.isfinite(np.asarray(result_dx.field))))
+        self.assertTrue(np.all(np.isfinite(np.asarray(result_pts.field))))
+
     def test_nearest_value(self):
         """Test AcousticPressureField.nearest_value method."""
         src = UWAGaussSourceModel(
