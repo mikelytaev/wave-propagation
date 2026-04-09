@@ -3,7 +3,7 @@ import pickle
 
 import numpy as np
 
-from pywaveprop.propagators._utils import pade_propagator_coefs
+from pywaveprop.propagators._utils import pade_propagator_coefs, ratinterp_propagator_coefs
 
 
 def second_difference_disp_rel(k_z: complex, dz: float, z=0):
@@ -160,15 +160,127 @@ class _OptTable:
 _tables_cache = _OptTable.load()
 
 
-def get_optimal_grid(kz_max, k_min, k_max, required_prec, dx_max=None, dz_max=None, propagator_order=(7, 8)) -> (float, float, float): # beta, dx, dz
+def _get_optimal_grid_pade(kz_max, k_min, k_max, required_prec, dx_max=None, dz_max=None, propagator_order=(7, 8)):
     global _tables_cache
-    
+
     if propagator_order not in _tables_cache:
-        # Compute and cache the new propagator order
         new_table = _OptTable(propagator_order=propagator_order)
         new_table.compute()
         _tables_cache[propagator_order] = new_table
         _OptTable.save(_tables_cache)
-    
+
     opt_table = _tables_cache[propagator_order]
     return opt_table.get_optimal(kz_max, k_min, k_max, required_prec, dx_max, dz_max)
+
+
+def _get_optimal_grid_ratinterp(kz_max, k_min, k_max, required_prec, dx_max=None, dz_max=None, propagator_order=(7, 8)):
+    """Grid optimization using rational interpolation on an interval.
+
+    Unlike the Pade optimizer, this computes ratinterp coefficients on-the-fly
+    for each candidate (beta, t_beta) because the approximation interval is the
+    input (determined by the physics) rather than the output.
+    """
+    dz_max = dz_max if dz_max else 5.0
+
+    t_betas = np.concatenate((
+        [0.01, 0.05],
+        np.linspace(0.1, 1, 10),
+        np.linspace(2, 10, 9),
+        np.linspace(20, 100, 9),
+        np.linspace(200, 1000, 9),
+        np.linspace(2000, 10000, 9),
+        np.linspace(20000, 50000, 4)
+    ))
+
+    a = k_min**2 - kz_max**2
+    b = k_max**2
+
+    # Candidate beta values: sample between k_min and k_max
+    beta_candidates = np.concatenate((
+        np.linspace(max(k_min * 0.5, 0.01), k_min, 10, endpoint=False),
+        np.linspace(k_min, k_max, 20),
+        np.linspace(k_max, k_max * 1.5, 5, endpoint=False),
+    ))
+    beta_candidates = np.unique(beta_candidates)
+
+    res = fm.nan, 0.0, 0.0
+    res_xi = (fm.nan, fm.nan)
+
+    for beta in beta_candidates:
+        xi_a = a / beta**2 - 1
+        xi_b = b / beta**2 - 1
+
+        if xi_a <= -0.99:
+            continue
+        if xi_b <= xi_a:
+            continue
+
+        for t_beta in t_betas:
+            dx = t_beta / beta
+            if dx_max and dx > dx_max:
+                continue
+
+            try:
+                coefs, c0 = ratinterp_propagator_coefs(
+                    order=propagator_order, beta=beta, dx=dx,
+                    xi_a=xi_a, xi_b=xi_b, tol=1e-14
+                )
+            except Exception:
+                continue
+
+            # Measure max error on the interval
+            xi_test = np.linspace(xi_a, xi_b, 100)
+            prec = rational_approx_error(t_beta, xi_test, coefs, c0).max()
+
+            if prec / dx > required_prec:
+                continue
+
+            # Transverse discretization error (same as Pade)
+            xi_min = a / beta**2 - 1
+            prop_op_d_xi = t_beta / (2 * fm.sqrt(1 + xi_min))
+            dz_prec = t_beta**2 * prec / prop_op_d_xi
+            if fourth_order_error_kz(kz_max, dz_max) < dz_prec:
+                dz = dz_max
+            else:
+                dz = func_binary_search(lambda a_dz: fourth_order_error_kz(kz_max, a_dz), 0.0001, dz_max,
+                                        dz_prec, 1e-3)
+
+            if dx * dz > res[1] * res[2]:
+                res = (beta, dx, dz)
+                res_xi = (xi_a, xi_b)
+
+    return res, res_xi
+
+
+# Module-level storage for ratinterp xi bounds (set by get_optimal_grid when approx_method='ratinterp')
+_last_ratinterp_xi_bounds = (fm.nan, fm.nan)
+
+
+def get_optimal_grid(kz_max, k_min, k_max, required_prec, dx_max=None, dz_max=None,
+                     propagator_order=(7, 8), approx_method='pade') -> (float, float, float):
+    """Compute optimal grid parameters for the one-way Helmholtz equation.
+
+    Parameters
+    ----------
+    approx_method : str
+        'pade' for Pade approximation (default), 'ratinterp' for rational interpolation.
+
+    Returns
+    -------
+    beta, dx, dz : float
+    """
+    global _last_ratinterp_xi_bounds
+
+    if approx_method == 'ratinterp':
+        (beta, dx, dz), xi_bounds = _get_optimal_grid_ratinterp(
+            kz_max, k_min, k_max, required_prec, dx_max, dz_max, propagator_order
+        )
+        _last_ratinterp_xi_bounds = xi_bounds
+        return beta, dx, dz
+    else:
+        return _get_optimal_grid_pade(kz_max, k_min, k_max, required_prec, dx_max, dz_max, propagator_order)
+
+
+def get_last_ratinterp_xi_bounds():
+    """Return the xi bounds from the most recent ratinterp grid optimization."""
+    return _last_ratinterp_xi_bounds

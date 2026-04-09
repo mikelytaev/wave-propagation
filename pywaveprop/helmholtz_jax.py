@@ -6,10 +6,10 @@ jax.config.update("jax_enable_x64", True)
 import lineax
 from jax import numpy as jnp
 
-from pywaveprop.grid_optimizer import get_optimal_grid
+from pywaveprop.grid_optimizer import get_optimal_grid, get_last_ratinterp_xi_bounds
 from pywaveprop.helmholtz_common import HelmholtzMeshParams2D
 from pywaveprop.jax_utils import bessel_ratio_4th_order, sqr_eq
-from pywaveprop.propagators._utils import pade_propagator_coefs
+from pywaveprop.propagators._utils import pade_propagator_coefs, ratinterp_propagator_coefs
 from pywaveprop.transforms.fcc_fourier import FCCAdaptiveFourier
 import numpy as np
 import cmath as cm
@@ -294,7 +294,7 @@ class RationalHelmholtzPropagator:
     @classmethod
     def create(cls, freq_hz: float, wave_speed, kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D,
                rho=None, lower_terrain=None, upper_terrain=None, lower_refl_coef_func=None,
-               rational_approx_order=(7, 8)):
+               rational_approx_order=(7, 8), approx_method='pade'):
         # Convert to float to avoid issues with JAX arrays in NumPy-based optimizer
         kz_max = float(kz_max)
         k_bounds = (float(k_bounds[0]), float(k_bounds[1]))
@@ -316,13 +316,19 @@ class RationalHelmholtzPropagator:
             orders = [rational_approx_order]
 
         cur_best = fm.inf
+        xi_bounds_best = None
         for order in orders:
             beta_t, dx_computational_m_t, dz_computational_m_t = get_optimal_grid(
                 kz_max, k_bounds[0], k_bounds[1], precision / mesh_params.x_size_m,
                 dx_max=dx_max,
                 dz_max=dz_max,
-                propagator_order=order
+                propagator_order=order,
+                approx_method=approx_method
             )
+            if approx_method == 'ratinterp':
+                xi_bounds_t = get_last_ratinterp_xi_bounds()
+            else:
+                xi_bounds_t = None
 
             if fm.isnan(beta_t):
                 continue
@@ -353,6 +359,7 @@ class RationalHelmholtzPropagator:
                 dx_computational_m = dx_computational_m_t
                 dz_computational_m = dz_computational_m_t
                 rational_approx_order = order
+                xi_bounds_best = xi_bounds_t
 
         if cur_best == fm.inf:
             raise ValueError(
@@ -380,12 +387,15 @@ class RationalHelmholtzPropagator:
             lower_terrain=lower_terrain,
             upper_terrain=upper_terrain,
             lower_refl_coef_func=lower_refl_coef_func,
+            approx_method=approx_method,
+            xi_bounds=xi_bounds_best,
         )
 
     def __init__(self, order: tuple[int, int], beta: float, dx_m: float, dz_m: float, x_n: int, z_n: int,
                  x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed, lower_terrain_mask=None,
                  rho=None, lower_terrain=None, upper_terrain=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None,
-                 lower_refl_coef_func=None, has_lower_nlbc: bool = False):
+                 lower_refl_coef_func=None, has_lower_nlbc: bool = False,
+                 approx_method='pade', xi_bounds=None):
         self.order = order
         self.beta = beta
         self.dx_m = dx_m
@@ -394,9 +404,19 @@ class RationalHelmholtzPropagator:
         self.z_n = z_n
         self.x_grid_scale = x_grid_scale
         self.z_grid_scale = z_grid_scale
+        self.approx_method = approx_method
+        self.xi_bounds = xi_bounds
         if coefs is not None:
             self.coefs_t = coefs
             self.coefs = jnp.array(coefs, dtype=complex)
+        elif approx_method == 'ratinterp' and xi_bounds is not None:
+            t = ratinterp_propagator_coefs(
+                order=self.order, beta=self.beta, dx=self.dx_m,
+                xi_a=xi_bounds[0], xi_b=xi_bounds[1]
+            )[0]
+            a = [list(v) for v in t]
+            self.coefs = jnp.array(a, dtype=complex)
+            self.coefs_t = a
         else:
             t = pade_propagator_coefs(pade_order=self.order, beta=self.beta, dx=self.dx_m)[0]
             a = [list(v) for v in t]
@@ -492,6 +512,8 @@ class RationalHelmholtzPropagator:
             'z_grid_scale': self.z_grid_scale,
             'freq_hz': self.freq_hz,
             'has_lower_nlbc': self.has_lower_nlbc,
+            'approx_method': self.approx_method,
+            'xi_bounds': self.xi_bounds,
         }
         return dynamic, static
 

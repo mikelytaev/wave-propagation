@@ -9,6 +9,75 @@ import math as fm
 import numpy as np
 
 
+def ratinterp_propagator_coefs(*, order, beta, dx, xi_a, xi_b, tol=1e-14):
+    """
+    Rational interpolation of the propagator on an interval.
+
+    Approximates P(xi) = exp(i*beta*dx*(sqrt(1+xi) - 1)) on [xi_a, xi_b]
+    using Chebyshev-type rational interpolation (Gonnet-Pachon-Trefethen).
+
+    Returns the same (a_l, b_l), c0 product-form as pade_propagator_coefs:
+        P(xi) ~ c0 * prod_l (1 + a_l*xi) / (1 + b_l*xi)
+
+    Parameters
+    ----------
+    order : tuple (m, n)
+        Numerator/denominator degrees of the rational approximant.
+    beta : float
+        Reference propagation constant.
+    dx : float
+        Longitudinal grid step (m).
+    xi_a, xi_b : float
+        Interval bounds for the approximation (xi_a < xi_b, xi_a > -1).
+    tol : float
+        Robustness tolerance for ratinterp (default 1e-14).
+
+    Returns
+    -------
+    coefs : list of (a_l, b_l) tuples
+    c0 : complex
+    """
+    from pywaveprop.utils.ratinterp import ratinterp
+
+    m, n = order
+    beta_dx = beta * dx
+
+    def propagator(xi):
+        xi = np.asarray(xi, dtype=complex)
+        return np.exp(1j * beta_dx * (np.sqrt(1.0 + xi) - 1.0))
+
+    r = ratinterp(propagator, m, n, dom=(xi_a, xi_b), tol=tol)
+
+    # Extract roots of numerator and denominator in Chebyshev basis,
+    # mapped to the physical [xi_a, xi_b] domain.
+    a_dom, b_dom = r.domain
+    if r.basis == "monomial":
+        num_roots_xi = np.polynomial.polynomial.polyroots(r.p)
+        den_roots_xi = np.polynomial.polynomial.polyroots(r.q)
+    else:
+        num_roots_cheb = np.polynomial.chebyshev.Chebyshev(r.p).roots()
+        den_roots_cheb = np.polynomial.chebyshev.Chebyshev(r.q).roots()
+        num_roots_xi = 0.5 * (a_dom + b_dom) + 0.5 * (b_dom - a_dom) * num_roots_cheb
+        den_roots_xi = 0.5 * (a_dom + b_dom) + 0.5 * (b_dom - a_dom) * den_roots_cheb
+
+    # Convert from root form r(xi) = C * prod(xi - r_k) / prod(xi - s_k)
+    # to product form P(xi) ~ c0 * prod(1 + a_l * xi) / (1 + b_l * xi)
+    # where a_l = -1/r_k, b_l = -1/s_k
+    a_coefs = [-1.0 / complex(root) for root in num_roots_xi]
+    b_coefs = [-1.0 / complex(root) for root in den_roots_xi]
+
+    coefs = list(zip_longest(a_coefs, b_coefs, fillvalue=0.0j))
+
+    # Compute c0 so that the product form matches r(xi) at xi=0
+    product_at_0 = 1.0 + 0j
+    for a_l, b_l in coefs:
+        product_at_0 *= (1 + a_l * 0.0) / (1 + b_l * 0.0)
+    # product_at_0 is 1.0 by construction, so c0 = r(0)
+    c0 = complex(r(0.0))
+
+    return coefs, c0
+
+
 def pade_sqrt_coefs(n):
     n_arr = np.arange(1, n+1)
     a_n = 2 / (2*n + 1) * np.sin(n_arr * cm.pi / (2 * n + 1))**2
