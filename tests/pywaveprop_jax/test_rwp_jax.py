@@ -9,13 +9,60 @@ Tests cover:
 - Path loss computation
 - Horizontal field extraction
 - Terrain effects
+
+Set the environment variable TEST_PLOTS to a directory path to generate
+diagnostic plots for each test, e.g.::
+
+    TEST_PLOTS=./test_plots python -m pytest tests/pywaveprop_jax/test_rwp_jax.py
 """
+import os
 import unittest
 import math as fm
 
 import jax
 import jax.numpy as jnp
 import numpy as np
+
+# ---------------------------------------------------------------------------
+# Optional plotting infrastructure
+# ---------------------------------------------------------------------------
+PLOT_DIR = os.environ.get("TEST_PLOTS")
+if PLOT_DIR:
+    os.makedirs(PLOT_DIR, exist_ok=True)
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+
+def _save_fig(name):
+    """Save current figure to *PLOT_DIR/name.png* and close it."""
+    if not PLOT_DIR:
+        return
+    plt.tight_layout()
+    plt.savefig(os.path.join(PLOT_DIR, f"{name}.png"), dpi=150)
+    plt.close()
+
+
+def _plot_field_2d(field, title="", filename="field", vmin=-60, vmax=0):
+    """Plot a 2-D propagation field (dB re max) with range/height axes."""
+    if not PLOT_DIR:
+        return
+    arr = np.asarray(field.field)
+    x = np.asarray(field.x_grid)
+    z = np.asarray(field.z_grid)
+    n_x = min(arr.shape[0], x.shape[0])
+    n_z = min(arr.shape[1], z.shape[0])
+    arr = arr[:n_x, :n_z]
+    amp = 20 * np.log10(np.abs(arr).T + 1e-30)
+    amp_max = float(np.nanmax(amp))
+    plt.figure(figsize=(8, 4))
+    plt.pcolormesh(x[:n_x], z[:n_z], amp, shading="auto",
+                   cmap="jet", vmin=amp_max + vmin, vmax=amp_max + vmax)
+    plt.colorbar(label="dB")
+    plt.xlabel("Range (m)")
+    plt.ylabel("Height (m)")
+    plt.title(title)
+    _save_fig(filename)
 
 from pywaveprop.rwp_jax import (
     RWPGaussSourceModel,
@@ -69,6 +116,14 @@ class TestRWPGaussSourceModel(unittest.TestCase):
         self.assertEqual(aperture.shape, (100,))
         self.assertTrue(jnp.all(jnp.isfinite(aperture)))
 
+        if PLOT_DIR:
+            plt.figure()
+            plt.plot(np.asarray(z), np.abs(np.asarray(aperture)))
+            plt.xlabel("Height (m)")
+            plt.ylabel("|Aperture|")
+            plt.title("Gaussian aperture (h=30 m, bw=15°)")
+            _save_fig("aperture_shape")
+
     def test_aperture_peak_near_height(self):
         src = RWPGaussSourceModel(
             freq_hz=300e6,
@@ -80,6 +135,17 @@ class TestRWPGaussSourceModel(unittest.TestCase):
         peak_idx = jnp.argmax(jnp.abs(aperture))
         peak_z = float(z[peak_idx])
         self.assertAlmostEqual(peak_z, 100.0, delta=1.0)
+
+        if PLOT_DIR:
+            plt.figure()
+            plt.plot(np.asarray(z), np.abs(np.asarray(aperture)))
+            plt.axvline(100.0, color="r", ls="--", label="expected peak")
+            plt.axvline(peak_z, color="g", ls=":", label=f"actual peak ({peak_z:.1f} m)")
+            plt.xlabel("Height (m)")
+            plt.ylabel("|Aperture|")
+            plt.title("Aperture peak location (h=100 m)")
+            plt.legend()
+            _save_fig("aperture_peak")
 
     def test_pytree_roundtrip(self):
         src = RWPGaussSourceModel(
@@ -116,6 +182,14 @@ class TestNProfileModels(unittest.TestCase):
         result_above = model(jnp.array([150.0]))
         self.assertAlmostEqual(float(result_above[0]), 0.0, delta=0.1)
 
+        if PLOT_DIR:
+            plt.figure()
+            plt.plot(np.asarray(result), np.asarray(z))
+            plt.xlabel("N (M-units)")
+            plt.ylabel("Height (m)")
+            plt.title("Evaporation duct N-profile (h_d=20 m)")
+            _save_fig("n_profile_evaporation_duct")
+
     def test_evaporation_duct_max_height(self):
         model = EvaporationDuctModel(height_m=20.0, truncate_height_m=100)
         self.assertEqual(model.max_height_m(), 100)
@@ -135,6 +209,17 @@ class TestNProfileModels(unittest.TestCase):
         result = model(z)
         self.assertAlmostEqual(float(result[0]), -5.0, places=3)
 
+        if PLOT_DIR:
+            z_plot = jnp.linspace(0, 200, 200)
+            plt.figure()
+            plt.plot(np.asarray(model(z_plot)), np.asarray(z_plot))
+            plt.plot(float(result[0]), 50.0, "ro", label="tested point (−5)")
+            plt.xlabel("N (M-units)")
+            plt.ylabel("Height (m)")
+            plt.title("Piecewise linear N-profile")
+            plt.legend()
+            _save_fig("n_profile_piecewise_linear")
+
     def test_piecewise_linear_from_M_profile(self):
         z_grid = jnp.array([0.0, 100.0, 200.0])
         M_vals = jnp.array([320.0, 350.0, 380.0])
@@ -149,12 +234,34 @@ class TestNProfileModels(unittest.TestCase):
         z = jnp.linspace(0, 50, 10)
         np.testing.assert_allclose(model(z), m2(z), atol=1e-10)
 
+        if PLOT_DIR:
+            z_plot = jnp.linspace(1, 50, 100)
+            plt.figure()
+            plt.plot(np.asarray(m2(z_plot)), np.asarray(z_plot), label="EvapDuct")
+            plt.plot(np.asarray(model(z_plot)), np.asarray(z_plot), "--", label="Empty + EvapDuct")
+            plt.xlabel("N (M-units)")
+            plt.ylabel("Height (m)")
+            plt.title("Sum N-profile (Empty + EvapDuct)")
+            plt.legend()
+            _save_fig("n_profile_sum")
+
     def test_mult_n_profile(self):
         m1 = EvaporationDuctModel(height_m=10.0)
         model = m1 * 2.0
         self.assertIsInstance(model, MultNProfileModel)
         z = jnp.array([25.0])
         np.testing.assert_allclose(model(z), 2.0 * m1(z), atol=1e-10)
+
+        if PLOT_DIR:
+            z_plot = jnp.linspace(1, 50, 100)
+            plt.figure()
+            plt.plot(np.asarray(m1(z_plot)), np.asarray(z_plot), label="EvapDuct × 1")
+            plt.plot(np.asarray(model(z_plot)), np.asarray(z_plot), "--", label="EvapDuct × 2")
+            plt.xlabel("N (M-units)")
+            plt.ylabel("Height (m)")
+            plt.title("Mult N-profile (EvapDuct × 2)")
+            plt.legend()
+            _save_fig("n_profile_mult")
 
 
 class TestTroposphereModel(unittest.TestCase):
@@ -173,6 +280,15 @@ class TestTroposphereModel(unittest.TestCase):
         # M should increase with height (standard atmosphere)
         self.assertGreater(float(M[1]), float(M[0]))
 
+        if PLOT_DIR:
+            z_plot = jnp.linspace(0, 300, 200)
+            plt.figure()
+            plt.plot(np.asarray(env.M_profile(z_plot)), np.asarray(z_plot))
+            plt.xlabel("M (M-units)")
+            plt.ylabel("Height (m)")
+            plt.title("Standard atmosphere M-profile")
+            _save_fig("m_profile_standard")
+
     def test_wave_speed_profile(self):
         env = TroposphereModel()
         z = jnp.array([0.0])
@@ -185,6 +301,20 @@ class TestTroposphereModel(unittest.TestCase):
         z = jnp.linspace(0, 100, 50)
         M = env.M_profile(z)
         self.assertTrue(jnp.all(jnp.isfinite(M)))
+
+        if PLOT_DIR:
+            z_plot = jnp.linspace(0, 200, 200)
+            env_std = TroposphereModel()
+            plt.figure()
+            plt.plot(np.asarray(env_std.M_profile(z_plot)), np.asarray(z_plot),
+                     label="Standard")
+            plt.plot(np.asarray(env.M_profile(z_plot)), np.asarray(z_plot),
+                     label="With evap. duct (h_d=20 m)")
+            plt.xlabel("M (M-units)")
+            plt.ylabel("Height (m)")
+            plt.title("M-profile with evaporation duct")
+            plt.legend()
+            _save_fig("m_profile_evap_duct")
 
     def test_pytree_roundtrip(self):
         env = TroposphereModel(N_profile=EvaporationDuctModel(height_m=20.0))
@@ -199,6 +329,20 @@ class TestTroposphereModel(unittest.TestCase):
         M = env.M_profile(z)
         self.assertAlmostEqual(float(M[0]), 320.0, delta=0.01)
         self.assertAlmostEqual(float(M[1]), 320.0, delta=0.01)
+
+        if PLOT_DIR:
+            z_plot = jnp.linspace(0, 200, 200)
+            env_std = TroposphereModel()
+            plt.figure()
+            plt.plot(np.asarray(env_std.M_profile(z_plot)), np.asarray(z_plot),
+                     label="Standard (slope=0.118)")
+            plt.plot(np.asarray(env.M_profile(z_plot)), np.asarray(z_plot),
+                     "--", label="Flat (slope=0)")
+            plt.xlabel("M (M-units)")
+            plt.ylabel("Height (m)")
+            plt.title("Flat vs standard troposphere")
+            plt.legend()
+            _save_fig("m_profile_flat")
 
 
 class TestProxyWaveSpeedModel(unittest.TestCase):
@@ -259,6 +403,9 @@ class TestRWPForwardTask(unittest.TestCase):
         self.assertGreater(len(field.z_grid), 0)
         self.assertTrue(np.all(np.isfinite(field.field)))
 
+        _plot_field_2d(field, "Standard atmosphere propagation",
+                       "forward_standard_atm")
+
     def test_evaporation_duct_propagation(self):
         """Test propagation in an evaporation duct environment."""
         src = RWPGaussSourceModel(
@@ -281,6 +428,9 @@ class TestRWPForwardTask(unittest.TestCase):
         last_col = field.field[-1, :]
         self.assertGreater(float(np.max(np.abs(last_col))), 0)
 
+        _plot_field_2d(field, "Evaporation duct propagation (h_d=20 m)",
+                       "forward_evap_duct")
+
     def test_piecewise_linear_N_profile(self):
         """Test propagation with a piecewise linear N-profile (surface duct)."""
         z_grid = jnp.array([0.0, 100.0, 200.0, 300.0])
@@ -302,6 +452,9 @@ class TestRWPForwardTask(unittest.TestCase):
         params.rational_approx_order = (1, 2)
         field = rwp_forward_task(src, env, params)
         self.assertTrue(np.all(np.isfinite(field.field)))
+
+        _plot_field_2d(field, "Piecewise linear N-profile propagation",
+                       "forward_piecewise_linear")
 
     def test_propagation_with_terrain(self):
         """Test propagation over terrain."""
@@ -326,6 +479,27 @@ class TestRWPForwardTask(unittest.TestCase):
         self.assertIsInstance(field, RWPField)
         self.assertTrue(np.all(np.isfinite(field.field)))
 
+        if PLOT_DIR:
+            _plot_field_2d(field, "Propagation over terrain", "forward_terrain")
+            # overlay terrain profile on the last saved figure — reopen
+            plt.figure(figsize=(8, 4))
+            arr = np.asarray(field.field)
+            x = np.asarray(field.x_grid)
+            z = np.asarray(field.z_grid)
+            n_x, n_z = min(arr.shape[0], x.shape[0]), min(arr.shape[1], z.shape[0])
+            amp = 20 * np.log10(np.abs(arr[:n_x, :n_z]).T + 1e-30)
+            amp_max = float(np.nanmax(amp))
+            plt.pcolormesh(x[:n_x], z[:n_z], amp, shading="auto",
+                           cmap="jet", vmin=amp_max - 60, vmax=amp_max)
+            plt.colorbar(label="dB")
+            plt.plot(np.asarray(x_terrain), np.asarray(h_terrain),
+                     "k-", lw=2, label="Terrain")
+            plt.xlabel("Range (m)")
+            plt.ylabel("Height (m)")
+            plt.title("Propagation over terrain (with terrain line)")
+            plt.legend()
+            _save_fig("forward_terrain_overlay")
+
     def test_with_elevation_angle(self):
         """Test source with nonzero elevation angle."""
         src = RWPGaussSourceModel(
@@ -344,6 +518,9 @@ class TestRWPForwardTask(unittest.TestCase):
         params.rational_approx_order = (1, 2)
         field = rwp_forward_task(src, env, params)
         self.assertTrue(np.all(np.isfinite(field.field)))
+
+        _plot_field_2d(field, "Propagation with elevation angle (5°)",
+                       "forward_elevation_angle")
 
 
 class TestRWPvsAnalytical(unittest.TestCase):
@@ -419,6 +596,39 @@ class TestRWPvsAnalytical(unittest.TestCase):
         self.assertLess(median_diff, 5.0,
                         f"Median normalized dB difference {median_diff:.2f} exceeds 5 dB threshold")
 
+        if PLOT_DIR:
+            fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+            # 2D JAX field
+            jax_arr = np.asarray(jax_field.field)
+            x = np.asarray(jax_field.x_grid)
+            z = np.asarray(jax_field.z_grid)
+            nx = min(jax_arr.shape[0], x.shape[0])
+            nz = min(jax_arr.shape[1], z.shape[0])
+            amp = 20 * np.log10(np.abs(jax_arr[:nx, :nz]).T + 1e-30)
+            amax = float(np.nanmax(amp))
+            axes[0].pcolormesh(x[:nx], z[:nz], amp, shading="auto",
+                               cmap="jet", vmin=amax - 60, vmax=amax)
+            axes[0].axhline(height_m, color="w", ls="--", lw=0.7)
+            axes[0].set_title("JAX propagator")
+            axes[0].set_xlabel("Range (m)")
+            axes[0].set_ylabel("Height (m)")
+            # 2D TwoRay field
+            amp_trm = 20 * np.log10(np.abs(trm_field[:nx, :nz]).T + 1e-30)
+            axes[1].pcolormesh(x[:nx], z[:nz], amp_trm, shading="auto",
+                               cmap="jet", vmin=amax - 60, vmax=amax)
+            axes[1].axhline(height_m, color="w", ls="--", lw=0.7)
+            axes[1].set_title("TwoRay analytical")
+            axes[1].set_xlabel("Range (m)")
+            # 1D comparison at source height
+            x_cmp = x[x_start:nx]
+            axes[2].plot(x_cmp, jax_db, label="JAX (norm dB)")
+            axes[2].plot(x_cmp, trm_db, "--", label="TwoRay (norm dB)")
+            axes[2].set_xlabel("Range (m)")
+            axes[2].set_ylabel("Normalized dB")
+            axes[2].set_title(f"z={height_m} m | median Δ={median_diff:.2f} dB")
+            axes[2].legend()
+            _save_fig("vs_analytical_pec_h_pol")
+
     def test_flat_pec_h_pol_path_loss_pattern(self):
         """Verify field at source height decays roughly as 1/r in free space.
 
@@ -459,6 +669,28 @@ class TestRWPvsAnalytical(unittest.TestCase):
         self.assertGreater(first_third, last_third * 0.1,
                            "Field should not blow up at far range")
 
+        if PLOT_DIR:
+            fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+            arr = np.asarray(jax_field.field)
+            x = np.asarray(jax_field.x_grid)
+            z = np.asarray(jax_field.z_grid)
+            nx = min(arr.shape[0], x.shape[0])
+            nz = min(arr.shape[1], z.shape[0])
+            amp = 20 * np.log10(np.abs(arr[:nx, :nz]).T + 1e-30)
+            amax = float(np.nanmax(amp))
+            axes[0].pcolormesh(x[:nx], z[:nz], amp, shading="auto",
+                               cmap="jet", vmin=amax - 60, vmax=amax)
+            axes[0].axhline(height_m, color="w", ls="--", lw=0.7)
+            axes[0].set_title("2D field (flat PEC, H-pol)")
+            axes[0].set_xlabel("Range (m)")
+            axes[0].set_ylabel("Height (m)")
+            # 1D horizontal at source height
+            axes[1].plot(x[1:nx], 20 * np.log10(horizontal + 1e-30))
+            axes[1].set_xlabel("Range (m)")
+            axes[1].set_ylabel("|Field| (dB)")
+            axes[1].set_title(f"Horizontal slice at z={height_m} m")
+            _save_fig("path_loss_pattern")
+
 
 class TestBrewsterAngleNLBC(unittest.TestCase):
     """Lower NLBC validation: V-polarized beam at the Brewster angle.
@@ -472,7 +704,7 @@ class TestBrewsterAngleNLBC(unittest.TestCase):
     """
 
     @staticmethod
-    def _build_brewster_scenario(*, height_m=15.0, beam_width_deg=4.0, freq_hz=300e6):
+    def _build_brewster_scenario(*, height_m=15.0, beam_width_deg=4.0, freq_hz=3e9):
         """Build a (src, env, params) triple for a V-polarized beam tilted
         at the Brewster angle of an eps_r=3 ground."""
         from pywaveprop.propagators._utils import brewster_angle
@@ -494,8 +726,8 @@ class TestBrewsterAngleNLBC(unittest.TestCase):
             max_range_m=2 * a + 100.0,
             max_height_m=max(4 * height_m, 30.0),
             max_angle_deg=beam_width_deg + grazing + 2.0,
-            x_output_points=60,
-            z_output_points=60,
+            x_output_points=300,
+            z_output_points=300,
             precision=0.01,
         )
         return src, env, params
@@ -564,6 +796,9 @@ class TestBrewsterAngleNLBC(unittest.TestCase):
         mid_slice = np.abs(arr[n_x // 4 : 3 * n_x // 4, z_idx])
         self.assertGreater(float(np.max(mid_slice)), 0.0)
 
+        _plot_field_2d(field, "Brewster angle forward (V-pol, eps_r=3)",
+                       "brewster_forward")
+
     def test_v_pol_differs_from_h_pol(self):
         """V- and H-polarized beams through the same eps_r=3 ground must
         produce measurably different fields because the Fresnel reflection
@@ -590,9 +825,33 @@ class TestBrewsterAngleNLBC(unittest.TestCase):
         self.assertGreater(rel_diff, 0.05,
                            f"V-pol/H-pol too similar: rel_diff={rel_diff:.4f}")
 
+        if PLOT_DIR:
+            fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+            px = min(mn_x, len(f_v.x_grid))
+            pz = min(mn_z, len(f_v.z_grid))
+            x_common = np.asarray(f_v.x_grid)[:px]
+            z_common = np.asarray(f_v.z_grid)[:pz]
+            for ax, arr_p, lbl in [(axes[0], arr_v[:px, :pz], "V-pol"),
+                                    (axes[1], arr_h[:px, :pz], "H-pol")]:
+                amp = 20 * np.log10(np.abs(arr_p).T + 1e-30)
+                amax = float(np.nanmax(amp))
+                ax.pcolormesh(x_common, z_common, amp, shading="auto",
+                              cmap="jet", vmin=amax - 60, vmax=amax)
+                ax.set_title(lbl)
+                ax.set_xlabel("Range (m)")
+                ax.set_ylabel("Height (m)")
+            # difference plot
+            amp_diff = 20 * np.log10(np.abs(arr_v[:px, :pz]).T + 1e-30) - \
+                       20 * np.log10(np.abs(arr_h[:px, :pz]).T + 1e-30)
+            axes[2].pcolormesh(x_common, z_common, amp_diff, shading="auto",
+                               cmap="RdBu_r", vmin=-20, vmax=20)
+            axes[2].set_title(f"|V|−|H| dB (rel_diff={rel_diff:.3f})")
+            axes[2].set_xlabel("Range (m)")
+            _save_fig("brewster_v_vs_h")
+
     def test_v_pol_brewster_matches_two_ray(self):
         """Compare JAX propagator with lower NLBC against the analytical
-        TwoRayModel on a horizontal slice near the beam path (z ≈ h/2).
+        TwoRayModel on a horizontal slice near the beam path (z ≈ h).
         For V-pol at the Brewster angle both models agree: reflection is
         suppressed so the field is dominated by the direct ray."""
         from pywaveprop.rwp.tworay import TwoRayModel
@@ -600,8 +859,8 @@ class TestBrewsterAngleNLBC(unittest.TestCase):
         from pywaveprop.rwp.environment import Troposphere, Terrain, CustomMaterial
 
         src, env, params = self._build_brewster_scenario(height_m=15.0)
-        params.x_output_points = 100
-        params.z_output_points = 100
+        params.x_output_points = 300
+        params.z_output_points = 300
         jax_field = rwp_forward_task(src, env, params)
 
         jax_x = np.asarray(jax_field.x_grid)
@@ -630,15 +889,55 @@ class TestBrewsterAngleNLBC(unittest.TestCase):
         z0 = src.height_m / 2
         z_idx = int(np.argmin(np.abs(jax_z[:n_z] - z0)))
         x_start = n_x // 4
-        jax_h = np.abs(jax_arr[x_start:, z_idx])
+        x_cmp = jax_x[x_start:n_x]
+
+        # Calibrate PE reduced field → physical field.
+        # The 2-D PE propagates the envelope u(x,z); the 3-D physical field is
+        #   p(x,z) = u(x,z) · exp(iβx) · √(2π / (k₀ x))
+        # TwoRay already returns the physical field (exp(ikr)/r convention).
+        k0 = 2 * np.pi * src.freq_hz / 3e8
+        jax_h = np.abs(jax_arr[x_start:, z_idx]) * np.sqrt(2 * np.pi / (k0 * x_cmp))
         trm_h = np.abs(trm_arr[x_start:, z_idx])
 
         self.assertGreater(float(np.max(jax_h)), 1e-20)
         self.assertGreater(float(np.max(trm_h)), 1e-20)
 
         corr = float(np.corrcoef(jax_h, trm_h)[0, 1])
-        self.assertGreater(corr, 0.85,
+        self.assertGreater(corr, 0.9,
                            f"Correlation with two-ray reference too low: {corr:.3f}")
+
+        # After calibration the median dB difference should be small
+        mid = slice(len(x_cmp) // 10, 8 * len(x_cmp) // 10)
+        jax_db = 20 * np.log10(jax_h[mid] + 1e-30)
+        trm_db = 20 * np.log10(trm_h[mid] + 1e-30)
+        median_diff = float(np.median(np.abs(jax_db - trm_db)))
+        self.assertLess(median_diff, 3.0,
+                        f"Median calibrated dB difference {median_diff:.2f} exceeds 3 dB")
+
+        if PLOT_DIR:
+            fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+            # 2D JAX field
+            amp = 20 * np.log10(np.abs(jax_arr[:n_x, :n_z]).T + 1e-30)
+            amax = float(np.nanmax(amp))
+            axes[0].pcolormesh(jax_x[:n_x], jax_z[:n_z], amp, shading="auto",
+                               cmap="jet", vmin=amax - 60, vmax=amax)
+            axes[0].set_title("JAX (V-pol, Brewster)")
+            axes[0].set_xlabel("Range (m)")
+            axes[0].set_ylabel("Height (m)")
+            # 2D TwoRay field
+            amp_trm = 20 * np.log10(np.abs(trm_arr[:n_x, :n_z]).T + 1e-30)
+            axes[1].pcolormesh(jax_x[:n_x], jax_z[:n_z], amp_trm, shading="auto",
+                               cmap="jet", vmin=amax - 60, vmax=amax)
+            axes[1].set_title("TwoRay analytical")
+            axes[1].set_xlabel("Range (m)")
+            # 1D comparison (calibrated)
+            axes[2].plot(x_cmp, 20 * np.log10(jax_h + 1e-30), label="JAX (calibrated)")
+            axes[2].plot(x_cmp, 20 * np.log10(trm_h + 1e-30), "--", label="TwoRay")
+            axes[2].set_xlabel("Range (m)")
+            axes[2].set_ylabel("|Field| (dB)")
+            axes[2].set_title(f"z≈{z0:.0f} m | corr={corr:.3f} Δ={median_diff:.1f}dB")
+            axes[2].legend()
+            _save_fig("brewster_vs_tworay")
 
 
 class TestRWPField(unittest.TestCase):

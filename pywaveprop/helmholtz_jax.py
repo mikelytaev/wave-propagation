@@ -415,9 +415,8 @@ class RationalHelmholtzPropagator:
             self.lower_terrain_mask = jnp.ones(shape=(self.x_n, self.z_n), dtype=complex)
         self._prepare_het_arrays()
         gamma = (self.het[-1] - self.het[-2]) / self.dz_m
-        # beta_param is the exterior het value at the boundary, adjusted for
-        # the linear slope: beta = (n^2 - 1) - gamma*z_max.
-        # Since het is already n^2/n_ref^2 - 1 and het[0]=0, this simplifies to:
+        # beta_param is the exterior het value at the upper boundary, adjusted
+        # for the linear slope: beta = het[-1] - gamma*z_max.
         beta_nlbc = self.het[-1] - gamma * (self.z_n - 1) * self.dz_m
         self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_upper_nlbc(beta_nlbc, gamma)
 
@@ -426,7 +425,7 @@ class RationalHelmholtzPropagator:
             if lower_nlbc_coefs is not None:
                 self.lower_nlbc_coefs = lower_nlbc_coefs
             else:
-                self.lower_nlbc_coefs = self._calc_lower_nlbc(lower_refl_coef_func)
+                self.lower_nlbc_coefs = self._calc_lower_nlbc(lower_refl_coef_func, float(self.het[0].real))
         else:
             # Placeholder for jit/pytree consistency; never used when has_lower_nlbc is False.
             self.lower_nlbc_coefs = jnp.zeros(
@@ -577,16 +576,23 @@ class RationalHelmholtzPropagator:
 
         return self._calc_nlbc(diff_eq_solution_ratio, inv_z_transform_rtol)
 
-    def _calc_lower_nlbc(self, refl_coef_func):
+    def _calc_lower_nlbc(self, refl_coef_func, beta_het=0.0):
         """Lower NLBC for an angle-dependent reflection coefficient.
 
         ``refl_coef_func`` maps grazing angle (in degrees, complex) to the
         reflection coefficient. The discrete Green's-function ratio is constructed
         from the homogeneous half-space solution and adjusted for the boundary
         impedance via ``(1/mu + R*mu) / (1 + R)``.
+
+        ``beta_het`` is the exterior heterogeneity value at the lower boundary,
+        i.e. ``het[0] = k[0]**2 / beta**2 - 1``.
         """
         inv_z_transform_rtol = 1e-7
-        beta = 0.0  # exterior het value at the lower boundary
+        beta = beta_het
+        # Physical wavenumber at the boundary: k[0] = beta_ref * sqrt(1 + het[0]).
+        # The Fresnel reflection coefficient requires the physical grazing angle,
+        # not the angle in the beta-parameterized reference medium.
+        k_boundary = self.beta * cm.sqrt(1 + beta_het)
 
         def diff_eq_solution_ratio(s):
             a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
@@ -594,7 +600,7 @@ class RationalHelmholtzPropagator:
             c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
             mu = sqr_eq(a_1, c, a_m1)
             mu_c = complex(mu)
-            theta = cm.asin(1 / (1j * self.beta * self.dz_m) * cm.log(mu_c)) / cm.pi * 180
+            theta = cm.asin(1 / (1j * k_boundary * self.dz_m) * cm.log(mu_c)) / cm.pi * 180
             refl_coef = refl_coef_func(theta)
             return (1 / mu_c + refl_coef * mu_c) / (1 + refl_coef)
 
