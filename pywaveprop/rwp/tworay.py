@@ -1,5 +1,6 @@
 from pywaveprop.rwp.antennas import *
 from pywaveprop.rwp.environment import *
+from pywaveprop.propagators._utils import reflection_coef
 from copy import deepcopy
 
 

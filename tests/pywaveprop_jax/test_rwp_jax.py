@@ -27,6 +27,7 @@ from pywaveprop.rwp_jax import (
     SumNProfileModel,
     MultNProfileModel,
     ProxyWaveSpeedModel,
+    GroundMaterial,
     create_rwp_model,
     rwp_forward_task,
     minmax_k,
@@ -457,6 +458,187 @@ class TestRWPvsAnalytical(unittest.TestCase):
         last_third = np.mean(horizontal[-len(horizontal)//3:])
         self.assertGreater(first_third, last_third * 0.1,
                            "Field should not blow up at far range")
+
+
+class TestBrewsterAngleNLBC(unittest.TestCase):
+    """Lower NLBC validation: V-polarized beam at the Brewster angle.
+
+    With a finite-permittivity ground material (eps_r=3) wired into
+    TroposphereModel, the JAX propagator activates the angle-dependent
+    lower nonlocal BC. For V-polarization at the Brewster angle (60 deg
+    from the surface normal, i.e. 30 deg grazing) the Fresnel reflection
+    coefficient vanishes. At 300 MHz the auto-grid optimizer picks
+    Padé (3,4), keeping each forward task under ~3 s on CPU.
+    """
+
+    @staticmethod
+    def _build_brewster_scenario(*, height_m=15.0, beam_width_deg=4.0, freq_hz=300e6):
+        """Build a (src, env, params) triple for a V-polarized beam tilted
+        at the Brewster angle of an eps_r=3 ground."""
+        from pywaveprop.propagators._utils import brewster_angle
+
+        ground = GroundMaterial(eps=3, sigma=0)
+        b_angle = brewster_angle(1, ground.complex_permittivity(freq_hz)).real
+        grazing = 90 - b_angle  # 30 deg
+
+        src = RWPGaussSourceModel(
+            freq_hz=freq_hz,
+            height_m=height_m,
+            beam_width_deg=beam_width_deg,
+            elevation_angle_deg=grazing,  # positive = downward toward ground
+            polarization='V',
+        )
+        env = TroposphereModel(M0=320, slope=0.0, ground_material=ground)
+        a = abs(height_m / fm.tan(grazing * fm.pi / 180))
+        params = RWPComputationalParams(
+            max_range_m=2 * a + 100.0,
+            max_height_m=max(4 * height_m, 30.0),
+            max_angle_deg=beam_width_deg + grazing + 2.0,
+            x_output_points=60,
+            z_output_points=60,
+            precision=0.01,
+        )
+        return src, env, params
+
+    def test_brewster_angle_value(self):
+        """Brewster angle for eps_r = 3 ground is exactly 60 deg from the
+        surface normal (arctan(sqrt(3)))."""
+        from pywaveprop.propagators._utils import brewster_angle
+        ground = GroundMaterial(eps=3, sigma=0)
+        b_angle = brewster_angle(1, ground.complex_permittivity(300e6)).real
+        self.assertAlmostEqual(b_angle, 60.0, delta=1e-6)
+
+    def test_v_pol_reflection_vanishes_at_brewster(self):
+        """The Fresnel reflection coefficient must vanish for V-polarization
+        at the Brewster angle and stay non-zero for H-polarization."""
+        from pywaveprop.propagators._utils import reflection_coef, brewster_angle
+        eps = 3.0 + 0j
+        b_angle = brewster_angle(1, eps).real
+        r_v = reflection_coef(1, eps, b_angle, 'V')
+        r_h = reflection_coef(1, eps, b_angle, 'H')
+        self.assertLess(abs(r_v), 1e-12)
+        self.assertGreater(abs(r_h), 0.1)
+
+    def test_lower_nlbc_activates_with_ground_material(self):
+        """Setting ground_material on TroposphereModel must enable the lower
+        NLBC inside the underlying RationalHelmholtzPropagator. Without it
+        the propagator falls back to the default Dirichlet (PEC) BC."""
+        src, env, params = self._build_brewster_scenario()
+        model = create_rwp_model(src, env, params)
+        self.assertTrue(getattr(model, 'has_lower_nlbc', False),
+                        "ground_material should enable lower NLBC")
+
+        env_pec = TroposphereModel(M0=320, slope=0.0, ground_material=None)
+        model_pec = create_rwp_model(src, env_pec, params)
+        self.assertFalse(getattr(model_pec, 'has_lower_nlbc', False))
+
+    def test_lower_nlbc_coefs_depend_on_polarization(self):
+        """The lower NLBC convolution coefficients must differ between
+        V- and H-polarized sources sharing identical geometry."""
+        src_v, env, params = self._build_brewster_scenario()
+        src_h = RWPGaussSourceModel(
+            freq_hz=src_v.freq_hz,
+            height_m=src_v.height_m,
+            beam_width_deg=src_v.beam_width_deg,
+            elevation_angle_deg=src_v.elevation_angle_deg,
+            polarization='H',
+        )
+        m_v = create_rwp_model(src_v, env, params)
+        m_h = create_rwp_model(src_h, env, params)
+        coefs_v = np.asarray(m_v.lower_nlbc_coefs)
+        coefs_h = np.asarray(m_h.lower_nlbc_coefs)
+        self.assertEqual(coefs_v.shape, coefs_h.shape)
+        self.assertGreater(float(np.max(np.abs(coefs_v - coefs_h))), 1e-3,
+                           "V- and H-pol NLBC coefs should be distinct")
+
+    def test_brewster_forward_task_finite(self):
+        """End-to-end smoke test: forward task with lower NLBC must
+        produce a finite, non-zero field."""
+        src, env, params = self._build_brewster_scenario()
+        field = rwp_forward_task(src, env, params)
+        arr = np.asarray(field.field)
+        self.assertTrue(np.all(np.isfinite(arr)))
+        self.assertGreater(float(np.max(np.abs(arr))), 0.0)
+        n_x = arr.shape[0]
+        z_idx = int(np.argmin(np.abs(np.asarray(field.z_grid) - src.height_m)))
+        mid_slice = np.abs(arr[n_x // 4 : 3 * n_x // 4, z_idx])
+        self.assertGreater(float(np.max(mid_slice)), 0.0)
+
+    def test_v_pol_differs_from_h_pol(self):
+        """V- and H-polarized beams through the same eps_r=3 ground must
+        produce measurably different fields because the Fresnel reflection
+        coefficients differ (R_V ≈ 0, R_H ≈ −0.5 at 30 deg grazing)."""
+        src_v, env, params = self._build_brewster_scenario(height_m=5.0)
+        src_h = RWPGaussSourceModel(
+            freq_hz=src_v.freq_hz,
+            height_m=src_v.height_m,
+            beam_width_deg=src_v.beam_width_deg,
+            elevation_angle_deg=src_v.elevation_angle_deg,
+            polarization='H',
+        )
+        f_v = rwp_forward_task(src_v, env, params)
+        f_h = rwp_forward_task(src_h, env, params)
+        arr_v = np.asarray(f_v.field)
+        arr_h = np.asarray(f_h.field)
+        # Truncate to common shape (grid optimizer may differ slightly)
+        mn_x = min(arr_v.shape[0], arr_h.shape[0])
+        mn_z = min(arr_v.shape[1], arr_h.shape[1])
+        arr_v = arr_v[:mn_x, :mn_z]
+        arr_h = arr_h[:mn_x, :mn_z]
+        denom = max(float(np.mean(np.abs(arr_v))), float(np.mean(np.abs(arr_h))))
+        rel_diff = float(np.mean(np.abs(np.abs(arr_v) - np.abs(arr_h)))) / (denom + 1e-30)
+        self.assertGreater(rel_diff, 0.05,
+                           f"V-pol/H-pol too similar: rel_diff={rel_diff:.4f}")
+
+    def test_v_pol_brewster_matches_two_ray(self):
+        """Compare JAX propagator with lower NLBC against the analytical
+        TwoRayModel on a horizontal slice near the beam path (z ≈ h/2).
+        For V-pol at the Brewster angle both models agree: reflection is
+        suppressed so the field is dominated by the direct ray."""
+        from pywaveprop.rwp.tworay import TwoRayModel
+        from pywaveprop.rwp.antennas import GaussAntenna
+        from pywaveprop.rwp.environment import Troposphere, Terrain, CustomMaterial
+
+        src, env, params = self._build_brewster_scenario(height_m=15.0)
+        params.x_output_points = 100
+        params.z_output_points = 100
+        jax_field = rwp_forward_task(src, env, params)
+
+        jax_x = np.asarray(jax_field.x_grid)
+        jax_z = np.asarray(jax_field.z_grid)
+        n_x = min(jax_field.field.shape[0], jax_x.shape[0])
+        n_z = min(jax_field.field.shape[1], jax_z.shape[0])
+        jax_arr = np.asarray(jax_field.field[:n_x, :n_z])
+
+        # --- TwoRayModel reference ---
+        legacy_env = Troposphere(flat=True)
+        legacy_env.z_max = params.max_height_m
+        legacy_env.terrain = Terrain(ground_material=CustomMaterial(eps=3, sigma=0))
+        legacy_antenna = GaussAntenna(
+            freq_hz=src.freq_hz,
+            height=src.height_m,
+            beam_width=src.beam_width_deg,
+            elevation_angle=src.elevation_angle_deg,  # same sign convention
+            polarz='V',
+        )
+        trm = TwoRayModel(src=legacy_antenna, env=legacy_env)
+        trm_x = np.maximum(jax_x[:n_x], 1.0)
+        trm_z = np.maximum(jax_z[:n_z], 1e-3)
+        trm_arr = trm.calculate(trm_x, trm_z)
+
+        # Compare at z ≈ h/2 (on the downward beam path, above ground)
+        z0 = src.height_m / 2
+        z_idx = int(np.argmin(np.abs(jax_z[:n_z] - z0)))
+        x_start = n_x // 4
+        jax_h = np.abs(jax_arr[x_start:, z_idx])
+        trm_h = np.abs(trm_arr[x_start:, z_idx])
+
+        self.assertGreater(float(np.max(jax_h)), 1e-20)
+        self.assertGreater(float(np.max(trm_h)), 1e-20)
+
+        corr = float(np.corrcoef(jax_h, trm_h)[0, 1])
+        self.assertGreater(corr, 0.85,
+                           f"Correlation with two-ray reference too low: {corr:.3f}")
 
 
 class TestRWPField(unittest.TestCase):

@@ -4,12 +4,14 @@ JAX-based tropospheric radio wave propagation module.
 This is the primary implementation of the tropospheric radio wave propagation
 solver using JAX for GPU-accelerated computation.
 """
+import cmath as cm
 from copy import deepcopy
 from dataclasses import dataclass, field
 
 from pywaveprop.helmholtz_jax import RegularGrid, AbstractWaveSpeedModel, RationalHelmholtzPropagator, \
     AbstractTerrainModel, PiecewiseLinearTerrainModel
 from pywaveprop.helmholtz_common import HelmholtzMeshParams2D
+from pywaveprop.propagators._utils import reflection_coef
 from pywaveprop.rwp_field import RWPField
 import jax
 import jax.numpy as jnp
@@ -44,19 +46,30 @@ class RWPComputationalParams:
 
 class RWPGaussSourceModel:
 
-    def __init__(self, *, freq_hz, height_m, beam_width_deg, elevation_angle_deg=0, multiplier=1.0):
+    def __init__(self, *, freq_hz, height_m, beam_width_deg, elevation_angle_deg=0, polarization='H', multiplier=1.0):
         self.freq_hz = freq_hz
         self.height_m = height_m
         self.beam_width_deg = beam_width_deg
         self.elevation_angle_deg = elevation_angle_deg
+        self.polarization = polarization
         self.multiplier = multiplier
 
     def aperture(self, z):
         k0 = 2 * jnp.pi * self.freq_hz / 3E8
         elevation_angle_rad = jnp.radians(self.elevation_angle_deg)
         ww = jnp.sqrt(2 * jnp.log(2)) / (k0 * jnp.sin(jnp.radians(self.beam_width_deg) / 2))
-        return jnp.array(self.multiplier / (jnp.sqrt(jnp.pi) * ww) * jnp.exp(-1j * k0 * jnp.sin(elevation_angle_rad) * z)
-                         * jnp.exp(-((z - self.height_m) / ww) ** 2), dtype=complex)
+        norm = self.multiplier / (jnp.sqrt(jnp.pi) * ww)
+        # Method-of-images Gaussian: combine beam at +height_m with its mirror
+        # at -height_m so the input automatically respects the BC at z=0.
+        # For H-polarization the difference enforces u(0)=0 (Dirichlet, PEC);
+        # for V-polarization the sum enforces du/dz(0)=0 (Neumann/PEC) and is
+        # the natural starting field for finite-eps ground via the lower NLBC.
+        pos = norm * jnp.exp(-1j * k0 * jnp.sin(elevation_angle_rad) * z) \
+              * jnp.exp(-((z - self.height_m) / ww) ** 2)
+        neg = norm * jnp.exp(-1j * k0 * jnp.sin(elevation_angle_rad) * (-z)) \
+              * jnp.exp(-((-z - self.height_m) / ww) ** 2)
+        sign = -1.0 if self.polarization.upper() == 'H' else 1.0
+        return jnp.array(pos + sign * neg, dtype=complex)
 
     def max_angle_deg(self):
         return self.beam_width_deg + abs(self.elevation_angle_deg)
@@ -64,7 +77,8 @@ class RWPGaussSourceModel:
     def _tree_flatten(self):
         dynamic = (self.height_m, self.beam_width_deg, self.elevation_angle_deg, self.multiplier)
         static = {
-            'freq_hz': self.freq_hz
+            'freq_hz': self.freq_hz,
+            'polarization': self.polarization,
         }
         return dynamic, static
 
@@ -236,11 +250,25 @@ tree_util.register_pytree_node(PiecewiseLinearNProfileModel,
 
 
 @dataclass
+class GroundMaterial:
+    """Simple frequency-independent ground material described by relative
+    permittivity and conductivity (S/m). Used for the lower nonlocal boundary
+    condition of the JAX RWP propagator."""
+    eps: float = 1.0
+    sigma: float = 0.0
+
+    def complex_permittivity(self, freq_hz: float) -> complex:
+        wavelength = 3e8 / freq_hz
+        return self.eps + 1j * 60 * self.sigma * wavelength
+
+
+@dataclass
 class TroposphereModel:
     N_profile: AbstractNProfileModel = field(default_factory=EmptyNProfileModel)
     M0: float = 320
     slope: float = (1 / 6371000) * 1E6
     terrain: AbstractTerrainModel = None
+    ground_material: GroundMaterial = None
 
     def M_profile(self, z):
         return self.N_profile(z) + self.M0 + self.slope*z
@@ -253,12 +281,14 @@ class TroposphereModel:
 
     def _tree_flatten(self):
         dynamic = (self.N_profile, self.M0, self.slope)
-        static = {}
+        static = {
+            'ground_material': self.ground_material,
+        }
         return dynamic, static
 
     @classmethod
     def _tree_unflatten(cls, static, dynamic):
-        unf = cls(N_profile=dynamic[0], M0=dynamic[1], slope=dynamic[2])
+        unf = cls(N_profile=dynamic[0], M0=dynamic[1], slope=dynamic[2], **static)
         return unf
 
 
@@ -342,6 +372,16 @@ def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
         k_min = k_center * 0.999
         k_max = k_center * 1.001
 
+    lower_refl_coef_func = None
+    if env.ground_material is not None:
+        eps_complex = env.ground_material.complex_permittivity(src.freq_hz)
+        polarz = src.polarization
+        # Closure: legacy reflection_coef takes the angle between the wave and
+        # the surface normal, while the propagator passes a grazing angle, so
+        # convert via 90 - theta.
+        def lower_refl_coef_func(theta_deg):
+            return reflection_coef(1, eps_complex, 90 - theta_deg, polarz)
+
     return RationalHelmholtzPropagator.create(
         rational_approx_order=params.rational_approx_order,
         freq_hz=src.freq_hz,
@@ -357,7 +397,8 @@ def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
             dz_output_m=params.dz_m,
             z_n_upper_bound=params.z_output_points,
         ),
-        lower_terrain=env.terrain
+        lower_terrain=env.terrain,
+        lower_refl_coef_func=lower_refl_coef_func,
     )
 
 

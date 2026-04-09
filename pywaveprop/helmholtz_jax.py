@@ -293,7 +293,8 @@ class RationalHelmholtzPropagator:
 
     @classmethod
     def create(cls, freq_hz: float, wave_speed, kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D,
-               rho=None, lower_terrain=None, upper_terrain=None, rational_approx_order=(7, 8)):
+               rho=None, lower_terrain=None, upper_terrain=None, lower_refl_coef_func=None,
+               rational_approx_order=(7, 8)):
         # Convert to float to avoid issues with JAX arrays in NumPy-based optimizer
         kz_max = float(kz_max)
         k_bounds = (float(k_bounds[0]), float(k_bounds[1]))
@@ -377,12 +378,14 @@ class RationalHelmholtzPropagator:
             wave_speed=wave_speed,
             rho=rho,
             lower_terrain=lower_terrain,
-            upper_terrain=upper_terrain
+            upper_terrain=upper_terrain,
+            lower_refl_coef_func=lower_refl_coef_func,
         )
 
     def __init__(self, order: tuple[int, int], beta: float, dx_m: float, dz_m: float, x_n: int, z_n: int,
                  x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed, lower_terrain_mask=None,
-                 rho=None, lower_terrain=None, upper_terrain=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None):
+                 rho=None, lower_terrain=None, upper_terrain=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None,
+                 lower_refl_coef_func=None, has_lower_nlbc: bool = False):
         self.order = order
         self.beta = beta
         self.dx_m = dx_m
@@ -411,13 +414,24 @@ class RationalHelmholtzPropagator:
         else:
             self.lower_terrain_mask = jnp.ones(shape=(self.x_n, self.z_n), dtype=complex)
         self._prepare_het_arrays()
-        self.lower_nlbc_coefs = None
         gamma = (self.het[-1] - self.het[-2]) / self.dz_m
         # beta_param is the exterior het value at the boundary, adjusted for
         # the linear slope: beta = (n^2 - 1) - gamma*z_max.
         # Since het is already n^2/n_ref^2 - 1 and het[0]=0, this simplifies to:
         beta_nlbc = self.het[-1] - gamma * (self.z_n - 1) * self.dz_m
-        self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_nlbc(beta_nlbc, gamma)
+        self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_upper_nlbc(beta_nlbc, gamma)
+
+        self.has_lower_nlbc = bool(has_lower_nlbc or lower_refl_coef_func is not None or lower_nlbc_coefs is not None)
+        if self.has_lower_nlbc:
+            if lower_nlbc_coefs is not None:
+                self.lower_nlbc_coefs = lower_nlbc_coefs
+            else:
+                self.lower_nlbc_coefs = self._calc_lower_nlbc(lower_refl_coef_func)
+        else:
+            # Placeholder for jit/pytree consistency; never used when has_lower_nlbc is False.
+            self.lower_nlbc_coefs = jnp.zeros(
+                (self.x_n, max(self.order), max(self.order)), dtype=complex
+            )
 
 
     def _prepare_het_arrays(self):
@@ -478,6 +492,7 @@ class RationalHelmholtzPropagator:
             'x_grid_scale': self.x_grid_scale,
             'z_grid_scale': self.z_grid_scale,
             'freq_hz': self.freq_hz,
+            'has_lower_nlbc': self.has_lower_nlbc,
         }
         return dynamic, static
 
@@ -489,44 +504,29 @@ class RationalHelmholtzPropagator:
                   lower_terrain_mask=dynamic[6], **static)
         return unf
 
-    def _calc_nlbc(self, beta, gamma=0.0):
+    def _calc_nlbc(self, diff_eq_solution_ratio, inv_z_transform_rtol):
+        """Generic NLBC computation: convolve a 1D diff-eq solution ratio over the
+        z-transform contour using FCC adaptive Fourier quadrature.
 
-        if abs(gamma) < 10*jnp.finfo(complex).eps:
-            inv_z_transform_rtol = 1e-7
-            def diff_eq_solution_ratio(s):
-                a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
-                a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
-                c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
-                mu = sqr_eq(a_1, c, a_m1)
-                return 1 / mu
-        else:
-            inv_z_transform_rtol = 1e-11
-            b = self.alpha * gamma * self.dz_m * (self.beta * self.dz_m) ** 2
-            d = gamma * self.dz_m * (self.beta * self.dz_m) ** 2 - 2 * b
-
-            def diff_eq_solution_ratio(s):
-                a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta) - b
-                a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta) + b
-                c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
-                return bessel_ratio_4th_order(a_m1, a_1, b, c, d, self.z_n - 1, inv_z_transform_rtol)
-
-
+        diff_eq_solution_ratio: callable taking a complex spectral parameter ``s``
+        and returning the corresponding boundary ratio (a JAX or python complex).
+        """
         num_roots, den_roots = self.coefs[:, 0], self.coefs[:, 1]
         m_size = self.coefs.shape[0]
         tau = self.inv_z_transform_tau
+        num_roots_np = np.array(num_roots)
+        den_roots_np = np.array(den_roots)
+
         if max(self.order) == 1:
-            @jax.jit
-            def nlbc_transformed(t):
-                t = tau * jnp.exp(1j * t)
-                return diff_eq_solution_ratio(((1 - t) / (-num_roots[0] + den_roots[0] * t)))
+            def nlbc_transformed(f):
+                t = tau * np.exp(1j * f)
+                s_val = (1 - t) / (-num_roots_np[0] + den_roots_np[0] * t)
+                return np.array([complex(diff_eq_solution_ratio(jnp.asarray(s_val)))], dtype=complex)
         else:
             # Use scipy.linalg.funm for robust matrix function evaluation.
             # This avoids eigenvector discontinuity issues that cause FCC
             # adaptive integration to fail.
             from scipy import linalg as sla
-
-            num_roots_np = np.array(num_roots)
-            den_roots_np = np.array(den_roots)
 
             def _scalar_diff_eq(s):
                 s = np.asarray(s)
@@ -552,6 +552,53 @@ class RationalHelmholtzPropagator:
                  fcca.forward(lambda t: np.array(nlbc_transformed(t), dtype=complex), 0, 2 * cm.pi)).reshape((self.x_n, m_size, m_size))
 
         return jnp.array(coefs)
+
+    def _calc_upper_nlbc(self, beta, gamma=0.0):
+        """Upper transparent NLBC, optionally with linear refractive-index slope."""
+        if abs(gamma) < 10 * jnp.finfo(complex).eps:
+            inv_z_transform_rtol = 1e-7
+
+            def diff_eq_solution_ratio(s):
+                a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
+                a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
+                c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
+                mu = sqr_eq(a_1, c, a_m1)
+                return 1 / mu
+        else:
+            inv_z_transform_rtol = 1e-11
+            b = self.alpha * gamma * self.dz_m * (self.beta * self.dz_m) ** 2
+            d = gamma * self.dz_m * (self.beta * self.dz_m) ** 2 - 2 * b
+
+            def diff_eq_solution_ratio(s):
+                a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta) - b
+                a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta) + b
+                c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
+                return bessel_ratio_4th_order(a_m1, a_1, b, c, d, self.z_n - 1, inv_z_transform_rtol)
+
+        return self._calc_nlbc(diff_eq_solution_ratio, inv_z_transform_rtol)
+
+    def _calc_lower_nlbc(self, refl_coef_func):
+        """Lower NLBC for an angle-dependent reflection coefficient.
+
+        ``refl_coef_func`` maps grazing angle (in degrees, complex) to the
+        reflection coefficient. The discrete Green's-function ratio is constructed
+        from the homogeneous half-space solution and adjusted for the boundary
+        impedance via ``(1/mu + R*mu) / (1 + R)``.
+        """
+        inv_z_transform_rtol = 1e-7
+        beta = 0.0  # exterior het value at the lower boundary
+
+        def diff_eq_solution_ratio(s):
+            a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
+            a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
+            c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
+            mu = sqr_eq(a_1, c, a_m1)
+            mu_c = complex(mu)
+            theta = cm.asin(1 / (1j * self.beta * self.dz_m) * cm.log(mu_c)) / cm.pi * 180
+            refl_coef = refl_coef_func(theta)
+            return (1 / mu_c + refl_coef * mu_c) / (1 + refl_coef)
+
+        return self._calc_nlbc(diff_eq_solution_ratio, inv_z_transform_rtol)
 
     @jax.jit
     def _Crank_Nikolson_propagate_no_rho_4th_order(self, a, b, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
@@ -617,17 +664,36 @@ class RationalHelmholtzPropagator:
         )
 
     @jax.jit
-    def _step(self, initial, upper_convolution):
+    def _step(self, initial, upper_convolution, lower_convolution):
         upper_field = jnp.zeros(len(self.coefs), dtype=complex)
+        lower_field = jnp.zeros(len(self.coefs), dtype=complex)
 
-        def substep(i, val):
-            y0, upper_field = val
-            upper_bound = 1, -self.upper_nlbc_coefs[0, i, i], upper_convolution[i] + self.upper_nlbc_coefs[0, i] @ upper_field
-            y1 = self._Crank_Nikolson_propagate(self.coefs[i][0], self.coefs[i][1], y0, upper_bound=upper_bound)
-            upper_field = upper_field.at[i].set(y1[-1])
-            return y1, upper_field
+        if self.has_lower_nlbc:
+            def substep(i, val):
+                y0, lower_field, upper_field = val
+                upper_bound = (1,
+                               -self.upper_nlbc_coefs[0, i, i],
+                               upper_convolution[i] + self.upper_nlbc_coefs[0, i] @ upper_field)
+                lower_bound = (-self.lower_nlbc_coefs[0, i, i],
+                               1,
+                               lower_convolution[i] + self.lower_nlbc_coefs[0, i] @ lower_field)
+                y1 = self._Crank_Nikolson_propagate(self.coefs[i][0], self.coefs[i][1], y0,
+                                                    lower_bound=lower_bound, upper_bound=upper_bound)
+                lower_field = lower_field.at[i].set(y1[0])
+                upper_field = upper_field.at[i].set(y1[-1])
+                return y1, lower_field, upper_field
+        else:
+            def substep(i, val):
+                y0, lower_field, upper_field = val
+                upper_bound = (1,
+                               -self.upper_nlbc_coefs[0, i, i],
+                               upper_convolution[i] + self.upper_nlbc_coefs[0, i] @ upper_field)
+                y1 = self._Crank_Nikolson_propagate(self.coefs[i][0], self.coefs[i][1], y0,
+                                                    upper_bound=upper_bound)
+                upper_field = upper_field.at[i].set(y1[-1])
+                return y1, lower_field, upper_field
 
-        return jax.lax.fori_loop(0, len(self.coefs), substep, (initial, upper_field))
+        return jax.lax.fori_loop(0, len(self.coefs), substep, (initial, lower_field, upper_field))
 
     def _convolution(self, a, b, i):
 
@@ -647,15 +713,24 @@ class RationalHelmholtzPropagator:
         results = results.at[0, :].set(initial[::self.z_grid_scale])
 
         def body_fun(i, val):
-            y0, res, upper_field = val
+            y0, res, lower_field, upper_field = val
             upper_convolution = self._convolution(self.upper_nlbc_coefs, upper_field, i)
-            y1, upper_field_i = self._step(y0, upper_convolution)
-            y1 = y1 * self.lower_terrain_mask[i,:]
+            if self.has_lower_nlbc:
+                lower_convolution = self._convolution(self.lower_nlbc_coefs, lower_field, i)
+            else:
+                lower_convolution = jnp.zeros(max(self.order), dtype=complex)
+            y1, lower_field_i, upper_field_i = self._step(y0, upper_convolution, lower_convolution)
+            y1 = y1 * self.lower_terrain_mask[i, :]
             res = jax.lax.cond(i % self.x_grid_scale == 0, lambda: res.at[i // self.x_grid_scale, :].set(y1[::self.z_grid_scale]), lambda: res)
             upper_field = upper_field.at[i].set(upper_field_i)
-            return y1, res, upper_field
-        _, results, _ = jax.lax.fori_loop(1, self.x_n, body_fun,
-                                          (initial, results, jnp.zeros(shape=(round(self.x_n), max(self.order)), dtype=complex)))
+            lower_field = lower_field.at[i].set(lower_field_i)
+            return y1, res, lower_field, upper_field
+
+        zeros_field = jnp.zeros(shape=(round(self.x_n), max(self.order)), dtype=complex)
+        _, results, _, _ = jax.lax.fori_loop(
+            1, self.x_n, body_fun,
+            (initial, results, zeros_field, zeros_field),
+        )
 
         return results
 

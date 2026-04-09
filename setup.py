@@ -55,6 +55,7 @@ setup(
         'pywaveprop.uwa._optimization',
         'pywaveprop.transforms',
         'pywaveprop.transforms.fcc_fourier',
+        'pywaveprop.utils',
         'pywaveprop.experimental',
     ],
     package_data={
