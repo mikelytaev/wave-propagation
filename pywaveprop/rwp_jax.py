@@ -26,6 +26,7 @@ class RWPComputationalParams:
     max_height_m: float = None
     max_angle_deg: float = None
     rational_approx_order = None
+    approx_method = 'pade'
     dx_m: float = None
     dz_m: float = None
     x_output_points: int = None
@@ -399,6 +400,7 @@ def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
         ),
         lower_terrain=env.terrain,
         lower_refl_coef_func=lower_refl_coef_func,
+        approx_method=params.approx_method,
     )
 
 

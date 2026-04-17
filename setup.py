@@ -44,6 +44,10 @@ setup(
     extras_require={
         'legacy': ['cython'],
         'gpu': ['jax[cuda12]'],
+        'environment': [
+            'rasterio', 'boto3', 'mercantile', 'requests',
+            'argopy', 'xarray', 'netCDF4',
+        ],
     },
     ext_modules=extensions,
     zip_safe=False,
@@ -57,6 +61,7 @@ setup(
         'pywaveprop.transforms.fcc_fourier',
         'pywaveprop.utils',
         'pywaveprop.experimental',
+        'pywaveprop.environment',
     ],
     package_data={
         '': ['*.pyx']
