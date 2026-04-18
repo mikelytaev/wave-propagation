@@ -195,13 +195,17 @@ def _get_optimal_grid_ratinterp(kz_max, k_min, k_max, required_prec, dx_max=None
     a = k_min**2 - kz_max**2
     b = k_max**2
 
-    # Candidate beta values: sample between k_min and k_max
-    beta_candidates = np.concatenate((
-        np.linspace(max(k_min * 0.5, 0.01), k_min, 10, endpoint=False),
-        np.linspace(k_min, k_max, 20),
-        np.linspace(k_max, k_max * 1.5, 5, endpoint=False),
-    ))
-    beta_candidates = np.unique(beta_candidates)
+    # Candidate beta values. We require the interpolation interval [xi_a, xi_b]
+    # to bracket zero, i.e. xi_a <= 0 <= xi_b, which means
+    #   sqrt(k_min^2 - kz_max^2) <= beta <= k_max.
+    # Picking beta well below k_min pushes the physical het = (k/beta)^2 - 1
+    # far from 0 and makes the continued-fraction NLBC converge prohibitively
+    # slowly, even though the approximation error on the interval is small.
+    beta_lo = fm.sqrt(max(a, 1e-12))
+    beta_hi = fm.sqrt(b)
+    if beta_hi <= beta_lo:
+        beta_hi = beta_lo * (1 + 1e-6)
+    beta_candidates = np.linspace(beta_lo, beta_hi, 30)
 
     res = fm.nan, 0.0, 0.0
     res_xi = (fm.nan, fm.nan)
