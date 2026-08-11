@@ -89,6 +89,58 @@ class BathymetryProfile:
 
 
 @dataclass
+class RefractivityTransect:
+    """Range-dependent modified refractivity ``M(x, z)`` along a great-circle path.
+
+    Produced by :func:`pywaveprop.environment.nwp.refractivity_transect`.
+    ``M_profile()`` returns the callable that
+    :attr:`pywaveprop.rwp.environment.Troposphere.M_profile` expects, so a
+    transect can be handed straight to the range-dependent PE solver.
+    """
+    x_m: np.ndarray            # (nx,) range along the path [m]
+    z_m: np.ndarray            # (nz,) height grid [m]
+    M: np.ndarray              # (nx, nz) modified refractivity [M-units]
+    lat_pts: np.ndarray        # (nx,) sample latitudes [deg]
+    lon_pts: np.ndarray        # (nx,) sample longitudes [deg]
+    lsm_pts: np.ndarray        # (nx,) land fraction (1 = land)
+    edh_pts: np.ndarray        # (nx,) evaporation duct height [m]
+    duct_base: np.ndarray      # (nx,) trapping-layer base [m], NaN if none
+    duct_top: np.ndarray       # (nx,) trapping-layer top [m], NaN if none
+    duct_strength: np.ndarray  # (nx,) duct strength [M-units], NaN if none
+    p1: Optional[np.ndarray] = None
+    p2: Optional[np.ndarray] = None
+    name: str = ""
+    cycle: str = ""
+
+    @property
+    def length_m(self) -> float:
+        return float(self.x_m[-1])
+
+    def M_profile(self) -> Callable:
+        """Range-dependent ``f(x, z)`` callable for the PE solvers."""
+        from .refractivity import range_dependent_M_profile
+        return range_dependent_M_profile(self.x_m, self.z_m, self.M)
+
+    def uniform_M_profile(self, column: int = 0) -> Callable:
+        """Range-INDEPENDENT ``f(x, z)`` from one column (the classical control)."""
+        from .refractivity import uniform_M_profile
+        return uniform_M_profile(self.z_m, self.M[column])
+
+    def as_dict(self) -> dict:
+        """Plain-array view, suitable for :func:`numpy.savez_compressed`."""
+        return {
+            "x_m": self.x_m, "z_m": self.z_m, "M": self.M,
+            "lat_pts": self.lat_pts, "lon_pts": self.lon_pts,
+            "lsm_pts": self.lsm_pts, "edh_pts": self.edh_pts,
+            "duct_base": self.duct_base, "duct_top": self.duct_top,
+            "duct_strength": self.duct_strength,
+            "p1": np.asarray(self.p1 if self.p1 is not None else []),
+            "p2": np.asarray(self.p2 if self.p2 is not None else []),
+            "name": self.name, "cycle": self.cycle,
+        }
+
+
+@dataclass
 class SoundVelocityProfile:
     """Vertical sound-speed profile derived from Argo or other CTD data."""
     depths_m: np.ndarray

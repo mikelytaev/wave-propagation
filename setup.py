@@ -46,7 +46,7 @@ setup(
         'gpu': ['jax[cuda12]'],
         'environment': [
             'rasterio', 'boto3', 'mercantile', 'requests',
-            'argopy', 'xarray', 'netCDF4',
+            'argopy', 'xarray', 'netCDF4', 'cfgrib', 'eccodes',
         ],
     },
     ext_modules=extensions,
