@@ -110,7 +110,8 @@ def test_range_dependent_profile_preserves_scalar_shape():
     M = np.array([[300.0, 310.0, 320.0],
                   [301.0, 311.0, 321.0],
                   [302.0, 312.0, 322.0]])
-    f = rf.range_dependent_M_profile(x, z, M)
+    # raw interpolation semantics: no top normalization
+    f = rf.range_dependent_M_profile(x, z, M, normalize_top=False)
 
     v = f(0.0, 0.0)
     assert np.isscalar(v) or np.ndim(v) == 0
@@ -125,11 +126,30 @@ def test_range_dependent_profile_clamps_outside_grid():
     x = np.array([0.0, 1000.0])
     z = np.array([0.0, 100.0])
     M = np.array([[300.0, 320.0], [310.0, 330.0]])
-    f = rf.range_dependent_M_profile(x, z, M)
+    f = rf.range_dependent_M_profile(x, z, M, normalize_top=False)
     assert f(-500.0, 0.0) == pytest.approx(300.0)
     assert f(5000.0, 0.0) == pytest.approx(310.0)
     assert f(0.0, -10.0) == pytest.approx(300.0)
     assert f(0.0, 1000.0) == pytest.approx(320.0)
+
+
+def test_range_dependent_profile_normalizes_top():
+    """The upper non-local BC is built from the launch column only, so every
+    column must reach the same M at the top of the domain."""
+    x = np.array([0.0, 1000.0, 2000.0])
+    z = np.array([0.0, 100.0, 200.0])
+    M = np.array([[300.0, 320.0, 340.0],       # top 340
+                  [305.0, 330.0, 355.0],       # top 355 -> shifted by -15
+                  [290.0, 305.0, 320.0]])      # top 320 -> shifted by +20
+    f = rf.range_dependent_M_profile(x, z, M)
+    for xi in x:
+        assert f(float(xi), 200.0) == pytest.approx(340.0)
+    # the shift is a constant per column: vertical gradients are untouched
+    assert f(1000.0, 100.0) - f(1000.0, 0.0) == pytest.approx(25.0)
+    assert f(2000.0, 100.0) - f(2000.0, 0.0) == pytest.approx(15.0)
+    # and it can be switched off
+    g = rf.range_dependent_M_profile(x, z, M, normalize_top=False)
+    assert g(1000.0, 200.0) == pytest.approx(355.0)
 
 
 def test_range_dependent_profile_validates_shape():
