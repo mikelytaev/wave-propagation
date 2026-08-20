@@ -49,7 +49,7 @@ def main():
     max_terrain = float(np.max(np.asarray(env.terrain.height)))
     max_height = max_terrain + 1000.0
     src = RWPGaussSourceModel(
-        freq_hz=30e6,
+        freq_hz=3000e6,
         height_m=src_height_absolute,
         beam_width_deg=10.0,
     )
