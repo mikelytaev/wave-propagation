@@ -278,10 +278,18 @@ def _prony_core(
     # pseudo-inverse (batched SVD).  Slightly more expensive than the
     # normal equations but unconditionally robust to rank deficiency,
     # which occurs naturally at points where the field is essentially
-    # zero (e.g., on a PEC ground).  Those degenerate points produce
-    # near-zero amplitudes — the caller can mask them on output.
-    H_pinv = np.linalg.pinv(H)  # (n_points, n_paths, rows)
+    # zero (e.g., on a PEC ground) or where two paths nearly collide.
+    # The ``rcond`` cutoff suppresses singular values below ``1e-10``
+    # times the largest, which prevents the pinv from amplifying noise
+    # into amplitudes many orders of magnitude larger than the input.
+    rcond = 1e-10
+    with np.errstate(divide="ignore", invalid="ignore"):
+        H_pinv = np.linalg.pinv(H, rcond=rcond)  # (n_points, n_paths, rows)
     h = (H_pinv @ rhs[..., None])[..., 0]  # (n_points, n_paths)
+    # At points where the input field is exactly zero, pinv produces NaNs;
+    # treat those as "no signal" by zeroing the linear-prediction
+    # coefficients (yields zero roots and therefore zero delays).
+    h = np.nan_to_num(h, nan=0.0, posinf=0.0, neginf=0.0)
 
     # Roots of the characteristic polynomial via the companion matrix
     # P(z) = z^{n_p} - h_1 z^{n_p-1} - ... - h_{n_p}.
@@ -302,9 +310,12 @@ def _prony_core(
     n_idx = np.arange(nf)
     M = z[:, None, :] ** n_idx[None, :, None]  # (n_points, nf, n_paths)
     # Vandermonde least-squares for the amplitudes (eq. 8), batched via
-    # the same pseudo-inverse approach.
-    M_pinv = np.linalg.pinv(M)  # (n_points, n_paths, nf)
+    # the same pseudo-inverse approach.  Same rcond cutoff prevents
+    # explosive amplitudes when two recovered roots collide.
+    with np.errstate(divide="ignore", invalid="ignore"):
+        M_pinv = np.linalg.pinv(M, rcond=rcond)  # (n_points, n_paths, nf)
     a = (M_pinv @ u_batched[..., None])[..., 0]  # (n_points, n_paths)
+    a = np.nan_to_num(a, nan=0.0, posinf=0.0, neginf=0.0)
 
     return a, tau
 
