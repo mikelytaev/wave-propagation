@@ -16,6 +16,12 @@ Helmholtz propagator
 .. automodule:: pywaveprop.helmholtz_jax
    :members:
 
+Split-step Fourier propagator
+-----------------------------
+
+.. automodule:: pywaveprop.helmholtz_ssf_jax
+   :members:
+
 Tropospheric radio wave propagation
 ------------------------------------
 

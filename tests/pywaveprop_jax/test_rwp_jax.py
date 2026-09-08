@@ -1002,3 +1002,44 @@ class TestRWPRandomField(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestVegetationLayer(unittest.TestCase):
+    """The vegetation slab must attenuate the field like a homogeneous lossy
+    dielectric when it fills the whole computational domain."""
+
+    def test_slab_attenuation_matches_theory(self):
+        import cmath
+        from pywaveprop.helmholtz_jax import PiecewiseLinearTerrainModel
+        from pywaveprop.rwp_jax import (GroundMaterial, RWPComputationalParams,
+                                        RWPGaussSourceModel, TroposphereModel,
+                                        VegetationLayerModel, create_rwp_model)
+        f = 300e6
+        k0 = 2 * fm.pi * f / 3e8
+        x = jnp.linspace(0, 1000, 11)
+        terrain = PiecewiseLinearTerrainModel(x, jnp.zeros_like(x))
+        material = GroundMaterial(eps=1.05, sigma=2e-4)
+        src = RWPGaussSourceModel(freq_hz=f, height_m=100.0, beam_width_deg=5.0,
+                                  polarization='V')
+        params = RWPComputationalParams(max_range_m=1000, max_height_m=200,
+                                        dx_m=20.0, dz_m=2.0, precision=1e-2)
+        params.rational_approx_order = (7, 8)
+        fields = {}
+        for tag, veg in (("air", None),
+                         ("slab", VegetationLayerModel(
+                             thickness=PiecewiseLinearTerrainModel(x, jnp.full_like(x, 300.0)),
+                             material=material))):
+            env = TroposphereModel(terrain=terrain,
+                                   ground_material=GroundMaterial(eps=15, sigma=0.005),
+                                   vegetation=veg)
+            model = create_rwp_model(src, env, params)
+            fields[tag] = (np.asarray(model.compute(src.aperture(model.z_computational_grid()))),
+                           np.asarray(model.x_output_grid()), np.asarray(model.z_output_grid()))
+        u_air, xg, zg = fields["air"]
+        u_slab = fields["slab"][0]
+        iz = int(np.argmin(np.abs(zg - 100.0)))
+        ix = int(np.argmin(np.abs(xg - 500.0)))
+        ratio_db = 20 * np.log10(np.abs(u_slab[ix, iz]) / np.abs(u_air[ix, iz]))
+        eps_c = material.complex_permittivity(f)
+        theory_db = -8.686 * k0 * cmath.sqrt(eps_c).imag * xg[ix]
+        self.assertLess(abs(ratio_db - theory_db), 0.02 * abs(theory_db))

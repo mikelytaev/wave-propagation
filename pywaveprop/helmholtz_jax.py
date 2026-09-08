@@ -163,6 +163,34 @@ tree_util.register_pytree_node(PiecewiseLinearTerrainModel,
                                PiecewiseLinearTerrainModel._tree_unflatten)
 
 
+class LowerLayerModel:
+    """Range-dependent slab lying on top of the lower terrain (vegetation canopy,
+    snow cover, ...), modelled as a heterogeneity of the wavenumber.
+
+    ``thickness`` is an :class:`AbstractTerrainModel` giving the slab thickness
+    in metres as a function of range; ``k2_contrast`` is the wavenumber-squared
+    contrast ``k0**2 * (eps_layer - 1)`` (complex; ``Im > 0`` gives a lossy
+    layer in the ``exp(-i omega t)`` convention of the propagator). Inside the
+    slab the heterogeneity becomes ``het + k2_contrast / beta**2``.
+    """
+
+    def __init__(self, thickness: AbstractTerrainModel, k2_contrast: complex):
+        self.thickness = thickness
+        self.k2_contrast = complex(k2_contrast)
+
+    def _tree_flatten(self):
+        return (self.thickness,), {'k2_contrast': self.k2_contrast}
+
+    @classmethod
+    def _tree_unflatten(cls, static, dynamic):
+        return cls(thickness=dynamic[0], **static)
+
+
+tree_util.register_pytree_node(LowerLayerModel,
+                               LowerLayerModel._tree_flatten,
+                               LowerLayerModel._tree_unflatten)
+
+
 class ConstWaveSpeedModel(AbstractWaveSpeedModel):
 
     def __init__(self, c0):
@@ -294,7 +322,7 @@ class RationalHelmholtzPropagator:
     @classmethod
     def create(cls, freq_hz: float, wave_speed, kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D,
                rho=None, lower_terrain=None, upper_terrain=None, lower_refl_coef_func=None,
-               rational_approx_order=(7, 8), approx_method='pade'):
+               rational_approx_order=(7, 8), approx_method='pade', lower_layer=None):
         # Convert to float to avoid issues with JAX arrays in NumPy-based optimizer
         kz_max = float(kz_max)
         k_bounds = (float(k_bounds[0]), float(k_bounds[1]))
@@ -389,13 +417,14 @@ class RationalHelmholtzPropagator:
             lower_refl_coef_func=lower_refl_coef_func,
             approx_method=approx_method,
             xi_bounds=xi_bounds_best,
+            lower_layer=lower_layer,
         )
 
     def __init__(self, order: tuple[int, int], beta: float, dx_m: float, dz_m: float, x_n: int, z_n: int,
-                 x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed, lower_terrain_mask=None,
+                 x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed,
                  rho=None, lower_terrain=None, upper_terrain=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None,
                  lower_refl_coef_func=None, has_lower_nlbc: bool = False,
-                 approx_method='pade', xi_bounds=None):
+                 approx_method='pade', xi_bounds=None, lower_layer=None):
         self.order = order
         self.beta = beta
         self.dx_m = dx_m
@@ -429,10 +458,7 @@ class RationalHelmholtzPropagator:
         self.rho = rho
         self.lower_terrain = lower_terrain
         self.upper_terrain = upper_terrain
-        if lower_terrain_mask is not None:
-            self.lower_terrain_mask = lower_terrain_mask
-        else:
-            self.lower_terrain_mask = jnp.ones(shape=(self.x_n, self.z_n), dtype=complex)
+        self.lower_layer = lower_layer
         self._prepare_het_arrays()
         gamma = (self.het[-1] - self.het[-2]) / self.dz_m
         # beta_param is the exterior het value at the upper boundary, adjusted
@@ -468,22 +494,51 @@ class RationalHelmholtzPropagator:
             self.rho_v_min = jnp.ones(self.z_n - 2)
             self.rho_v_pls = jnp.ones(self.z_n - 2)
 
-        if self.lower_terrain is not None or self.upper_terrain is not None:
-            z_indices = jnp.arange(self.z_n)[jnp.newaxis, :]
-            mask = jnp.ones(shape=(self.x_n, self.z_n), dtype=complex)
-            if self.lower_terrain is not None:
-                heights = jnp.round(self.lower_terrain.on_regular_grid(
-                    RegularGrid(start=0, dx=self.dx_m, n=self.x_n)) / self.dz_m)
-                # Zero out z_index < terrain_height (below ground in RWP)
-                mask = mask * jnp.where(z_indices < heights[:, jnp.newaxis], 0.0 + 0.0j, 1.0 + 0.0j)
-            if self.upper_terrain is not None:
-                heights = jnp.round(self.upper_terrain.on_regular_grid(
-                    RegularGrid(start=0, dx=self.dx_m, n=self.x_n)) / self.dz_m)
-                # Zero out z_index >= terrain_height (below bottom in UWA)
-                mask = mask * jnp.where(z_indices >= heights[:, jnp.newaxis], 0.0 + 0.0j, 1.0 + 0.0j)
-            self.lower_terrain_mask = mask
+        # Terrain / layer geometry is stored as O(x_n) integer index arrays; the
+        # (x_n, z_n) mask rows are generated on the fly at every range step
+        # (see terrain_mask_row / het_row), which keeps the memory footprint
+        # independent of the range extent.
+        x_grid = RegularGrid(start=0, dx=self.dx_m, n=self.x_n)
+        self._z_indices = jnp.arange(self.z_n)
+        if self.lower_terrain is not None:
+            # Zero out z_index < terrain_height (below ground in RWP)
+            self.lower_terrain_idx = jnp.round(
+                self.lower_terrain.on_regular_grid(x_grid) / self.dz_m).astype(jnp.int64)
         else:
-            self.lower_terrain_mask = jnp.ones(shape=(self.x_n, self.z_n), dtype=complex)
+            self.lower_terrain_idx = jnp.zeros(self.x_n, dtype=jnp.int64)
+        if self.upper_terrain is not None:
+            # Zero out z_index >= terrain_height (below bottom in UWA)
+            self.upper_terrain_idx = jnp.round(
+                self.upper_terrain.on_regular_grid(x_grid) / self.dz_m).astype(jnp.int64)
+        else:
+            self.upper_terrain_idx = jnp.full(self.x_n, self.z_n, dtype=jnp.int64)
+        if self.lower_layer is not None:
+            self.layer_idx = jnp.round(
+                self.lower_layer.thickness.on_regular_grid(x_grid) / self.dz_m).astype(jnp.int64)
+            self.layer_delta_het = jnp.asarray(self.lower_layer.k2_contrast / self.beta ** 2, dtype=complex)
+        else:
+            self.layer_idx = jnp.zeros(self.x_n, dtype=jnp.int64)
+            self.layer_delta_het = jnp.asarray(0.0, dtype=complex)
+
+    def terrain_mask_row(self, i):
+        """Field mask (1 in the medium, 0 inside the terrain) at range step ``i``."""
+        z = self._z_indices
+        inside = (z >= self.lower_terrain_idx[i]) & (z < self.upper_terrain_idx[i])
+        return jnp.where(inside, 1.0 + 0.0j, 0.0 + 0.0j)
+
+    def het_row(self, i):
+        """Heterogeneity profile at range step ``i`` (includes the lower layer)."""
+        if self.lower_layer is None:
+            return self.het
+        z = self._z_indices
+        lo = self.lower_terrain_idx[i]
+        inside = (z >= lo) & (z < lo + self.layer_idx[i])
+        return self.het + self.layer_delta_het * inside
+
+    @property
+    def lower_terrain_mask(self):
+        """Full (x_n, z_n) terrain mask. Diagnostics only: O(x_n * z_n) memory."""
+        return jax.vmap(self.terrain_mask_row)(jnp.arange(self.x_n))
 
     def x_computational_grid(self):
         return jnp.arange(0, self.x_n) * self.dx_m
@@ -499,7 +554,7 @@ class RationalHelmholtzPropagator:
 
     def _tree_flatten(self):
         dynamic = (self.wave_speed, self.rho, self.lower_terrain, self.upper_terrain,
-                   self.lower_nlbc_coefs, self.upper_nlbc_coefs, self.lower_terrain_mask)
+                   self.lower_nlbc_coefs, self.upper_nlbc_coefs, self.lower_layer)
         static = {
             'order': self.order,
             'beta': self.beta,
@@ -522,7 +577,7 @@ class RationalHelmholtzPropagator:
         unf = cls(wave_speed=dynamic[0], rho=dynamic[1], lower_terrain=dynamic[2],
                   upper_terrain=dynamic[3],
                   lower_nlbc_coefs=dynamic[4], upper_nlbc_coefs=dynamic[5],
-                  lower_terrain_mask=dynamic[6], **static)
+                  lower_layer=dynamic[6], **static)
         return unf
 
     def _calc_nlbc(self, diff_eq_solution_ratio, inv_z_transform_rtol):
@@ -629,12 +684,12 @@ class RationalHelmholtzPropagator:
         return self._calc_nlbc(diff_eq_solution_ratio, inv_z_transform_rtol)
 
     @jax.jit
-    def _Crank_Nikolson_propagate_no_rho_4th_order(self, a, b, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
+    def _Crank_Nikolson_propagate_no_rho_4th_order(self, a, b, initial, het, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
         alpha = self.alpha
-        c_a = alpha * (self.beta * self.dz_m) ** 2 + a + alpha * a * (self.beta * self.dz_m) ** 2 * self.het
-        c_b = alpha * (self.beta * self.dz_m) ** 2 + b + alpha * b * (self.beta * self.dz_m) ** 2 * self.het
-        d_a = (self.beta * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * a + (a * (self.beta * self.dz_m) ** 2 - 2 * a * alpha * (self.beta * self.dz_m) ** 2) * self.het
-        d_b = (self.beta * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * b + (b * (self.beta * self.dz_m) ** 2 - 2 * b * alpha * (self.beta * self.dz_m) ** 2) * self.het
+        c_a = alpha * (self.beta * self.dz_m) ** 2 + a + alpha * a * (self.beta * self.dz_m) ** 2 * het
+        c_b = alpha * (self.beta * self.dz_m) ** 2 + b + alpha * b * (self.beta * self.dz_m) ** 2 * het
+        d_a = (self.beta * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * a + (a * (self.beta * self.dz_m) ** 2 - 2 * a * alpha * (self.beta * self.dz_m) ** 2) * het
+        d_b = (self.beta * self.dz_m) ** 2 * (1 - 2 * alpha) - 2 * b + (b * (self.beta * self.dz_m) ** 2 - 2 * b * alpha * (self.beta * self.dz_m) ** 2) * het
 
         rhs = d_a * initial
         rhs = rhs.at[1::].set(rhs[1::] + c_a[:-1:] * initial[:-1:])
@@ -652,22 +707,22 @@ class RationalHelmholtzPropagator:
         return res.value
 
     @jax.jit
-    def _Crank_Nikolson_propagate_rho_4th_order(self, a, b, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
+    def _Crank_Nikolson_propagate_rho_4th_order(self, a, b, initial, het, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
         alpha_m = self.alpha * self.rho_v[1:-1]
         tau2 = (self.beta * self.dz_m) ** 2
 
-        c_a_left = 1 / self.rho_v_min * (alpha_m * tau2 + a * self.rho_v[1:-1:] + a * alpha_m * tau2 * self.het[:-2:])
-        c_a_right = 1 / self.rho_v_pls * (alpha_m * tau2 + a * self.rho_v[1:-1:] + a * alpha_m * tau2 * self.het[2::])
-        c_b_left = 1 / self.rho_v_min * (alpha_m * tau2 + b * self.rho_v[1:-1:] + b * alpha_m * tau2 * self.het[:-2:])
-        c_b_right = 1 / self.rho_v_pls * (alpha_m * tau2 + b * self.rho_v[1:-1:] + b * alpha_m * tau2 * self.het[2::])
+        c_a_left = 1 / self.rho_v_min * (alpha_m * tau2 + a * self.rho_v[1:-1:] + a * alpha_m * tau2 * het[:-2:])
+        c_a_right = 1 / self.rho_v_pls * (alpha_m * tau2 + a * self.rho_v[1:-1:] + a * alpha_m * tau2 * het[2::])
+        c_b_left = 1 / self.rho_v_min * (alpha_m * tau2 + b * self.rho_v[1:-1:] + b * alpha_m * tau2 * het[:-2:])
+        c_b_right = 1 / self.rho_v_pls * (alpha_m * tau2 + b * self.rho_v[1:-1:] + b * alpha_m * tau2 * het[2::])
 
         het_mid2 = 1 / self.rho_v_pls + 1 / self.rho_v_min
 
         d_a = tau2 * (1 - alpha_m * het_mid2) - a * het_mid2 * \
-              self.rho_v[1:-1:] + a * tau2 * self.het[1:-1:] - a * alpha_m * tau2 * self.het[1:-1:] * het_mid2
+              self.rho_v[1:-1:] + a * tau2 * het[1:-1:] - a * alpha_m * tau2 * het[1:-1:] * het_mid2
 
         d_b = tau2 * (1 - alpha_m * het_mid2) - b * het_mid2 * \
-              self.rho_v[1:-1:] + b * tau2 * self.het[1:-1:] - b * alpha_m * tau2 * self.het[1:-1:] * het_mid2
+              self.rho_v[1:-1:] + b * tau2 * het[1:-1:] - b * alpha_m * tau2 * het[1:-1:] * het_mid2
 
         rhs = jnp.concatenate((jnp.array([0.0]), d_a, jnp.array([0.0]))) * initial
         rhs = rhs.at[1::].add(jnp.concatenate((c_a_left, jnp.array([0.0]))) * initial[:-1:])
@@ -684,15 +739,15 @@ class RationalHelmholtzPropagator:
         return res.value
 
     @jax.jit
-    def _Crank_Nikolson_propagate(self, a, b, initial, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
+    def _Crank_Nikolson_propagate(self, a, b, initial, het, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
         return jax.lax.cond(
             self.rho is None,
-            lambda: self._Crank_Nikolson_propagate_no_rho_4th_order(a, b, initial, lower_bound, upper_bound),
-            lambda: self._Crank_Nikolson_propagate_rho_4th_order(a, b, initial, lower_bound, upper_bound)
+            lambda: self._Crank_Nikolson_propagate_no_rho_4th_order(a, b, initial, het, lower_bound, upper_bound),
+            lambda: self._Crank_Nikolson_propagate_rho_4th_order(a, b, initial, het, lower_bound, upper_bound)
         )
 
     @jax.jit
-    def _step(self, initial, upper_convolution, lower_convolution):
+    def _step(self, initial, upper_convolution, lower_convolution, het):
         upper_field = jnp.zeros(len(self.coefs), dtype=complex)
         lower_field = jnp.zeros(len(self.coefs), dtype=complex)
 
@@ -705,7 +760,7 @@ class RationalHelmholtzPropagator:
                 lower_bound = (-self.lower_nlbc_coefs[0, i, i],
                                1,
                                lower_convolution[i] + self.lower_nlbc_coefs[0, i] @ lower_field)
-                y1 = self._Crank_Nikolson_propagate(self.coefs[i][0], self.coefs[i][1], y0,
+                y1 = self._Crank_Nikolson_propagate(self.coefs[i][0], self.coefs[i][1], y0, het,
                                                     lower_bound=lower_bound, upper_bound=upper_bound)
                 lower_field = lower_field.at[i].set(y1[0])
                 upper_field = upper_field.at[i].set(y1[-1])
@@ -716,7 +771,7 @@ class RationalHelmholtzPropagator:
                 upper_bound = (1,
                                -self.upper_nlbc_coefs[0, i, i],
                                upper_convolution[i] + self.upper_nlbc_coefs[0, i] @ upper_field)
-                y1 = self._Crank_Nikolson_propagate(self.coefs[i][0], self.coefs[i][1], y0,
+                y1 = self._Crank_Nikolson_propagate(self.coefs[i][0], self.coefs[i][1], y0, het,
                                                     upper_bound=upper_bound)
                 upper_field = upper_field.at[i].set(y1[-1])
                 return y1, lower_field, upper_field
@@ -724,14 +779,18 @@ class RationalHelmholtzPropagator:
         return jax.lax.fori_loop(0, len(self.coefs), substep, (initial, lower_field, upper_field))
 
     def _convolution(self, a, b, i):
+        """sum_{ind=1}^{i-1} a[ind] @ b[i-ind], vectorised over ``ind``.
 
-        def body_fun(ind, val):
-            # Only accumulate for ind <= i-1 (historical steps).
-            # For ind > i, b[i-ind] wraps to uninitialized entries.
-            contrib = a[ind] @ b[i-ind]
-            return val + jnp.where(ind < i, contrib, 0.0)
-
-        return jax.lax.fori_loop(1, len(a), body_fun, jnp.zeros(max(self.order), dtype=complex))
+        ``a`` has shape (x_n, p, p) and ``b`` (x_n, p).  The gather of the
+        reversed history plus one einsum replaces a sequential loop of x_n tiny
+        matrix-vector products per range step, whose dispatch overhead used to
+        dominate long-range runs (O(x_n^2) loop iterations).
+        """
+        n = a.shape[0]
+        ind = jnp.arange(n)
+        hist = b[jnp.clip(i - ind, 0, n - 1)]
+        mask = ((ind >= 1) & (ind < i)).astype(b.dtype)
+        return jnp.einsum('njk,nk->j', a, hist * mask[:, None])
 
     @jax.jit
     def compute(self, initial):
@@ -747,8 +806,9 @@ class RationalHelmholtzPropagator:
                 lower_convolution = self._convolution(self.lower_nlbc_coefs, lower_field, i)
             else:
                 lower_convolution = jnp.zeros(max(self.order), dtype=complex)
-            y1, lower_field_i, upper_field_i = self._step(y0, upper_convolution, lower_convolution)
-            y1 = y1 * self.lower_terrain_mask[i, :]
+            y1, lower_field_i, upper_field_i = self._step(y0, upper_convolution, lower_convolution,
+                                                          self.het_row(i))
+            y1 = y1 * self.terrain_mask_row(i)
             res = jax.lax.cond(i % self.x_grid_scale == 0, lambda: res.at[i // self.x_grid_scale, :].set(y1[::self.z_grid_scale]), lambda: res)
             upper_field = upper_field.at[i].set(upper_field_i)
             lower_field = lower_field.at[i].set(lower_field_i)

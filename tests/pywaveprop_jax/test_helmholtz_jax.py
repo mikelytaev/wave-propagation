@@ -25,7 +25,7 @@ from pywaveprop.helmholtz_jax import (
     EOFWaveSpeedModel,
     SumWaveSpeedModel,
     MultWaveSpeedModel,
-    PiecewiseLinearTerrainModel,
+    PiecewiseLinearTerrainModel, LowerLayerModel,
     StaircaseRhoModel,
     RationalHelmholtzPropagator,
     AbstractWaveSpeedModel,
@@ -288,13 +288,49 @@ class TestRationalHelmholtzPropagator(unittest.TestCase):
         initial = initial.at[25].set(1.0 + 0j)
         a, b = prop.coefs[0]
         result = prop._Crank_Nikolson_propagate_no_rho_4th_order(
-            a, b, initial,
+            a, b, initial, prop.het,
             lower_bound=(1, 0, 0),
             upper_bound=(0, 1, 0)
         )
         self.assertEqual(result.shape, (50,))
         # Result should be finite
         self.assertTrue(jnp.all(jnp.isfinite(result)))
+
+    def test_terrain_mask_rows_match_full_mask(self):
+        """Per-step mask rows must reproduce the full (x_n, z_n) mask."""
+        x_grid = jnp.linspace(0, 190, 20)
+        height = jnp.where(x_grid > 50, 5.0, 0.0)
+        terrain = PiecewiseLinearTerrainModel(x_grid_m=x_grid, height=height)
+        prop = self._create_simple_propagator()
+        prop.lower_terrain = terrain
+        prop._prepare_het_arrays()
+        full = prop.lower_terrain_mask
+        self.assertEqual(full.shape, (prop.x_n, prop.z_n))
+        for i in (0, 7, 10, 19):
+            np.testing.assert_allclose(np.asarray(prop.terrain_mask_row(i)),
+                                       np.asarray(full[i]), atol=0)
+        self.assertEqual(float(jnp.abs(full[10, 0])), 0.0)
+        self.assertEqual(float(jnp.abs(full[10, 25])), 1.0)
+        # no lower layer -> het_row is the plain het profile
+        np.testing.assert_allclose(np.asarray(prop.het_row(10)), np.asarray(prop.het))
+
+    def test_lower_layer_het_row(self):
+        """A LowerLayerModel adds the wavenumber contrast only inside the slab."""
+        x_grid = jnp.linspace(0, 190, 20)
+        terrain = PiecewiseLinearTerrainModel(
+            x_grid_m=x_grid, height=jnp.where(x_grid > 50, 5.0, 0.0))
+        thickness = PiecewiseLinearTerrainModel(
+            x_grid_m=x_grid, height=jnp.where(x_grid > 100, 10.0, 0.0))
+        prop = self._create_simple_propagator()
+        prop.lower_terrain = terrain
+        prop.lower_layer = LowerLayerModel(thickness=thickness, k2_contrast=0.3 + 0.1j)
+        prop._prepare_het_arrays()
+        delta = (0.3 + 0.1j) / prop.beta ** 2
+        row = np.asarray(prop.het_row(15)) - np.asarray(prop.het)   # terrain 5 m, slab 10 m
+        np.testing.assert_allclose(row[5:15], delta)
+        np.testing.assert_allclose(row[:5], 0.0)
+        np.testing.assert_allclose(row[15:], 0.0)
+        np.testing.assert_allclose(np.asarray(prop.het_row(2)) - np.asarray(prop.het), 0.0)
 
     def test_lower_terrain_mask(self):
         """Test terrain mask generation."""

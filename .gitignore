@@ -5,3 +5,5 @@ grid_optimizer.dump
 build/
 *.so
 *.c
+test_reports/
+test_plots/

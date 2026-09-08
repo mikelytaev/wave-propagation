@@ -9,8 +9,9 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 
 from pywaveprop.helmholtz_jax import RegularGrid, AbstractWaveSpeedModel, RationalHelmholtzPropagator, \
-    AbstractTerrainModel, PiecewiseLinearTerrainModel
+    AbstractTerrainModel, PiecewiseLinearTerrainModel, LowerLayerModel
 from pywaveprop.helmholtz_common import HelmholtzMeshParams2D
+from pywaveprop.helmholtz_ssf_jax import SSFHelmholtzPropagator, impedance_alpha
 from pywaveprop.propagators._utils import reflection_coef
 from pywaveprop.rwp_field import RWPField
 import jax
@@ -26,7 +27,7 @@ class RWPComputationalParams:
     max_height_m: float = None
     max_angle_deg: float = None
     rational_approx_order = None
-    approx_method = 'pade'
+    approx_method = 'pade'  # 'pade' / 'ratinterp' (rational FD) or 'ssf' (split-step Fourier)
     dx_m: float = None
     dz_m: float = None
     x_output_points: int = None
@@ -264,12 +265,40 @@ class GroundMaterial:
 
 
 @dataclass
+class VegetationLayerModel:
+    """Vegetation (forest canopy) modelled as a lossy dielectric slab of
+    range-dependent thickness lying on the terrain, following the classical
+    slab model of Tamir. ``thickness`` gives the canopy height above ground as
+    a function of range (0 where there is no vegetation); ``material`` holds
+    the effective relative permittivity and conductivity of the canopy."""
+    thickness: AbstractTerrainModel
+    material: GroundMaterial = field(default_factory=lambda: GroundMaterial(eps=1.004, sigma=180e-6))
+
+    def k2_contrast(self, freq_hz: float) -> complex:
+        k0 = 2 * fm.pi * freq_hz / 3E8
+        return complex(k0 ** 2 * (self.material.complex_permittivity(freq_hz) - 1.0))
+
+    def _tree_flatten(self):
+        return (self.thickness,), {'material': self.material}
+
+    @classmethod
+    def _tree_unflatten(cls, static, dynamic):
+        return cls(thickness=dynamic[0], **static)
+
+
+tree_util.register_pytree_node(VegetationLayerModel,
+                               VegetationLayerModel._tree_flatten,
+                               VegetationLayerModel._tree_unflatten)
+
+
+@dataclass
 class TroposphereModel:
     N_profile: AbstractNProfileModel = field(default_factory=EmptyNProfileModel)
     M0: float = 320
     slope: float = (1 / 6371000) * 1E6
     terrain: AbstractTerrainModel = None
     ground_material: GroundMaterial = None
+    vegetation: VegetationLayerModel = None
 
     def M_profile(self, z):
         return self.N_profile(z) + self.M0 + self.slope*z
@@ -281,7 +310,7 @@ class TroposphereModel:
         return self.N_profile.max_height_m()
 
     def _tree_flatten(self):
-        dynamic = (self.N_profile, self.M0, self.slope)
+        dynamic = (self.N_profile, self.M0, self.slope, self.terrain, self.vegetation)
         static = {
             'ground_material': self.ground_material,
         }
@@ -289,7 +318,8 @@ class TroposphereModel:
 
     @classmethod
     def _tree_unflatten(cls, static, dynamic):
-        unf = cls(N_profile=dynamic[0], M0=dynamic[1], slope=dynamic[2], **static)
+        unf = cls(N_profile=dynamic[0], M0=dynamic[1], slope=dynamic[2],
+                  terrain=dynamic[3], vegetation=dynamic[4], **static)
         return unf
 
 
@@ -335,23 +365,8 @@ def minmax_k(src: RWPGaussSourceModel, env: TroposphereModel, max_height_m: floa
     return k_min, k_max
 
 
-def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RWPComputationalParams) -> RationalHelmholtzPropagator:
-    """Create a JAX-based rational Helmholtz propagator configured for tropospheric RWP.
-
-    Parameters
-    ----------
-    src : RWPGaussSourceModel
-        Source/antenna model.
-    env : TroposphereModel
-        Tropospheric environment model.
-    params : RWPComputationalParams
-        Computational parameters.
-
-    Returns
-    -------
-    RationalHelmholtzPropagator
-        Configured propagator ready for computation.
-    """
+def _rwp_model_setup(src: RWPGaussSourceModel, env: TroposphereModel, params: RWPComputationalParams):
+    """Grid-independent quantities shared by the rational-FD and SSF front-ends."""
     params = deepcopy(params)
 
     max_angle_deg = params.max_angle_deg or src.max_angle_deg()
@@ -383,24 +398,96 @@ def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
         def lower_refl_coef_func(theta_deg):
             return reflection_coef(1, eps_complex, 90 - theta_deg, polarz)
 
+    lower_layer = None
+    if getattr(env, 'vegetation', None) is not None:
+        lower_layer = LowerLayerModel(thickness=env.vegetation.thickness,
+                                      k2_contrast=env.vegetation.k2_contrast(src.freq_hz))
+
+    mesh_params = HelmholtzMeshParams2D(
+        x_size_m=params.max_range_m,
+        z_size_m=params.max_height_m,
+        dx_output_m=params.dx_m,
+        x_n_upper_bound=params.x_output_points,
+        dz_output_m=params.dz_m,
+        z_n_upper_bound=params.z_output_points,
+    )
+    return params, float(kz_max), (k_min, k_max), lower_refl_coef_func, lower_layer, mesh_params
+
+
+def create_rwp_ssf_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RWPComputationalParams,
+                         **ssf_kwargs) -> SSFHelmholtzPropagator:
+    """Create a JAX-based split-step Fourier propagator configured for tropospheric RWP.
+
+    The lower boundary follows the source polarization: a perfectly conducting
+    ground (``env.ground_material is None``) gives a Dirichlet (H) or Neumann (V)
+    condition, a finite-permittivity ground gives the Leontovich impedance
+    condition handled by the discrete mixed Fourier transform. Extra keyword
+    arguments (``dx_m``, ``dz_m``, ``abs_layer_scale``, ``spectral_margin``) are
+    forwarded to :meth:`SSFHelmholtzPropagator.create`.
+    """
+    params, kz_max, k_bounds, _, lower_layer, mesh_params = _rwp_model_setup(src, env, params)
+    if env.ground_material is not None:
+        k0 = 2 * fm.pi * src.freq_hz / 3E8
+        lower_bc = 'impedance'
+        alpha = impedance_alpha(k0, env.ground_material.complex_permittivity(src.freq_hz), src.polarization)
+    else:
+        lower_bc = 'dirichlet' if src.polarization.upper() == 'H' else 'neumann'
+        alpha = None
+    return SSFHelmholtzPropagator.create(
+        freq_hz=src.freq_hz,
+        wave_speed=ProxyWaveSpeedModel(env),
+        kz_max=kz_max,
+        k_bounds=k_bounds,
+        precision=params.precision,
+        mesh_params=mesh_params,
+        lower_terrain=env.terrain,
+        lower_bc=lower_bc,
+        lower_impedance_alpha=alpha,
+        lower_layer=lower_layer,
+        **ssf_kwargs,
+    )
+
+
+def create_rwp_model(src: RWPGaussSourceModel, env: TroposphereModel, params: RWPComputationalParams):
+    """Create a JAX-based Helmholtz propagator configured for tropospheric RWP.
+
+    ``params.approx_method`` selects the solver: ``'pade'`` / ``'ratinterp'``
+    give the rational finite-difference propagator
+    (:class:`RationalHelmholtzPropagator`), ``'ssf'`` the split-step Fourier one
+    (:class:`SSFHelmholtzPropagator`). Both expose the same ``compute`` /
+    grid interface.
+
+    Parameters
+    ----------
+    src : RWPGaussSourceModel
+        Source/antenna model.
+    env : TroposphereModel
+        Tropospheric environment model.
+    params : RWPComputationalParams
+        Computational parameters.
+
+    Returns
+    -------
+    RationalHelmholtzPropagator or SSFHelmholtzPropagator
+        Configured propagator ready for computation.
+    """
+    if params.approx_method == 'ssf':
+        return create_rwp_ssf_model(src, env, params)
+
+    params, kz_max, k_bounds, lower_refl_coef_func, lower_layer, mesh_params = _rwp_model_setup(src, env, params)
+    k_min, k_max = k_bounds
     return RationalHelmholtzPropagator.create(
         rational_approx_order=params.rational_approx_order,
         freq_hz=src.freq_hz,
         wave_speed=ProxyWaveSpeedModel(env),
-        kz_max=float(kz_max),
+        kz_max=kz_max,
         k_bounds=(k_min, k_max),
         precision=params.precision,
-        mesh_params=HelmholtzMeshParams2D(
-            x_size_m=params.max_range_m,
-            z_size_m=params.max_height_m,
-            dx_output_m=params.dx_m,
-            x_n_upper_bound=params.x_output_points,
-            dz_output_m=params.dz_m,
-            z_n_upper_bound=params.z_output_points,
-        ),
+        mesh_params=mesh_params,
         lower_terrain=env.terrain,
         lower_refl_coef_func=lower_refl_coef_func,
         approx_method=params.approx_method,
+        lower_layer=lower_layer,
     )
 
 
@@ -422,6 +509,7 @@ def rwp_forward_task(src: RWPGaussSourceModel, env: TroposphereModel, params: RW
     -------
     RWPField
         Computed electromagnetic field with methods for path_loss, horizontal extraction, etc.
+    Set ``params.approx_method = 'ssf'`` to use the split-step Fourier solver.
     """
     model = create_rwp_model(src, env, params)
     init = src.aperture(model.z_computational_grid())
