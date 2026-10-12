@@ -1,0 +1,6 @@
+{"slope_deg": 20.0, "note": "staircase solver, Pade (7,8), aperture 55 deg; max |u-u_exact| / max|u_exact|",
+ "runs": [
+  {"dz": 0.0345, "dx": 2.5, "z_n": 23167, "err": 0.6925, "time_s": 10},
+  {"dz": 0.0125, "dx": 2.5, "z_n": 63907, "err": 0.5454, "time_s": 19},
+  {"dz": 0.0050, "dx": 2.5, "z_n": 159766, "err": 0.5436, "time_s": 36},
+  {"dz": 0.0050, "dx": 0.625, "z_n": 159766, "err": 0.4525, "time_s": 115}]}

@@ -1,0 +1,25 @@
+{
+ "note": "terrain-following solver vs double-precision RAM (dr=2.5 m, dz=0.125 m, exact Argo SSP points); median |dTL| (dB) at 50 m / 500 m, aperture 70 deg, precision 0.1",
+ "runs": [
+  {
+   "label": "eta_b = 3600 m, dx = 5 m, deta = 0.286 m, q = 2",
+   "z50": 0.685,
+   "z500": 0.743
+  },
+  {
+   "label": "eta_b = 3600 m, dx = 2.5 m, deta = 0.25 m, q = 2",
+   "z50": 0.654,
+   "z500": 0.711
+  },
+  {
+   "label": "eta_b = 1200 m, dx = 5 m, deta = 0.2 m, q = 2",
+   "z50": 0.54,
+   "z500": 0.645
+  },
+  {
+   "label": "eta_b = 3600 m, dx = 2.5 m, deta = 0.25 m, q = 3",
+   "z50": 0.658,
+   "z500": 0.701
+  }
+ ]
+}

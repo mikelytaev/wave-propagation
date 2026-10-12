@@ -1,0 +1,280 @@
+\begin{thebibliography}{35}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Lytaev(2020{\natexlab{a}})]{lytaev2020awpl}
+Mikhail~S. Lytaev.
+\newblock {Numerov-Pad\'e} scheme for the one-way {Helmholtz} equation in
+  tropospheric radio-wave propagation.
+\newblock \emph{IEEE Antennas and Wireless Propagation Letters}, 19\penalty0
+  (12):\penalty0 2167--2171, 2020{\natexlab{a}}.
+\newblock \doi{10.1109/LAWP.2020.3026626}.
+
+\bibitem[Lytaev(2020{\natexlab{b}})]{lytaev2020iccsa}
+Mikhail~S. Lytaev.
+\newblock Automated selection of the computational parameters for the
+  higher-order parabolic equation numerical methods.
+\newblock In \emph{Computational Science and Its Applications -- ICCSA 2020},
+  volume 12249 of \emph{Lecture Notes in Computer Science}, pages 296--311.
+  Springer, 2020{\natexlab{b}}.
+\newblock \doi{10.1007/978-3-030-58799-4_22}.
+
+\bibitem[Lytaev(2023)]{lytaev2023jmse}
+Mikhail Lytaev.
+\newblock Mesh optimization for the acoustic parabolic equation.
+\newblock \emph{Journal of Marine Science and Engineering}, 11\penalty0
+  (3):\penalty0 496, 2023.
+\newblock \doi{10.3390/jmse11030496}.
+
+\bibitem[Lytaev(2026)]{lytaev2026nmp}
+Mikhail~S. Lytaev.
+\newblock Mesh optimization for rational approximations of the one-way
+  {Helmholtz} equation in inhomogeneous media.
+\newblock \emph{Numerical Methods and Programming (Vychislitel'nye Metody i
+  Programmirovanie)}, 27\penalty0 (2):\penalty0 302--316, 2026.
+\newblock \doi{10.26089/NumMet.v27r220}.
+
+\bibitem[Lytaev(2018)]{lytaev2018awpl}
+Mikhail~S. Lytaev.
+\newblock Nonlocal boundary conditions for split-step {Pad\'e} approximations
+  of the {Helmholtz} equation with modified refractive index.
+\newblock \emph{IEEE Antennas and Wireless Propagation Letters}, 17\penalty0
+  (8):\penalty0 1561--1565, 2018.
+\newblock \doi{10.1109/LAWP.2018.2855086}.
+
+\bibitem[Beilis and Tappert(1979)]{beilis1979coupled}
+A.~Beilis and F.~D. Tappert.
+\newblock Coupled mode analysis of multiple rough surface scattering.
+\newblock \emph{The Journal of the Acoustical Society of America}, 66\penalty0
+  (3):\penalty0 811--826, 1979.
+\newblock \doi{10.1121/1.383685}.
+
+\bibitem[Barrios(1994)]{barrios1994tpem}
+A.~E. Barrios.
+\newblock A terrain parabolic equation model for propagation in the
+  troposphere.
+\newblock \emph{IEEE Transactions on Antennas and Propagation}, 42\penalty0
+  (1):\penalty0 90--98, 1994.
+\newblock \doi{10.1109/8.272306}.
+
+\bibitem[Donohue and Kuttler(2000)]{donohue2000gtpe}
+D.~J. Donohue and J.~R. Kuttler.
+\newblock Propagation modeling over terrain using the parabolic wave equation.
+\newblock \emph{IEEE Transactions on Antennas and Propagation}, 48\penalty0
+  (2):\penalty0 260--277, 2000.
+\newblock \doi{10.1109/8.833076}.
+
+\bibitem[Barrios(2003)]{barrios2003apm}
+A.~E. Barrios.
+\newblock Considerations in the development of the advanced propagation model
+  ({APM}) for {U.S.} {N}avy applications.
+\newblock In \emph{Proceedings of the International Conference on Radar (RADAR
+  2003)}, pages 77--82, 2003.
+\newblock \doi{10.1109/RADAR.2003.1278714}.
+
+\bibitem[Dozier(1984)]{dozier1984peruse}
+Lewis~B. Dozier.
+\newblock {PERUSE}: A numerical treatment of rough surface scattering for the
+  parabolic wave equation.
+\newblock \emph{The Journal of the Acoustical Society of America}, 75\penalty0
+  (5):\penalty0 1415--1432, 1984.
+\newblock \doi{10.1121/1.390849}.
+
+\bibitem[Parakkal et~al.(2012)Parakkal, Gilbert, and Di]{parakkal2012beilis}
+Santosh Parakkal, Kenneth~E. Gilbert, and Xiao Di.
+\newblock Application of the {B}eilis--{T}appert parabolic equation method to
+  sound propagation over irregular terrain.
+\newblock \emph{The Journal of the Acoustical Society of America}, 131\penalty0
+  (2):\penalty0 1039--1046, 2012.
+\newblock \doi{10.1121/1.3676693}.
+
+\bibitem[Khodr et~al.(2020)Khodr, Azarpeyvand, and Green]{khodr2020iterative}
+Codor Khodr, Mahdi Azarpeyvand, and David~N. Green.
+\newblock An iterative three-dimensional parabolic equation solver for
+  propagation above irregular boundaries.
+\newblock \emph{The Journal of the Acoustical Society of America}, 148\penalty0
+  (2):\penalty0 1089--1100, 2020.
+\newblock \doi{10.1121/10.0001766}.
+
+\bibitem[Wang et~al.(2020)Wang, Pu, Xi, and Zhou]{wang2020smpe}
+Dan-Dan Wang, Yu-Rong Pu, Xiao-Li Xi, and Li-Li Zhou.
+\newblock An analysis of narrow-angle and wide-angle shift-map parabolic
+  equations.
+\newblock \emph{IEEE Transactions on Antennas and Propagation}, 68\penalty0
+  (5):\penalty0 3911--3918, 2020.
+\newblock \doi{10.1109/TAP.2020.2963903}.
+
+\bibitem[Collins(1990)]{collins1990rotated}
+Michael~D. Collins.
+\newblock The rotated parabolic equation and sloping ocean bottoms.
+\newblock \emph{J. Acoust. Soc. Am.}, 87\penalty0 (3):\penalty0 1035--1037,
+  1990.
+\newblock \doi{10.1121/1.398829}.
+
+\bibitem[Outing et~al.(2006)Outing, Siegmann, Collins, and
+  Westwood]{outing2006variable}
+Donald~A. Outing, William~L. Siegmann, Michael~D. Collins, and Evan~K.
+  Westwood.
+\newblock Generalization of the rotated parabolic equation to variable slopes.
+\newblock \emph{J. Acoust. Soc. Am.}, 120\penalty0 (6):\penalty0 3534--3538,
+  2006.
+\newblock \doi{10.1121/1.2372590}.
+
+\bibitem[Abrahamsson and Kreiss(1990)]{abrahamsson1990bc}
+Leif Abrahamsson and Heinz-Otto Kreiss.
+\newblock Boundary conditions for the parabolic equation in a range-dependent
+  duct.
+\newblock \emph{J. Acoust. Soc. Am.}, 87\penalty0 (6):\penalty0 2438--2441,
+  1990.
+\newblock \doi{10.1121/1.399089}.
+
+\bibitem[Akrivis et~al.(1994)Akrivis, Dougalis, and
+  Kampanis]{akrivis1994galerkin}
+Georgios~D. Akrivis, Vassilios~A. Dougalis, and Nikolaos~A. Kampanis.
+\newblock On {Galerkin} methods for the wide-angle parabolic equation.
+\newblock \emph{J. Comput. Acoust.}, 2\penalty0 (2):\penalty0 99--112, 1994.
+\newblock \doi{10.1142/S0218396X94000087}.
+
+\bibitem[Collins and Dacol(2000)]{collins2000mapping}
+Michael~D. Collins and Dalcio~K. Dacol.
+\newblock A mapping approach for handling sloping interfaces.
+\newblock \emph{J. Acoust. Soc. Am.}, 107\penalty0 (4):\penalty0 1937--1942,
+  2000.
+\newblock \doi{10.1121/1.428476}.
+
+\bibitem[Metzler et~al.(2014)Metzler, Moran, Collis, Martin, and
+  Siegmann]{metzler2014scaled}
+Adam~M. Metzler, Daniel Moran, Jon~M. Collis, P.~A. Martin, and William~L.
+  Siegmann.
+\newblock A scaled mapping parabolic equation for sloping range-dependent
+  environments.
+\newblock \emph{J. Acoust. Soc. Am.}, 135\penalty0 (3):\penalty0 EL172--EL178,
+  2014.
+\newblock \doi{10.1121/1.4865265}.
+
+\bibitem[Janaswamy(1998)]{janaswamy1998curvilinear}
+R.~Janaswamy.
+\newblock A curvilinear coordinate-based split-step parabolic equation method
+  for propagation predictions over terrain.
+\newblock \emph{IEEE Transactions on Antennas and Propagation}, 46\penalty0
+  (7):\penalty0 1089--1097, 1998.
+\newblock \doi{10.1109/8.704813}.
+
+\bibitem[Collins and Westwood(1991)]{collins1991energy}
+Michael~D. Collins and Evan~K. Westwood.
+\newblock A higher-order energy-conserving parabolic equation for
+  range-dependent ocean depth, sound speed, and density.
+\newblock \emph{J. Acoust. Soc. Am.}, 89\penalty0 (3):\penalty0 1068--1075,
+  1991.
+\newblock \doi{10.1121/1.400526}.
+
+\bibitem[Donohue and Kuttler(1997)]{donohue1997apl}
+Denis~J. Donohue and James~R. Kuttler.
+\newblock Modeling radar propagation over terrain.
+\newblock \emph{Johns Hopkins APL Technical Digest}, 18\penalty0 (2):\penalty0
+  279--287, 1997.
+\newblock URL
+  \url{https://secwww.jhuapl.edu/techdigest/Content/techdigest/pdf/V18-N02/18-02-Donohue.pdf}.
+
+\bibitem[Heiblum and Harris(1975)]{heiblum1975conformal}
+M.~Heiblum and J.~H. Harris.
+\newblock Analysis of curved optical waveguides by conformal transformation.
+\newblock \emph{IEEE Journal of Quantum Electronics}, 11\penalty0 (2):\penalty0
+  75--83, 1975.
+\newblock \doi{10.1109/JQE.1975.1068563}.
+
+\bibitem[Kirby et~al.(1994)Kirby, Dalrymple, and Kaku]{kirby1994conformal}
+James~T. Kirby, Robert~A. Dalrymple, and Haruhiko Kaku.
+\newblock Parabolic approximations for water waves in conformal coordinate
+  systems.
+\newblock \emph{Coastal Engineering}, 23\penalty0 (3-4):\penalty0 185--213,
+  1994.
+\newblock \doi{10.1016/0378-3839(94)90001-9}.
+
+\bibitem[Lu(1999)]{lu1999exact}
+Ya~Yan Lu.
+\newblock Exact one-way methods for acoustic waveguides.
+\newblock \emph{Math. Comput. Simul.}, 50\penalty0 (5-6):\penalty0 377--391,
+  1999.
+\newblock \doi{10.1016/S0378-4754(99)00111-1}.
+
+\bibitem[Lu et~al.(2001)Lu, Huang, and McLaughlin]{lu2001lot}
+Ya~Yan Lu, Jinyang Huang, and Joyce~R. McLaughlin.
+\newblock Local orthogonal transformation and one-way methods for acoustic
+  waveguides.
+\newblock \emph{Wave Motion}, 34\penalty0 (2):\penalty0 193--207, 2001.
+\newblock \doi{10.1016/S0165-2125(00)00083-4}.
+
+\bibitem[Lu and Zhu(2004)]{lu2004lot}
+Ya~Yan Lu and Jianxin Zhu.
+\newblock A local orthogonal transform for acoustic waveguides with an internal
+  interface.
+\newblock \emph{J. Comput. Acoust.}, 12\penalty0 (1):\penalty0 37--53, 2004.
+\newblock \doi{10.1142/S0218396X04002183}.
+
+\bibitem[Arnold and Ehrhardt(1998)]{arnold_ehrhardt1998jcp}
+Anton Arnold and Matthias Ehrhardt.
+\newblock Discrete transparent boundary conditions for wide angle parabolic
+  equations in underwater acoustics.
+\newblock \emph{Journal of Computational Physics}, 145\penalty0 (2):\penalty0
+  611--638, 1998.
+\newblock \doi{10.1006/jcph.1998.6043}.
+
+\bibitem[Ehrhardt and Zisowsky(2007)]{ehrhardt_zisowsky2007}
+Matthias Ehrhardt and Andrea Zisowsky.
+\newblock Discrete non-local boundary conditions for split-step {Pad\'e}
+  approximations of the one-way {Helmholtz} equation.
+\newblock \emph{Journal of Computational and Applied Mathematics}, 200\penalty0
+  (2):\penalty0 471--490, 2007.
+\newblock \doi{10.1016/j.cam.2006.01.001}.
+
+\bibitem[Lytaev(2022)]{lytaev2022radarconf}
+Mikhail~S. Lytaev.
+\newblock Fresnel reflection modeling within the higher-order parabolic
+  equation and discrete nonlocal boundary conditions.
+\newblock In \emph{2022 IEEE Radar Conference (RadarConf22)}, 2022.
+\newblock \doi{10.1109/RadarConf2248738.2022.9764174}.
+
+\bibitem[Kampanis(2002)]{kampanis2002}
+Nikolaos~A. Kampanis.
+\newblock Numerical simulation of low-frequency aeroacoustics over irregular
+  terrain using a finite element discretization of the parabolic equation.
+\newblock \emph{Journal of Computational Acoustics}, 10\penalty0 (1):\penalty0
+  97--111, 2002.
+\newblock \doi{10.1142/S0218396X02001413}.
+
+\bibitem[Kampanis(2005)]{kampanis2005}
+Nikolaos~A. Kampanis.
+\newblock A finite element method for the parabolic equation in aeroacoustics
+  coupled with a nonlocal boundary condition for an inhomogeneous atmosphere.
+\newblock \emph{Journal of Computational Acoustics}, 13\penalty0 (4):\penalty0
+  569--584, 2005.
+\newblock \doi{10.1142/S0218396X05002864}.
+
+\bibitem[Porter et~al.(1991)Porter, Jensen, and Ferla]{porter1991energy}
+Michael~B. Porter, Finn~B. Jensen, and Carlo~M. Ferla.
+\newblock The problem of energy conservation in one-way models.
+\newblock \emph{J. Acoust. Soc. Am.}, 89\penalty0 (3):\penalty0 1058--1067,
+  1991.
+\newblock \doi{10.1121/1.400525}.
+
+\bibitem[Milinazzo et~al.(1997)Milinazzo, Zala, and Brooke]{milinazzo1997}
+Fausto~A. Milinazzo, Cedric~A. Zala, and Gary~H. Brooke.
+\newblock Rational square-root approximations for parabolic equation
+  algorithms.
+\newblock \emph{The Journal of the Acoustical Society of America}, 101\penalty0
+  (2):\penalty0 760--766, 1997.
+\newblock \doi{10.1121/1.418038}.
+
+\bibitem[Jensen and Ferla(1990)]{jensen1990benchmark}
+Finn~B. Jensen and Carlo~M. Ferla.
+\newblock Numerical solutions of range-dependent benchmark problems in ocean
+  acoustics.
+\newblock \emph{J. Acoust. Soc. Am.}, 87\penalty0 (4):\penalty0 1499--1510,
+  1990.
+\newblock \doi{10.1121/1.399448}.
+
+\end{thebibliography}

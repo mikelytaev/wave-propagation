@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<title>New Shift-Map Parabolic Equations Based on Finite Difference Method - TechRxiv</title>
+<meta name="description" content="In this paper, a new type of shift-map PE is proposed, which fundamentally overcomes fatal defect in [14]&#39;s solutions, as they are inaccurate for waves propagating at angles close to 0 •. According to both theory and experiment, [14]&#39;s 1storder soluti">
+<!-- meta property="og:image" content="https://authorea.com/assets/thumb.png" / -->
+<script src="https://cmp.osano.com/AzZdRbSORDOOzF9W/834aded8-af76-45a5-b64d-c79bebafd5fd/osano.js"></script>
+<link rel="canonical" href="https://www.authorea.com/users/715364/articles/700098-new-shift-map-parabolic-equations-based-on-finite-difference-method" />
+
+
+<!--[if lt IE 9]>
+<script src="http://html5shim.googlecode.com/svn/trunk/html5.js" type="text/javascript"></script>
+<![endif]-->
+<link rel="stylesheet" media="all" href="https://d197for5662m48.cloudfront.net/assets/bootstrap.2.3.2.no-print-1814f3c3650062851579a65ade26e8a5632ef954534f7d6b5c753d7b59ceeffc.css" />
+
+
+<link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.min.css"/>
+
+  <meta id='fontawesomemin' class='icon-'>
+
+  <script type="text/javascript">
+    var tag = document.querySelector('meta#fontawesomemin')
+    var tagStyle = window.getComputedStyle(tag).getPropertyValue('font-family')
+
+    if (!tagStyle || tagStyle == 'auto' ){
+      var message = "font-awesome.min.3.2.1.css failed to load, falling back to local copy"
+      localLink = document.createElement('link');
+        localLink.rel = "stylesheet";
+        localLink.type = "text/css";
+        localLink.href = "/assets/font-awesome.min.3.2.1.css";
+      document.head.appendChild(localLink);
+      delete localLink;
+    }
+  </script>
+
+
+
+
+<link rel="stylesheet" type="text/css" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"/>
+
+  <meta id='all' class='icon-'>
+
+  <script type="text/javascript">
+    var tag = document.querySelector('meta#all')
+    var tagStyle = window.getComputedStyle(tag).getPropertyValue('font-family')
+
+    if (!tagStyle || tagStyle == 'auto' ){
+      var message = "all.5.7.2.css failed to load, falling back to local copy"
+      localLink = document.createElement('link');
+        localLink.rel = "stylesheet";
+        localLink.type = "text/css";
+        localLink.href = "/assets/all.5.7.2.css";
+      document.head.appendChild(localLink);
+      delete localLink;
+    }
+  </script>
+
+
+<!--[if lt IE 9]>
+<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+<![endif]-->
+
+<link rel="stylesheet" media="all" href="https://d197for5662m48.cloudfront.net/assets/application-fc9c90f0c0cebe429ca1108d8dc5274735b218c00990fe70cfe043b8703230c6.css" />
+<link rel="stylesheet" media="print" href="https://d197for5662m48.cloudfront.net/assets/print-48f6b2a80288d92ba59c4fe33082a8b1d6f2e4269b1b3326557f444416db4343.css" />
+
+
+<!-- Google fonts -->
+<link rel="stylesheet" media="all" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,400i,500,600,700" />
+<style type="text/css">@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:200;src:url(/cf-fonts/s/source-serif-pro/5.0.11/cyrillic/200/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:200;src:url(/cf-fonts/s/source-serif-pro/5.0.11/cyrillic-ext/200/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C88,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:200;src:url(/cf-fonts/s/source-serif-pro/5.0.11/latin/200/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:200;src:url(/cf-fonts/s/source-serif-pro/5.0.11/vietnamese/200/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:200;src:url(/cf-fonts/s/source-serif-pro/5.0.11/greek/200/normal.woff2);unicode-range:U+0370-03FF;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:200;src:url(/cf-fonts/s/source-serif-pro/5.0.11/latin-ext/200/normal.woff2);unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20CF,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:400;src:url(/cf-fonts/s/source-serif-pro/5.0.11/cyrillic-ext/400/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C88,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:400;src:url(/cf-fonts/s/source-serif-pro/5.0.11/cyrillic/400/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:400;src:url(/cf-fonts/s/source-serif-pro/5.0.11/latin/400/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:400;src:url(/cf-fonts/s/source-serif-pro/5.0.11/latin-ext/400/normal.woff2);unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20CF,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:400;src:url(/cf-fonts/s/source-serif-pro/5.0.11/vietnamese/400/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:400;src:url(/cf-fonts/s/source-serif-pro/5.0.11/greek/400/normal.woff2);unicode-range:U+0370-03FF;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:600;src:url(/cf-fonts/s/source-serif-pro/5.0.11/latin-ext/600/normal.woff2);unicode-range:U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20CF,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:600;src:url(/cf-fonts/s/source-serif-pro/5.0.11/greek/600/normal.woff2);unicode-range:U+0370-03FF;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:600;src:url(/cf-fonts/s/source-serif-pro/5.0.11/vietnamese/600/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:600;src:url(/cf-fonts/s/source-serif-pro/5.0.11/cyrillic-ext/600/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C88,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:600;src:url(/cf-fonts/s/source-serif-pro/5.0.11/cyrillic/600/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:Source Serif Pro;font-style:normal;font-weight:600;src:url(/cf-fonts/s/source-serif-pro/5.0.11/latin/600/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}</style>
+
+<!-- needed for our upload interface -->
+
+
+<link id="theme" media="screen" rel="stylesheet" type="text/css" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/themes/smoothness/jquery-ui.css"/>
+
+  <meta id='jqueryui' class='ui-state-error'>
+
+  <script type="text/javascript">
+    var tag = document.querySelector('meta#jqueryui')
+    var tagStyle = window.getComputedStyle(tag).getPropertyValue('background-color')
+
+    if (!tagStyle || tagStyle == 'auto' ){
+      var message = "jquery-ui.css failed to load, falling back to local copy"
+      localLink = document.createElement('link');
+        localLink.id = "theme";
+        localLink.media = "screen";
+        localLink.rel = "stylesheet";
+        localLink.type = "text/css";
+        localLink.href = "/assets/jquery-ui.css";
+      document.head.appendChild(localLink);
+      delete localLink;
+    }
+  </script>
+
+
+
+  
+
+<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script type="text/javascript">
+  try{if (!(jQuery)){ throw new Error("") }}
+  catch(e){
+    var message = 'jquery.min failed to load, falling back to local copy'
+    console.log(message);
+    document.write("<script src=\"/assets/jquery.min.1.11.1.js\"><\/script>");
+  }
+</script>
+
+
+  
+
+<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/jquery-ui.min.js"></script>
+<script type="text/javascript">
+  try{if (!($.ui)){ throw new Error("") }}
+  catch(e){
+    var message = 'jquery-ui.min failed to load, falling back to local copy'
+    console.log(message);
+    document.write("<script src=\"/assets/jquery-ui.min.1.11.1.js\"><\/script>");
+  }
+</script>
+
+
+  
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.1/jquery.autocomplete.min.js"></script>
+<script type="text/javascript">
+  try{if (!($('*').devbridgeAutocomplete)){ throw new Error("") }}
+  catch(e){
+    var message = 'jquery.autocomplete.min failed to load, falling back to local copy'
+    console.log(message);
+    document.write("<script src=\"/assets/jquery.autocomplete.min.1.4.1.js\"><\/script>");
+  }
+</script>
+
+
+
+
+<!--   <!-- Materialize (used for form-input animations) -->
+<!--   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/css/materialize.min.css">  -->
+<!--   Compiled and minified JavaScript -->
+
+<!-- useful in development -->
+<!-- <script src="/assets/jquery/jquery-ui.js" type="text/javascript"></script> -->
+<!-- <script src="/assets/jquery/jquery-1.11.1.js" type="text/javascript"></script> -->
+
+
+
+<script type="text/javascript" src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+<script type="text/javascript">
+  try{if (!(typeof($.fn.modal) !== 'undefined')){ throw new Error("") }}
+  catch(e){
+    var message = 'bootstrap.min failed to load, falling back to local copy'
+    console.log(message);
+    document.write("<script src=\"/assets/bootstrap.min.2.3.2.js\"><\/script>");
+  }
+</script>
+
+
+
+<!-- <script src="//cdn.quilljs.com/latest/quill.min.js"></script> -->
+<script src="https://d197for5662m48.cloudfront.net/assets/application-e508bc495607c41dddb6c9f15f7d9ef472fe01b2c249ec103b10e972b6197b7d.js"></script>
+
+<!-- <link rel="stylesheet" type="text/css" href="materialize.css"/>
+ -->
+
+<meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="LVXYV8l7Mbke1gBvHWZPgYCxFvRbZyEjchCNu0ynjQCvRDOk60EfVWVIinxWiKm4WiDpjsfuRObw13LzWlnYIw" />
+
+<!-- favicon -->
+<link rel="shortcut icon" type="image/x-icon" href="" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google Tag Manager -->
+<!--New Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W1GVDSYB94"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-W1GVDSYB94');
+</script>
+<!-- End Google Tag Manager -->
+
+
+  <script type="text/javascript">window.$crisp=[];window.CRISP_WEBSITE_ID="d38f777e-0276-4c52-8a15-b5855ac4903c";(function(){d=document;s=d.createElement("script");s.src="https://client.crisp.chat/l.js";s.async=1;d.getElementsByTagName("head")[0].appendChild(s);})();
+</script>
+
+
+  <!-- Google Analytics -->
+<script>
+window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+
+var host = window.location.host;
+var domain = 'auto';
+switch(host) {
+  case "www.authorea.com" :
+  case "authorea.com":
+    ga('create', 'UA-37313163-2', domain);
+    break;
+  case "prereview.org":
+    ga('create', 'UA-107005711-1', domain);
+    break;
+  default: // unknown domain, assume it's the main one as a fallback
+    ga('create', 'UA-37313163-2', domain);
+}
+
+
+ga('send', 'pageview');
+
+
+</script>
+
+<script src="https://d197for5662m48.cloudfront.net/assets/google_analytics_events-1a24a491691431cf90985587f97249fda8f1dba81bb8732ff3733d9378482e71.js" async="async"></script>
+
+<script async src='//www.google-analytics.com/analytics.js'></script>
+<!-- End Google Analytics -->
+
+
+  <script src="//assets.adobedtm.com/59640f9fa510/415b62dc7a85/launch-3f676abb764b.min.js" async="async"></script><script>window.addEventListener('load', function () {
+  const title = document.title || ''
+
+  window.digital_dataLayer = {
+    Pageload: {
+      country: '',
+      hierarchy1: '',
+      hierarchy2: '',
+      hierarchy3: '',
+      hierarchy4: '',
+      loginStatus: "not loggedin",
+      pageError: '',
+      pageName: `authorea:${title}`,
+      pageTitle: title,
+      pageURL: window.location.href || '',
+      searchResults: '',
+      searchTerm: '',
+      siteLanguage: "en",
+      siteName: 'authorea',
+      siteSection: ''
+    }
+  }
+  if (window._satellite) {
+    window._satellite.track('pageLoad')
+    window._satellite.pageBottom()
+  }
+})</script>
+
+  <!-- Facebook Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+
+fbq('init', "1067575940294079");
+fbq('track', "PageView");</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1067575940294079&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Facebook Pixel Code -->
+
+  <!--BEGIN QUALTRICS WEBSITE FEEDBACK SNIPPET-->
+
+<script type='text/javascript'>
+  (function(){var g=function(e,h,f,g){
+    this.get=function(a){for(var a=a+"=",c=document.cookie.split(";"),b=0,e=c.length;b<e;b++){for(var d=c[b];" "==d.charAt(0);)d=d.substring(1,d.length);if(0==d.indexOf(a))return d.substring(a.length,d.length)}return null};
+    this.set=function(a,c){var b="",b=new Date;b.setTime(b.getTime()+6048E5);b="; expires="+b.toGMTString();document.cookie=a+"="+c+b+"; path=/; "};
+    this.check=function(){var a=this.get(f);if(a)a=a.split(":");else if(100!=e)"v"==h&&(e=Math.random()>=e/100?0:100),a=[h,e,0],this.set(f,a.join(":"));else return!0;var c=a[1];if(100==c)return!0;switch(a[0]){case "v":return!1;case "r":return c=a[2]%Math.floor(100/c),a[2]++,this.set(f,a.join(":")),!c}return!0};
+    this.go=function(){if(this.check()){var a=document.createElement("script");a.type="text/javascript";a.src=g;document.body&&document.body.appendChild(a)}};
+    this.start=function(){var a=this;window.addEventListener?window.addEventListener("load",function(){a.go()},!1):window.attachEvent&&window.attachEvent("onload",function(){a.go()})}};
+    try{(new g(100,"r","QSI_S_ZN_1YW7OaSUiXq6RH7","https://zn1yw7oasuixq6rh7-wiley.siteintercept.qualtrics.com/WRSiteInterceptEngine/?Q_ZID=ZN_1YW7OaSUiXq6RH7")).start()}catch(i){}})();
+</script><div id='ZN_1YW7OaSUiXq6RH7'><!--DO NOT REMOVE-CONTENTS PLACED HERE--></div>
+
+<!--END WEBSITE FEEDBACK SNIPPET-->
+
+
+
+    <link rel="stylesheet" media="all" href="https://d197for5662m48.cloudfront.net/assets/react_article-cfd760d4b8edefc6b84a5c911b7b71aea72c690414f847db0e9d738e3404449a.css" />
+      <style>
+        
+
+
+      </style>
+
+    <!-- Schema.org markup for Google+ -->
+    <meta itemprop="name" content="New Shift-Map Parabolic Equations Based on Finite Difference Method">
+    <meta itemprop="description" content="In this paper, a new type of shift-map PE is proposed, which fundamentally overcomes fatal defect in [14]'s solutions, as they are inaccurate for waves propagating at angles close to 0 •. According to both theory and experiment, [14]'s 1storder soluti">
+    <meta itemprop="image" content="https://authorea.com//d197for5662m48.cloudfront.net/assets/blog/default_image-be9182bca7b6523bb6c72e32e5c12398f36b92d81f6ee7882327b6145744bf1f.jpg">
+    <script>
+      window.iframelyKey = '2e4f7b1eda34892de7870e1d00e11857'
+    </script>
+
+    <!-- Twitter Card data -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@authorea">
+    <meta name="twitter:title" content="New Shift-Map Parabolic Equations Based on Finite Difference Method">
+    <meta name="twitter:description" content="In this paper, a new type of shift-map PE is proposed, which fundamentally overcomes fatal defect in [14]'s solutions, as they are inaccurate for waves propagating at angles close to 0 •. According to both theory and experiment, [14]'s 1storder soluti">
+    <meta name="twitter:image:src" content="https://authorea.com//d197for5662m48.cloudfront.net/assets/blog/default_image-be9182bca7b6523bb6c72e32e5c12398f36b92d81f6ee7882327b6145744bf1f.jpg">
+
+    <!-- Open Graph (Facebook and more) protocol metadata -->
+    <meta property="og:title" content="New Shift-Map Parabolic Equations Based on Finite Difference Method" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://www.authorea.com/doi/full/10.36227/techrxiv.170619205.59357076?commit=cbd0c2de5d743c174b8f7eea254f4817ce8f52d7" />
+    <meta property="og:image" content="https://authorea.com//d197for5662m48.cloudfront.net/assets/blog/default_image-be9182bca7b6523bb6c72e32e5c12398f36b92d81f6ee7882327b6145744bf1f.jpg" />
+    <meta property="og:description" content="In this paper, a new type of shift-map PE is proposed, which fundamentally overcomes fatal defect in [14]'s solutions, as they are inaccurate for waves propagating at angles close to 0 •. According to both theory and experiment, [14]'s 1storder soluti" />
+    <meta property="og:site_name" content="Authorea" />
+    <meta property="article:modified_time" content="2024-04-15 15:12:09 UTC" />
+
+      
+
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.css"/>
+
+  <meta id='mathquillmin' class='mq-editable-field'>
+
+  <script type="text/javascript">
+    var tag = document.querySelector('meta#mathquillmin')
+    var tagStyle = window.getComputedStyle(tag).getPropertyValue('display')
+
+    if (!tagStyle || tagStyle == 'auto' ){
+      var message = "mathquill.min.0.10.1.css failed to load, falling back to local copy"
+      localLink = document.createElement('link');
+        localLink.rel = "stylesheet";
+        localLink.type = "text/css";
+        localLink.href = "/assets/mathquill.min.0.10.1.css";
+      document.head.appendChild(localLink);
+      delete localLink;
+    }
+  </script>
+
+
+    <meta property="article:publisher" content="https://www.authorea.com" />
+    
+
+<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/default.min.css"/>
+
+  <meta id='defaultmin' class='hljs-strong'>
+
+  <script type="text/javascript">
+    var tag = document.querySelector('meta#defaultmin')
+    var tagStyle = window.getComputedStyle(tag).getPropertyValue('font-weight')
+
+    if (!tagStyle || tagStyle == 'auto' ){
+      var message = "default.min.css failed to load, falling back to local copy"
+      localLink = document.createElement('link');
+        localLink.rel = "stylesheet";
+        localLink.type = "text/css";
+        localLink.href = "/assets/default.min.css";
+      document.head.appendChild(localLink);
+      delete localLink;
+    }
+  </script>
+
+
+        <!-- Google Scholar metadata -->
+    <meta name="citation_publisher" content="Authorea"/>
+    <meta name="citation_title" content="New Shift-Map Parabolic Equations Based on Finite Difference Method"/>
+    <meta name="citation_abstract" content="In this paper, a new type of shift-map PE is proposed, which fundamentally overcomes fatal defect in [14]&#39;s solutions, as they are inaccurate for waves propagating at angles close to 0 •. According to both theory and experiment, [14]&#39;s 1storder solution is not accurate for waves propagating at 0 •. Additionally, the reduced function of [14] introduces truncation error for the wave propagating at angle close to 0 •. These shortcomings render the PE unsuitable for the wave propagating problem. The proposed method utilizes the usual reduced function to eliminate the truncation error when the wave propagates at 0 • and reduces the truncation errors when the wave propagating at angle close to 0 •. Two examples of new shift-map PE are studied and compared to [14]&#39;s methods. Both theory and experiments demonstrate that the proposed methods achieve higher accuracy while using a larger range step compared to [14]&#39;s solutions, making it more suitable for long-distance calculation than [14]&#39;s methods. In the numerical experiments, the proposed method with the range step of 128λ is more accurate than [14]&#39;s solution with the range step of 1λ."/>
+    <meta name="citation_doi" content="10.36227/techrxiv.170619205.59357076/v1"/>
+
+      <meta name="citation_pdf_url" content="https://www.techrxiv.org/doi/pdf/10.36227/techrxiv.170619205.59357076" />
+
+        <meta name="citation_author" content="Nuanfeng Zhang">
+        <meta name="citation_author" content="Yunliang Long">
+
+    <meta name="citation_publication_date" content="2024/01/25">
+
+      <meta name="citation_journal_title" content="Authorea Preprints">
+
+
+
+    
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathquill/0.10.1/mathquill.min.js"></script>
+<script type="text/javascript">
+  try{if (!(MathQuill)){ throw new Error("") }}
+  catch(e){
+    var message = 'mathquill.min failed to load, falling back to local copy'
+    console.log(message);
+    document.write("<script src=\"/assets/mathquill.min.0.10.1.js\"><\/script>");
+  }
+</script>
+
+
+    
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.10.8/xlsx.full.min.js"></script>
+<script type="text/javascript">
+  try{if (!(XLSX)){ throw new Error("") }}
+  catch(e){
+    var message = 'xlsx.full.min failed to load, falling back to local copy'
+    console.log(message);
+    document.write("<script src=\"/assets/xlsx.full.min.0.10.8.js\"><\/script>");
+  }
+</script>
+
+
+    
+
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script type="text/javascript">
+  try{if (!(hljs)){ throw new Error("") }}
+  catch(e){
+    var message = 'highlight.min failed to load, falling back to local copy'
+    console.log(message);
+    document.write("<script src=\"/assets/highlight.min.9.18.1.js\"><\/script>");
+  }
+</script>
+
+
+  </head>
+  <body>
+
+        <div id="navbar" class="navbar__white">
+
+  <div class="navbar__left-side" >
+    <a href="/" class="navbar__logo_anchor">
+        <img class="navbar__logo_secondary" src="https://d197for5662m48.cloudfront.net/images/institution/26407/whitelabel_logo_image/5cfcfb7bb5078907655a652ac0444b47.png" />
+    </a>
+  </div>
+  <div class="navbar__article-links">
+  <div class="comments-button"></div>
+</div>
+
+<div class="navbar__right-side-content--collapse">
+  <a href="#" class="navbar__collapse-toggle">
+    <img src="https://d197for5662m48.cloudfront.net/assets/icons/hamburger-ea91f5c35622f90ca466db90b6b2cbc676402c3cce254852350b610ad80aac76.svg" />
+  </a>
+    <div class="navbar-collapse__dropdown hide">
+      <div class="navbar-collapse__title">AUTHOREA</div>
+      <a class="navbar-collapse__link" href="/signin">Log in</a>
+      <a class="navbar-collapse__link" href="/signup">Sign Up</a>
+      <a class="navbar-collapse__link" href="/preprints">Browse Preprints</a>
+    </div>
+  </div>
+
+  <div class="navbar__right-side-content">
+    <!-- if they're not signed in -->
+
+      <a class="navbar__dropdown-toggle signin-link" href="/signin">LOG IN</a>
+      <a class="navbar__dropdown-toggle signup-link" href="/signup">SIGN UP</a>
+      <!-- end of not signed in -->
+    </div><!-- end of right side content -->
+
+</div><!-- end of navbar2 -->
+<script>
+  jQuery(document).ready(function() {
+    $('#help-button').click(
+      function(e){
+        $.get('/help-modal-content', function(data) {
+        $('#help-modal-content').html(data);
+      });
+    });
+  });
+</script>
+
+    <div class='article-react-body'>
+      <div class='article-react-content'>
+        <div style="height: 60px"></div>
+        
+        <div class="container-fluid">
+          <div class="row-fluid">
+            <div class="span12 centered-article-container">
+              <!--Body content-->
+              
+
+<meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="YGr-g001pS7EXLeLAibfZ8e4TSHZ7iPfZnRPW75x3dbiexVwbw-Lwr_CPZhJyDleHSmyW0VnRhrks7ATqI-I9Q" />
+<div class="article-unit span11 article-padded-container">
+
+<div class="loading-icon-container">
+<div class="au-loading-icon">
+  <svg class="au-loading-icon__svg"  xmlns="http://www.w3.org/2000/svg"
+     width="80px" height="60px"
+     viewBox="5 0 80 60">
+    <path class="wave"
+          fill="none"
+          stroke="#30a970"
+          stroke-width="2"
+          stroke-linecap="round">
+    </path>
+  </svg>
+  <p id='au-loading-message'>loading page</p>
+</div>
+
+
+<script type="text/javascript">
+  const path = document.querySelector('.wave');
+  const m = 0.512286623256592433;
+  function buildWave(w, h) {
+  const a = h / 4;
+  const y = h / 2;
+  const pathData = [
+    'M', w * 0, y + a / 2,
+    'c',
+      a * m, 0,
+      -(1 - a) * m, -a,
+      a, -a,
+    's',
+      -(1 - a) * m, a,
+      a, a,
+    's',
+      -(1 - a) * m, -a,
+      a, -a,
+    's',
+      -(1 - a) * m, a,
+      a, a,
+    's',
+      -(1 - a) * m, -a,
+      a, -a,
+
+    's',
+      -(1 - a) * m, a,
+      a, a,
+    's',
+      -(1 - a) * m, -a,
+      a, -a,
+    's',
+      -(1 - a) * m, a,
+      a, a,
+    's',
+      -(1 - a) * m, -a,
+      a, -a,
+    's',
+      -(1 - a) * m, a,
+      a, a,
+    's',
+      -(1 - a) * m, -a,
+      a, -a,
+    's',
+      -(1 - a) * m, a,
+      a, a,
+    's',
+      -(1 - a) * m, -a,
+      a, -a,
+    's',
+      -(1 - a) * m, a,
+      a, a,
+    's',
+      -(1 - a) * m, -a,
+      a, -a
+  ].join(' ');
+  path.setAttribute('d', pathData);
+
+  }
+  buildWave(90, 60);
+  window.setTimeout(function (){
+    if(!window._store){
+      $('.au-loading-icon').fadeOut()
+      $('.au-loading-icon').after('<div class="alert" id="load-fail-message">Article failed to load. Refresh and try again. Also make sure you are using Chrome or Firefox, as other browsers are not yet fully supported.</div>')
+      window.Raven &&   window.Raven.captureMessage('Article load failure prior to fetching store.', {level: 'info'})
+    }
+  }, 60000)
+</script>
+
+</div>
+<div id="richeditor_modal" class="modal fade hide"></div>
+<div id="jsfigure_modal" class="modal fade hide"></div>
+
+
+
+
+
+
+
+
+<div id="article-data" class="" style="display:none" data-article-permission="{&quot;id&quot;:null,&quot;can_view&quot;:true,&quot;can_edit&quot;:false,&quot;can_suggest_edits&quot;:false,&quot;can_comment&quot;:true,&quot;can_see_private_comments&quot;:false,&quot;article_viewer_id&quot;:null,&quot;article_viewer_type&quot;:null,&quot;article_id&quot;:null,&quot;created_at&quot;:null,&quot;updated_at&quot;:null,&quot;pinned&quot;:false}" data-article-id="700098" data-institution-id="26407" data-institution-keyword="[&quot;Aerospace&quot;,&quot;Bioengineering&quot;,&quot;Communication, Networking And Broadcast Technologies&quot;,&quot;Components, Circuits, Devices And Systems&quot;,&quot;Computing And Processing&quot;,&quot;Engineered Materials, Dielectrics And Plasmas&quot;,&quot;Engineering Profession&quot;,&quot;Fields, Waves And Electromagnetics&quot;,&quot;General Topics For Engineers&quot;,&quot;Geoscience&quot;,&quot;Nuclear Engineering&quot;,&quot;Photonics And Electrooptics&quot;,&quot;Power, Energy And Industry Applications&quot;,&quot;Robotics And Control Systems&quot;,&quot;Signal Processing And Analysis&quot;,&quot;Transportation&quot;]" data-institution-custom-question="{&quot;prompt&quot;:&quot;&quot;,&quot;description&quot;:&quot;&quot;,&quot;question_prompt&quot;:&quot;&quot;}" data-institution-settings="{&quot;share_with_community&quot;:true,&quot;submit_to_journal&quot;:true}" data-article-preview-path="/users/715364/articles/700098-new-shift-map-parabolic-equations-based-on-finite-difference-method" data-article-edit-mode-path="/users/715364/articles/700098-new-shift-map-parabolic-equations-based-on-finite-difference-method?mode=edit" data-authenticity-token="0JnEWyB5qSFivCZ6murYu99yIVArrk5orAlym_2pLepSiC-oAkOHzRkirGnRBD6CBePeKrcnK60uzo3T61d4yQ" data-blank-paragraph-id="__blank__" data-default-format="html" data-dictionary="en_US" data-dont-auto-load-faye="true" data-edit-new-editor-address="/users/715364/articles/700098-new-shift-map-parabolic-equations-based-on-finite-difference-method" data-faye-article-private-channel-name="/production-user715364-article700098/private" data-faye-channel-name="/production-user715364-article700098" data-faye-server="https://faye.authorea.com/faye" data-faye-signature="c1175e31bd3ef77fd74fec04f2ecda0f0c5a0837" data-folder-tab-address="/users/715364/articles/700098/master/folder" data-get-block-diff-address="/users/715364/articles/700098/get_block_diff" data-get-article-collabs-address="/users/715364/articles/700098/article_collabs.json" data-get-commit-history-address="/users/715364/articles/700098/commit_history" data-get-store-address="/users/715364/articles/700098/get_store" data-history-tab-address="/users/715364/articles/700098/_show_article_feed" data-is-admin="false" data-is-collaborator="false" data-is-author="false" data-is-private="false" data-numbered-headings="false" data-figures-label="true" data-show-all-references="false" data-sentry-dsn="https://e17eab83945c4de5b3089931f6ca264d@sentry.authorea.com/3" data-sentry-release="dec20b14106efde5201b79aa9d6a5d81f7491bc6" data-sync-address="/users/715364/articles/700098/sync" data-transer-comments-address="/users/715364/articles/700098/transfer_comments" data-macros-address="/users/715364/articles/700098/master/file/header.tex/_edit" data-reference-sort-key-address="/users/715364/articles/700098/update_reference_sort_key_beta" data-default-citation-style="curriculum-journal" data-collab-address="/users/715364/articles/700098/article_collabs" data-article-affiliations-address="/users/715364/articles/700098/article_affiliations" data-add-article-keyword-address="/tags/add_article_keyword" data-delete-article-keyword-address="/tags/delete_article_keyword" data-get-article-keywords-address="/tags/get_article_keywords" data-autocomplete-keywords-address="/tags/autocomplete_keywords" data-update-author-affiliation="/users/715364/articles/700098/author_affiliations" data-add-author-affiliation="/users/715364/articles/700098/article_collabs/add_author_affiliation" data-viewable-article-institutions="[{&quot;id&quot;:26407,&quot;name&quot;:&quot;TechRxiv&quot;}]" data-view-count="88" data-download-count="1" data-reviews-count="0" data-update-article-address="/users/715364/articles/700098" data-delete-citation-url="/citations" data-publications="{&quot;partner_collection_name&quot;:&quot;TechRxiv&quot;,&quot;authorea_peer_reviewed&quot;:false,&quot;funding_groups&quot;:[{&quot;id&quot;:16941,&quot;funder_identifier&quot;:&quot;501100003453&quot;,&quot;funder_name&quot;:&quot;Natural Science Foundation of Guangdong Province&quot;,&quot;grant_no&quot;:&quot;2015A030312010&quot;,&quot;recipient_name&quot;:&quot;&quot;}],&quot;current_doi_publication_status&quot;:{&quot;amended_doi_string&quot;:&quot;10.36227/techrxiv.170619205.59357076/v1&quot;,&quot;approved&quot;:true,&quot;authors&quot;:[&quot;Nuanfeng Zhang&quot;,&quot;Yunliang Long&quot;],&quot;doi_string&quot;:&quot;10.36227/techrxiv.170619205.59357076/v1&quot;,&quot;id&quot;:187553,&quot;license&quot;:&quot;cc_by_nc_sa_4&quot;,&quot;license_link&quot;:&quot;https://creativecommons.org/licenses/by-nc-sa/4.0/&quot;,&quot;license_name&quot;:&quot;This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)&quot;,&quot;preprint_disclaimer&quot;:&quot;e-Prints posted on TechRxiv are preliminary reports that are not peer reviewed. They should not be regarded as conclusive, guide clinical practice/health-related behavior, or be reported in the media as established information.&quot;,&quot;preprint_pdf_url&quot;:&quot;https://d197for5662m48.cloudfront.net/documents/publicationstatus/187553/preprint_pdf/dcaf48fa7abc8faaefc690e90d9783e2.pdf&quot;,&quot;registered&quot;:true,&quot;submission_date&quot;:&quot;January 25, 2024&quot;,&quot;tag_sha&quot;:&quot;cbd0c2de5d743c174b8f7eea254f4817ce8f52d7&quot;,&quot;title&quot;:&quot;New Shift-Map Parabolic Equations Based on Finite Difference Method&quot;,&quot;version&quot;:1,&quot;time_review&quot;:true,&quot;references&quot;:[]},&quot;doi_publication_statuses&quot;:[{&quot;amended_doi_string&quot;:&quot;10.36227/techrxiv.170619205.59357076/v1&quot;,&quot;approved&quot;:true,&quot;doi_string&quot;:&quot;10.36227/techrxiv.170619205.59357076/v1&quot;,&quot;id&quot;:187553,&quot;registered&quot;:true,&quot;submission_date&quot;:&quot;January 25, 2024&quot;,&quot;tag_sha&quot;:&quot;cbd0c2de5d743c174b8f7eea254f4817ce8f52d7&quot;,&quot;version&quot;:1}],&quot;version_of_record&quot;:null}">this is for holding javascript data</div>
+
+
+  <div class="span11 article-preview-content-container"><div class="article-preview-content"><div class="social-box-editor-tools-container"><div class="social-box--react"><div class="social-box__download"><div class="dropdown"><a class="social-box__download-preprint-button" tab_index="-1" rel="nofollow noopener noreferrer" target="_blank" href="https://www.techrxiv.org/doi/pdf/10.36227/techrxiv.170619205.59357076/v1">Download PDF</a><a class="dropdown-toggle" data-toggle="dropdown" href="#"><button class="social-box__download-button"><span class="social-box__download-button-text">DOWNLOAD</span><i class="fas fa-chevron-down"></i></button></a><ul class="dropdown-menu social-box__download-menu"><li><a class="social-box__download-link" rel="nofollow" tab_index="-1" href="/users/715364/articles/700098/download_zip">Download ZIP</a></li><li><a class="social-box__download-link" rel="nofollow" tab_index="-1" href="/users/715364/articles/700098/download_latex">Download LaTeX</a></li><li><a class="social-box__download-link" tab_index="-1" href="https://www.techrxiv.org/doi/xml/10.36227/techrxiv.170619205.59357076/v1">Download JATS XML</a></li><li><a class="social-box__download-link" href="https://www.techrxiv.org/users/715364/articles/700098/add_cite">Track citations</a></li><li><a class="social-box__download-link" rel="nofollow noopener noreferrer" tab_index="-1" target="_blank" href="/signup">Fork (make a copy)</a></li></ul></div></div><div class="view-count" data-placement="bottom" data-toggle="view-tooltip" title="88  Views"><i class="fas fa-eye"></i><span class="view-count__number">88</span></div><div class="download-count" data-placement="bottom" data-toggle="download-tooltip" title="1  Downloads"><i class="fas fa-download"></i><span class="download-count__number">1</span></div></div><div><div><div class="scite-badge" data-doi="10.36227/techrxiv.170619205.59357076/v1" data-layout="horizontal"></div><script async="" src="https://cdn.scite.ai/badge/scite-badge-latest.min.js" type="application/javascript"></script></div></div></div><div class="au-article-title">New Shift-Map Parabolic Equations Based on Finite Difference Method</div><div class="preview-tags"></div><div class="preview-authors-row"><ul class="preview-avatar-list"><li class="preview-avatar"><img src="data:image/jpg;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAALGP
+C/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3Cc
+ulE8AAAABmJLR0QAAAAAAAD5Q7t/AAAAB3RJTUUH6AQPDDoUrUl2uQAABpVJ
+REFUWAl9wTuv7glBR+G1z0WoaLAQooUiARM0ITQW6rewB20hViYU2vkNrAdj
+Y2KDwcCcPXPOnP1793Cb4aIxUYdBYBJJBq8UeP7rPddltskkVjwPjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHOHLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDlyhCNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIEY4cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjRzhy5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5coQjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyBGOHDly5MiRI0+383Qnd5EjR44cebqTp1s58nQrT3fy
+dDtPt/N0O0+383Q7T7dz5MiRI0eOHOHIkSNHjhw5Oh7Q8So5cuTIkVd0vEq+
+Rp7I1+h4lY77dNyn4z4d9+m4T8d9cuTIkSNHjhzhyJEjR44c+ZDOb3ykx9/5
+VL5GXpG7yCvydKvH3/3tzt/4UMcDOn/jQ52//Vud3/j1zm9+tPMbH+385sc6
+v/kbnd/8eF6RI0eOHDlyhCNHjhw58nSr4xV6cf7Xbjx95886vkK+/v6O+3R+
+8+PdeP6ff9OjL9Lznz7o5/F0Kx+Su8iRI0eOcOTIkSNHni46LunFo3/qPeev
+/0rHA/IBnb/5q9149u5LHV+m8zd/ufO3f7PzGx/p/K1P5OlWT3/wx9149m9/
+1fEKebqVI0eOHDnCkSNHjhx5uui4pBfH93rPi//5h45LOh7Q+Y1f68azd1/q
+uEdeXXS8SscDOu7RcZ/eczwgXyNPt3LkyJEjRzhy5MiRI08XHZf04vzjem5P
+f/Sn3Xjy9md79CU6f+tj3Xj27ksdL5PX78vT7by+03GPnv/su914/N3f7bgk
+r+/kyJEjR44c4ciRI0eOPF10XNKL8zvdOO5Rz37WjeNVOn/9l7rx7N2XOl4m
+T3fy+k7Hy/Tk7c9149mP/7zjK+T17Rw5cuTIkSNHOHLkyJEjTxcdl/TCH3bj
+eJnO3/pkN569+4V8SDeevftSx8vk6+/vuE/nr324//P0px2vkFfkLnLkyJEj
+R44c4ciRI0eOPF10XNILf9gNr+jRl+n5f325G0/e+kw3nv3kLzvukdd3Oi7p
+xfF2N85vfqLjVfL6fXm6lSNHjhw5cuQIR44cOXLk6aLjkl74o274kI775NVF
+/9+zn/xFxyUdL9PTH3y+G09/8PkefYl8SMcDOh6QV+TIkSNHjhzhyJEjR448
+XXRc0ovj7W74kBwd9+jJP/9B73n2ky/06G/p8Xc+2Y0XvpNXdP7qBzp/7Rc7
+f+2Dnb/x4Rx5RY4cOXLkCEeOHDly5OlWxyW9ePLv3fCKfEiebnW8TM9/9u1u
+PPuPv+7RF+n5f9/r53n8nU913CdPt3PkyJEjHDly5MiRu8jX6Mk//n5Pvv/Z
+vCKvyNOtfI18/YM9fedPevx3v9NxSY///vd68v3P9eStT/fke3/Yk7c+05Pv
+faYnb326p//yR/nVD+RDchc5cuTIEY4cOXLkyJGj4xU6LskrcuTIE/mQjnt0
+3CdPdNyn4x4dl3Rc0nFJxyUdl3TcIx+SI0eOHDlyhCNHjhw5cuTI0528vpsj
+R44cebqV17+Qp9s58nQ7r+/m9d28vpvXd/P6bl7fzeu7uYscOXLkyJEjHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOcOTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5wpEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkCEeOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRIxw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjnDk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOcKRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5AhHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkaP/BTu2SepYgfTHAAAAJXRFWHRkYXRlOmNyZWF0
+ZQAyMDI0LTA0LTE1VDEyOjU4OjIwKzAwOjAwmVxRswAAACV0RVh0ZGF0ZTpt
+b2RpZnkAMjAyNC0wNC0xNVQxMjo1ODoyMCswMDowMOgB6Q8AAABNdEVYdHNv
+ZnR3YXJlAEltYWdlTWFnaWNrIDYuOC45LTkgUTE2IHg4Nl82NCAyMDE5LTEx
+LTEyIGh0dHA6Ly93d3cuaW1hZ2VtYWdpY2sub3JnZFT+oAAAABh0RVh0VGh1
+bWI6OkRvY3VtZW50OjpQYWdlcwAxp/+7LwAAABh0RVh0VGh1bWI6OkltYWdl
+OjpIZWlnaHQANjAwet69tQAAABd0RVh0VGh1bWI6OkltYWdlOjpXaWR0aAA2
+MDDpL+3oAAAAGXRFWHRUaHVtYjo6TWltZXR5cGUAaW1hZ2UvcG5nP7JWTgAA
+ABd0RVh0VGh1bWI6Ok1UaW1lADE3MTMxODU5MDArFSL6AAAAE3RFWHRUaHVt
+Yjo6U2l6ZQAxNC4zS0JCG0knQQAAADt0RVh0VGh1bWI6OlVSSQBmaWxlOi8v
+dG1wL2xldHRlcl9hdmF0YXJzLzIvTlovMjQ3XzE5Ml8wLzYwMC5wbmc16ZMY
+AAAAAElFTkSuQmCC
+" /></li><li class="preview-avatar"><img src="https://d197for5662m48.cloudfront.net/assets/fallbackProfileImageThumb-984ccfbaa458aab0a490041cac4b127671a4eb58e1791de8cd3b68f517f20e84.png" /></li></ul><ul class="preview-author-list"><li class="preview-author"><span class="preview-author-name" data-collab-id="1158746">Nuanfeng Zhang<i class="fas fa-envelope preview-author-icon"></i></span><a class="preview-author-orcid" href="https://orcid.org/0000-0001-7740-9654" rel="noopener noreferrer" target="_blank"><img src="https://d197for5662m48.cloudfront.net/assets/icons/omniauth/orcid-ca37582cd91a671ed5cec57770e0e96c01b4b79b8b5b75d8598fc1ddac18c974.svg" /></a>, </li><li class="preview-author"><span class="preview-author-name" data-collab-id="1158747">Yunliang Long</span></li></ul></div><div class="author-popover" data-collab-id="1158746"><div class="author-popover-info"><div class="author-popover-name">Nuanfeng Zhang</div><a class="author-popover-orcid" href="https://orcid.org/0000-0001-7740-9654" rel="noopener noreferrer" target="_blank"><img src="https://d197for5662m48.cloudfront.net/assets/icons/omniauth/orcid-ca37582cd91a671ed5cec57770e0e96c01b4b79b8b5b75d8598fc1ddac18c974.svg" /></a><div class="author-popover-affiliations"></div><p>Corresponding Author:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d4e1e2e7e1e7ecede7e294a5a5fab7bbb9">[email&#160;protected]</a></p><a class="author-popover-profile" href="/users/715364">Author Profile</a></div><div class="author-popover-avatar"><img src="data:image/jpg;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWCAYAAAA8AXHiAAAABGdBTUEAALGP
+C/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3Cc
+ulE8AAAABmJLR0QAAAAAAAD5Q7t/AAAAB3RJTUUH6AQPDQYOIhqcCwAAau9J
+REFUeAHMwc+uZYlhV+HV55ZfAUXCE8QUYYkhnmTMC/BnwDvwMLxIiHSPq8vJ
+b7dEDKLBGKQbBkyZxe5B+u5V1XXuXlE1QhkYFGbJ9+HIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhzh
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c4ciRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhzhyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+4ciRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhzhyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c4ciRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhzhyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhzhyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c4ciRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c4ciRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhzhyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c4ciR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhzhyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44c4ciRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkcdTHk95POXx
+lMdTHk95POXxlMdTjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIfZXHUx5PeTzl
+8ZTHUx5PeTzl8ZT7KkeOHDly5MiR+yqPWx63PG553PK45XHL45bHLY9bHrc8
+bnnc8rjlccvjlsctj1setzxuedzyuOVxy+OWxy2PWx63PG553PK45XHL45bH
+LY9bHrc8brmvcuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+wpEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJF/Quedzmc6
+n+l8pvOZzmc6n+l8pvM9OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjf0nnnc5n
+Op/pfKbzmc5nOp/pvJN/Qo4cOXLkyJGj82s673Te6bzTeafzTuedzjuddzrv
+dN7pvNN5p/NO553OO513Ou903um803mn807nnc47nXc673Te6bzTeafzTued
+zjuddzrvdN7pvJO/JEeOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRIxw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHHrf8JX38
+s7/X219+29t3H3r77uvevvvQ23cfevvuQ2+/u3f95X/p8//8N52/II9bjhw5
+cuTIkSNHjhw5cuTIkSNHjjxunR/o43/6R13f/6a3373v7bsPvX33obfvPvT2
+3Yfefve+6/vf9PE//sP8QB63HDly5PHU+Qt6/K9/2/X5t13f/7eu15eu15eu
+15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu
+15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu15eu739T
+j+/79N//Wed78niXI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+hCNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI46nza/r4H/5B
+/z8+/vs/6PyaPJ5y5MiRI0eOHDly5MiRI0eOHDnyeNf5nj791z/sb/LpP/+T
+zvfk8ZQjR4483nU+09vvftHfJT/8j3/deSe/+UmOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MgRjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSOPp84P9PFXf78fXZ/r+qGuz3V9rutzXZ/r7WNfXK9/3nknR44c
+OXLkyJEjR44cOXLkyJEjRx5Pne/p06//aT96+1TX57o+1/W5rs/19qkvPn77
+jzu/Jo+nHDly5PGu85ne/uKP+tGbdT3qetT1qOtR16OuR12Puh51Pep61PWo
+61HXo65HXY+6HnU96nrU9ajrUdejrkddj7oedT3qetT1qOtR16OuR12PerMv
+fnj555138puf5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHOHI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw58njq/EAff/XT/kbX
+oy9+ePmXnXfym3c5cuTIkSNHjhw5cuTIkSNHjjyeOt/Tp1//vP/trd/31hef
+vv1Z53vyeMqRI0ce7zqf6e23f9yPrs/9rbo+98UPL/+i805+85McOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0ceT50f6OOvftpfu/q/u/o//NN3+UvyuOXIkSNH
+jhw5cuTIkSNHjhx5PHW+p0+//nk/ut76fW998enbn3W+J4+nHDly5PGu85ne
+fvvH/ej63N+q63Nf/PDn/6rzTn7zkxw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSMcOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+Rx5PnR/o469+2l+7+n+6PvfF21/8UeczeXyVI0eOHDly5MiRI0eOHDly5PHU
++Z4+/frn/eh66/e99cWnb3/W+Z48nnLkyJHHu85nevvtv+tH16fqqq7qqq7q
+qq7qqq7qqq7qqq7+ijm8ifU8UfDzrqf7322MjMKLFCSUYgGBKUDRlAFhRJoo
+rGCBBEKKaIN4Z8UuQiwiIbGBRZCIxC4bFrBBSCBETObe6lN17/3+a+wuu1ye
+jpO4xzF2HMeSE8fxSzue33NOnTq/B526GpVa5RmPV87nU2d1Vmd1Vmd1Vmd1
+Vmf10O/Jed+jd9//4Y5vyFdf5siRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHOHIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw58nrp
+eEm3r5/00dnv7uzR3Z/6r3Z8Q16/yJEjR44cOXLkyJEjR44ceb103NDdd1/1
+wfnQpx56dPf2WccNeb3kyJEjr190PKeHv/Wqf+DOhz54/3fy5+TPyX2WI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDlyhCNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTI66XjJd2+ftJHZ7+7hz54+K2OF+TPyX2W
+I0eOHDly5MiRI0eOHHm9dNzQ3Xdf9cH50KceenT39lnHDXm95MiRI/dZ/pxu
+Xz/p9u2vdvvmV7p987TbN0+7ffO02zdPu33ztNs3T7t987TbN0+7ffO02zdP
+u33ztNs3T7t987TbN0+7ffO02zdPu33ztNs3T7t987TbN7/S7Z/8x/KP/kO9
++/4P90tnv5vbN//5jm/I6yVHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIEY4cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjr5eO
+l3T7+kkfnf09nfc9uv9L/2zHT8nrJUeOHDly5MiRI0eOHDnyeum4obvvvuqD
+86FPPfTo7u2zjhvyesmRI0eOHPkzOl7Q8YKOF3S8oOMFHS/oeEHHCzpe0PGC
+jhd0vKDjBR0v6HhBxws6XtDxgo4XdLyg4wUdL+i4oePX6Lz7t/rgfOgT532P
+7v+N/33HT8jrJUeOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+Ixw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHXi8dL+n29ZM+
+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
+nG7/xD/a7Z/8x7p98yvdvnna7Zun3b552u2bp92+edrtm6fdvnna7Zun3b55
+2u2bp92+edrtm6fdvnna7Zun3b552u2bp92+edrtm6fdvnna7Zun3b552u2b
+p92+edrtm6fdvnna7Zun3b552u2bp92+edrtm6fdvnna7Zun3b75le7e/sG8
+fpm/IPdZjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuQIR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR/6Cjhd0vKDjBR0v6HhB
+xws6XtDxgvw5OXLkyJEjR44cOXLkyJEjR44cOXLkyJFX8md0vKDjBR0v6HhB
+xws6XtDxgo4X5C/IkSNHjhw5cnS8pOMFHS/oeEHHCzpe0PGCjhd0vKDjBR0v
+6HhBxws6XtDxgo4XdLyg4wUdL+h4QccLOl7Q8YKOF3S8oOMFHS/oeEHHCzpe
+0PGCjhd0vKDjBR0v6HhBxwvyF+TIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5wpEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjr5e8XvJ6yeslr5e8XvJ6yesXuc9y5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0deP8/rJa+XvF7yesnrJa+XvF7yesl9liNHjhw5cuTI6yWvl7xe8nrJ6yWv
+l7xe8nrJ6yWvl7xe8nrJ6yWvl7xe8nrJ6yWvl7xe8nrJ6yWvl7xe8nrJ6yWv
+l7xe8nrJ6yWvl7xe8nrJ6yWvl7xe8nrJ6yX3WY4cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRIxw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSMcOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRIxw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSMcOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRIxw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTI
+kSNHjhw5cuTIkSNHjhw5cuTIkSMcOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEj
+R44cOXLkyJEjHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eO
+HDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRIxw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5
+cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSMcOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLk
+yJEjR44cOXLkyJEjR44cOXLkyJEjHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiR
+I0eOHDly5MiRIxw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNH
+jhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSNHjhw5cuTIkSMc
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44c
+OXLkyJEjR44cOXLkyJEjR44cOXLkyJEjR44cOXLkyJEjHDly5MiRI0eOHDly
+5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDly5MiRI0eOHDn+/wXBMQEAAACD
+IPunstVOB02aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGkSkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRpEpMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0aRKTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGkSkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRpEpMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0aRKTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGkSkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRpEpMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0aRKTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGkSkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRpEpMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0aRKTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGkSkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRpEpMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0aRKTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGkSkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRpEpMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0aRKTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGkSkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRpEpMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0aRKT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGkSkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRpEpMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0
+adKkSZMmTZo0aRKTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnS
+pEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGkS
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJ
+kyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRpEpMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMm
+TZo0adKkSZMmTZo0adKkSZMmTZo0aRKTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2a
+NGnSpEmTJk2aNGkSkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp
+EpMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKk
+SZMmTZo0adKkSZMmTZo0adKkSZMmTZo0adKkSZMmTZo0aRKTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmTJk2aNGnSpEmT
+Jk2aNGnSpEmTJk2aNGnSpEmTJk2aNGkSkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZNmjRp0qRJkyZN
+mjRp0qRJkyZNmjRp0gF7p08hVCyR/AAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAy
+NC0wNC0xNVQxMjo1ODoyMCswMDowMJlcUbMAAAAldEVYdGRhdGU6bW9kaWZ5
+ADIwMjQtMDQtMTVUMTI6NTg6MjArMDA6MDDoAekPAAAATXRFWHRzb2Z0d2Fy
+ZQBJbWFnZU1hZ2ljayA2LjguOS05IFExNiB4ODZfNjQgMjAxOS0xMS0xMiBo
+dHRwOi8vd3d3LmltYWdlbWFnaWNrLm9yZ2RU/qAAAAAYdEVYdFRodW1iOjpE
+b2N1bWVudDo6UGFnZXMAMaf/uy8AAAAYdEVYdFRodW1iOjpJbWFnZTo6SGVp
+Z2h0ADYwMHrevbUAAAAXdEVYdFRodW1iOjpJbWFnZTo6V2lkdGgANjAw6S/t
+6AAAABl0RVh0VGh1bWI6Ok1pbWV0eXBlAGltYWdlL3BuZz+yVk4AAAAXdEVY
+dFRodW1iOjpNVGltZQAxNzEzMTg1OTAwKxUi+gAAABN0RVh0VGh1bWI6OlNp
+emUAMTQuM0tCQhtJJ0EAAAA7dEVYdFRodW1iOjpVUkkAZmlsZTovL3RtcC9s
+ZXR0ZXJfYXZhdGFycy8yL05aLzI0N18xOTJfMC82MDAucG5nNemTGAAAAABJ
+RU5ErkJggg==
+" /></div><div class="author-popover-arrow" data-popper-arrow=""></div></div><div class="author-popover" data-collab-id="1158747"><div class="author-popover-info"><div class="author-popover-name">Yunliang Long</div><div class="author-popover-affiliations"></div></div><div class="author-popover-arrow" data-popper-arrow=""></div></div><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>document.addEventListener('DOMContentLoaded', function () {
+  let popperInstance = null;
+  const authors = document.querySelectorAll('.preview-author-name')
+  const popperOptions = {
+    placement: 'bottom',
+    modifiers: [{ name: 'flip', enabled: false, }, { name: 'offset', options: { offset: [0, 12] } }]
+  }
+
+  function showPopover (author, popover) {
+    popover.setAttribute('data-show', '')
+    popperInstance = Popper.createPopper(author, popover, popperOptions)
+  }
+
+  function hidePopover () {
+    if (!popperInstance) return
+
+    const el = document.querySelector('.author-popover[data-show]')
+
+    if (!el) return
+
+    el.removeAttribute('data-show')
+    popperInstance.destroy()
+    popperInstance = null
+  }
+
+  authors.forEach(author => {
+    const id = author.getAttribute('data-collab-id')
+    const popover = document.querySelector(`.author-popover[data-collab-id="${id}"]`)
+
+    author.addEventListener('click', () => {
+      if (popperInstance) { hidePopover() }
+
+      showPopover(author, popover)
+    })
+  })
+
+  document.addEventListener('click', (e) => {
+    if (!popperInstance) return
+
+    const container = document.querySelector('.preview-author-list')
+
+    if (container.contains(e.target)) return
+
+    hidePopover()
+  })
+})</script><div class="article-paragraph preview-abstract"><h2 class="preview-abstract-heading">Abstract</h2>In this paper, a new type of shift-map PE is proposed, which fundamentally overcomes fatal defect in [14]'s solutions, as they are inaccurate for waves propagating at angles close to 0 •. According to both theory and experiment, [14]'s 1storder solution is not accurate for waves propagating at 0 •. Additionally, the reduced function of [14] introduces truncation error for the wave propagating at angle close to 0 •. These shortcomings render the PE unsuitable for the wave propagating problem. The proposed method utilizes the usual reduced function to eliminate the truncation error when the wave propagates at 0 • and reduces the truncation errors when the wave propagating at angle close to 0 •. Two examples of new shift-map PE are studied and compared to [14]'s methods. Both theory and experiments demonstrate that the proposed methods achieve higher accuracy while using a larger range step compared to [14]'s solutions, making it more suitable for long-distance calculation than [14]'s methods. In the numerical experiments, the proposed method with the range step of 128λ is more accurate than [14]'s solution with the range step of 1λ.</div><div class="review-timeline"><div class="dashboard-container"><div class="publication-status-footer"><h4 class="header">Peer review timeline</h4></div><div class="events-container"><div class="version-container"><div class="entry"><span class="bar"></span><span class="indicator"></span><span class="time-box"><span>13 Jan 2024</span></span><span class="message">Submitted to <b><i>TechRxiv</i></b> <a target="_blank" rel="noopener noreferrer" href="/inst/26407"><i class="fas fa-external-link-alt"></i></a></span></div><div class="entry"><span class="bar"></span><span class="indicator"></span><span class="time-box"><span>25 Jan 2024</span></span><span class="message">Published in <b><i>TechRxiv</i></b></span></div></div></div></div></div><div class="preview-publication-status"></div></div></div>
+
+<div id="article-content">
+
+</div>
+
+</div>
+  <!-- this is needed to have the wiki-wrapper properly containing the floating elements within -->
+<div style="clear: both"></div>
+
+<!-- Used by React Portal -->
+<div id='article-sidebar-portal'></div>
+
+<script>
+  initialServerStore = {"article":{"titleBlock":{"block_content":null,"type":"htmlBlock","html":"New Shift-Map Parabolic Equations Based on Finite Difference Method","render_report":null,"raw":"New Shift-Map Parabolic Equations Based on Finite Difference Method","name":"title","format":"html","url":"/users/715364/articles/700098/master/file/title.html","folder_url":"/users/715364/articles/700098/master/folder/.","path":"title.html","old_path":null,"collapsed":false,"sha":"1e19b89181257009c14ef3c921f8d7ba1b78466f","captionBlock":null,"has_data":false,"has_ipython_notebook":false,"config":null},"id":700098,"sha":"cbd0c2de5d743c174b8f7eea254f4817ce8f52d7","blocks":[],"oldBlocks":[],"oldLayout":null,"online":true,"layout":"abstract.html\ndata/New Shift-Map Parabolic Equations Based on Finite Difference Method_2024_1_10/New Shift-Map Parabolic Equations Based on Finite Difference Method_2024_1_10.pdf\n","references":[],"referenceSorting":{"key":"default","ascending":true},"citationHash":{},"commits":null,"version":0},"commitToView":"cbd0c2de5d743c174b8f7eea254f4817ce8f52d7","commentToView":null,"onboarding":false}
+  initialFlashMessagesForReact = []
+</script>
+<script src="https://d197for5662m48.cloudfront.net/assets/editable_article_manifest_react-0e2402c94087ea8849798816fce0efc4450f0875cccb40634bf953b917795bd2.js" defer="defer"></script>
+
+
+<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css"/>
+
+  <meta id='katexmin' class='katex'>
+
+  <script type="text/javascript">
+    var tag = document.querySelector('meta#katexmin')
+    var tagStyle = window.getComputedStyle(tag).getPropertyValue('font-family')
+
+    if (!tagStyle || tagStyle == 'auto' ){
+      var message = "katex.min.0.11.1.css failed to load, falling back to local copy"
+      localLink = document.createElement('link');
+        localLink.rel = "stylesheet";
+        localLink.type = "text/css";
+        localLink.href = "/assets/katex.min.0.11.1.css";
+      document.head.appendChild(localLink);
+      delete localLink;
+    }
+  </script>
+
+
+
+<!-- TODO: NATE:this is a temporary placeholder for an editor we can use to clean incoming html from
+     the server which might not be equal to the html once it has passed through an editor -->
+<div id="squire-cleaner" style="width: 0px; height: 0px; display: none;"></div>
+
+
+            </div>
+              
+          </div>
+        </div>
+      </div>
+
+      <footer class="marketing-footer">
+  <div class="container">
+    <div class="row">
+      <div class="span12">
+        <div class="footer-logo">
+          <div class="paid-institution-footer">
+                <strong>TechRxiv</strong>
+                <p>| Powered by <strong><a href="https://www.authorea.com/"> Authorea.com </a></strong></p>
+          </div>
+          <div class= "inst-footer">
+              <a target="blank" href="https://www.ieee.org/"><img alt="instution-link" class="footer-image" src="https://d197for5662m48.cloudfront.net/images/footerimage/23/image/b290c2903b3d6a9bcb8e8699b5b31924.png" /></a>
+          </div>
+        </div>
+        <ul class="links">
+          <li><a href="/"><strong>Home</strong></a></li>
+              <li><a href="/about">About</a></li>
+              <li><a href="/submission-guidelines">Submission Guidelines</a></li>
+              <li><a href="/faqs">FAQs</a></li>
+              <li><a href="/terms-of-use">Terms of Use</a></li>
+              <li><a href="/ieee-privacy-policy">Privacy Policy</a></li>
+              <li><a href="/contact-us">Contact Us</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</footer>
+
+    </div>
+
+    <div class="modal fade" id="shareFlashModal" tabindex="-1" role="dialog" aria-labelledby="shareFlashModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title" id="myModalLabel"></h4>
+      </div>
+      <div class="modal-body">
+        <div id="flash_messages">
+        </div>
+        <div class="shareFlash__options-wrapper">
+            <button type="button" class="shareFlash__cancel" data-dismiss="modal" onClick="window.location.reload();">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v84a3a4012de94ce1a686ba8c167c359c1696973893317" integrity="sha512-euoFGowhlaLqXsPWQ48qSkBSCFs3DPRyiwVu3FjR96cMPx+Fr+gpWRhIafcHwqwCqWS42RZhIudOvEI+Ckf6MA==" data-cf-beacon='{"rayId":"874cdf4a4d3d2d09","b":1,"version":"2024.3.0","token":"011bdc882ba7417ead180c7c497fa6d4"}' crossorigin="anonymous"></script>
+</body>
+</html>
