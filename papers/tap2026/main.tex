@@ -320,7 +320,7 @@ a variable coefficient.
 
 \subsection{Level Curves}
 The coordinate lines $\eta=\text{const}$ are the curves
-$z=Z(x,\eta)=\eta+z_{\rm ref}+u(x,\eta)$, where $u$ is the harmonic extension of
+$z=F(x,\eta)=\eta+z_{\rm ref}+u(x,\eta)$, where $u$ is the harmonic extension of
 $b=B-z_{\rm ref}$, tapered to zero:
 \begin{gather}
 \hat u(\kappa,\eta)=\hat b(\kappa)\,w(\eta/L)\,e^{-|\kappa|\eta},\label{eq:family}\\
@@ -330,8 +330,8 @@ Here $\hat{\cdot}$ denotes the Fourier
 transform in $x$, and $L$ is the height of the transition layer. The
 construction has four properties.
 \begin{itemize}
-\item \emph{Exact boundary.} $Z(x,0)=B(x)$.
-\item \emph{Identity above the layer.} $Z=\eta+z_{\rm ref}$ for $\eta\ge\etal=L$:
+\item \emph{Exact boundary.} $F(x,0)=B(x)$.
+\item \emph{Identity above the layer.} $F=\eta+z_{\rm ref}$ for $\eta\ge\etal=L$:
 the coordinates are Cartesian, up to a constant shift, above the transition
 layer.
 \item \emph{Near-conformality near the ground.} Near the ground $u$ is harmonic,
@@ -339,9 +339,9 @@ so a feature of horizontal scale $\ell$ decays over a height of about $\ell$.
 Small-scale relief stays near the ground, as with a conformal map, and only
 the large-scale relief reaches the taper.
 \item \emph{Regularity.} With $u=wU$, the map is regular when
-$Z_\eta=1+wU_\eta+w'U/L>0$. For $z_{\rm ref}=\max B$ we have $U\le0$ (maximum
+$F_\eta=1+wU_\eta+w'U/L>0$. For $z_{\rm ref}=\max B$ we have $U\le0$ (maximum
 principle) and $w'\le0$, so the taper term is non-negative for every $L$, and
-$Z_\eta\ge1-\max|U_\eta|$ is a bound on the smoothed slopes. For
+$F_\eta\ge1-\max|U_\eta|$ is a bound on the smoothed slopes. For
 $z_{\rm ref}=\overline B$ the bound acquires the term
 $-\frac{15}{8}\max(B-z_{\rm ref})/L$.
 \end{itemize}
@@ -351,20 +351,55 @@ even extension makes $u_x(0,\eta)=0$, so the starting line $\xi=0$ is the
 vertical line $x=0$ and the antenna pattern is prescribed in height as usual.
 
 \subsection{Orthogonal Trajectories and Metrics}
-Let $X(\xi,\eta)$ be the abscissa of the trajectory orthogonal to the level
-curves that leaves the Cartesian region at $x=\xi$:
+The level curves fix $\eta$. It remains to find the lines $\xi=\text{const}$
+and the scale factors. A node $(\xi,\eta)$ is mapped to
+\begin{equation*}
+x=X(\xi,\eta),\qquad z=F\big(X(\xi,\eta),\eta\big),
+\end{equation*}
+where $X$ is the abscissa of the line $\xi=\text{const}$ at the level $\eta$;
+the second relation says that the node lies on the level curve $\eta$, so that
+$Z(\xi,\eta)=F(X(\xi,\eta),\eta)$ in the notation of Section~\ref{sec:why}. Since
+$F$ is known from \eqref{eq:family}, the only unknown is $X$. The tangents to
+the two coordinate lines are
+\begin{align*}
+\mathbf a_\xi&=(X_\xi,Z_\xi)=P\,(1,F_x),\\
+\mathbf a_\eta&=(X_\eta,Z_\eta)=(X_\eta,\,F_xX_\eta+F_\eta),
+\end{align*}
+by the chain rule, where $P=X_\xi$ and $F_x$, $F_\eta$ are taken at $x=X$.
+
+\emph{Trajectories.} Setting the scalar product of the two tangents to zero
+gives an ordinary differential equation for each line $\xi=\text{const}$:
 \begin{equation}\label{eq:traj}
-\frac{\pd X}{\pd\eta}=G(X,\eta)\equiv-\frac{Z_xZ_\eta}{1+Z_x^2},\qquad X(\xi,\etal)=\xi .
+X_\eta=G(X,\eta)\equiv-\frac{F_xF_\eta}{1+F_x^2},\qquad X(\xi,\etal)=\xi .
 \end{equation}
-The tangent $(X_\eta,Z_xX_\eta+Z_\eta)$ of the trajectory is orthogonal to the
-tangent $(1,Z_x)$ of the level curve. The trajectories are integral curves of
-the non-vanishing field $\nabla\eta$ and never cross. The scale factors are
+Above the layer $G=0$ and the lines are vertical, so they are labeled by their
+abscissa there. Integrating \eqref{eq:traj} downward from $\etal$ to $0$ traces
+each line through the layer, crossing every level curve at a right angle. The
+trajectories are integral curves of the non-vanishing field $\nabla\eta$ and
+never cross.
+
+\emph{Scale factors.} The scale factors are the lengths of the two tangents.
+With $X_\eta=G$ we have $F_xX_\eta+F_\eta=F_\eta/(1+F_x^2)$, and
 \begin{equation}\label{eq:metric}
-h_\eta=\frac{Z_\eta}{\sqrt{1+Z_x^2}},\quad h_\xi=P\sqrt{1+Z_x^2},\quad
-\frac{\pd P}{\pd\eta}=G_x(X,\eta)P,
+h_\eta=\frac{F_\eta}{\sqrt{1+F_x^2}},\quad h_\xi=P\sqrt{1+F_x^2},\quad
+P_\eta=G_x(X,\eta)P,
 \end{equation}
-where $P=\pd X/\pd\xi$ and $P(\xi,\etal)=1$. The function $\hat b$ is computed
-once by FFT. Equations \eqref{eq:traj}--\eqref{eq:metric} are integrated
+with $P(\xi,\etal)=1$. The equation for $P$ follows by differentiating
+\eqref{eq:traj} in $\xi$. Both factors have a simple meaning. Neighboring level
+curves are $F_\eta\,d\eta$ apart vertically; projected on the normal, which is
+tilted by $\arctan F_x$, this gives $h_\eta$. It depends on $F$ at the node
+only. Neighboring trajectories are $P\,d\xi$ apart horizontally; converted to
+arc length along the level curve, this gives $h_\xi$. Through $P$, which
+accumulates the convergence ($P<1$) or divergence ($P>1$) of the trajectories
+on their way down, $h_\xi$ depends on the whole path above the node. As a
+check, $h_\xi h_\eta=PF_\eta$ equals the Jacobian of the map, and the
+anisotropy is $r=F_\eta/[P(1+F_x^2)]$.
+
+\emph{Computation.} The function $\hat b$ is computed once by FFT. On each
+level, one inverse FFT of $\hat u$ and of its products with $i\kappa$,
+$-\kappa^2$ and $\pd_\eta$ gives $F_x$, $F_\eta$, $F_{xx}$ and $F_{x\eta}$ on a
+fine uniform grid in $x$; they are interpolated to the current $X$ to form $G$
+and $G_x$. Equations \eqref{eq:traj}--\eqref{eq:metric} are integrated
 downward with the fourth-order Runge--Kutta method for all columns at once, on
 coarse levels, and the metrics are then interpolated to the computational nodes
 with cubic splines. The map takes seconds to build. Orthogonality of the
