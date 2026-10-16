@@ -171,3 +171,68 @@ python evaluate.py --rational
 
 The study depends on `pywaveprop/helmholtz_tf_jax.py` and `pywaveprop/terrain_transform.py`.
 Those files are in the working tree but not yet committed.
+
+## 8. Latent encoder–decoder propagators (`latent.py`)
+
+The encoder maps a column u_j(η) to a latent vector s_j. The propagator maps s_j to s_{j+1} and takes
+as parameters the step dx (25, 50 or 100 m; one model covers all three) and the metric profiles
+log h_ξ, log h_η at 6 columns across the step, which include h_ξh_η. The decoder maps s back to u.
+
+### How compressible are the columns?
+
+POD of 8000 training columns, tested on unseen scenarios (relative L2 below 200 m, median):
+
+| m (complex) | 16 | 32 | 64 | 128 | 256 |
+|---|---|---|---|---|---|
+| reconstruction error | 0.71 | 0.50 | 6.3·10⁻² | 5.1·10⁻³ | 1.1·10⁻⁷ |
+
+The fields are band-limited (|κ| ≲ 3 rad/m in a 256 m window), so a linear latent space of 128–256
+complex dimensions holds them almost exactly.
+
+### Models
+
+- **`LinearLatent`** (reduced-order / Koopman model):
+  - The encoder and decoder are linear and tied: s = Φᴴu, u = Φs. Φ holds 128 POD modes; it is
+    frozen in the runs reported, because training it degraded reconstruction.
+  - The propagator is s' = expm(dx L) s, with L = L₀ + Σ_r a_r(metrics, dx) B_r, optionally plus a
+    low-rank term U Vᴴ that also comes from the metrics.
+  - L₀ is the Galerkin projection of the free-space generator. a, U and V come from a CNN of the
+    metric columns and are zero for identity metrics.
+  - For fixed metrics the propagator is a semigroup in dx.
+- **`NonlinearLatent`**: a CNN encoder and decoder with a 256-dimensional real latent vector plus the
+  log-norm of the field, and a residual MLP propagator s' = s + f(s, dx, code(metrics)).
+
+The loss combines reconstruction, decoded prediction and latent consistency, with one step per sample
+and dx drawn from {25, 50, 100} m; 4000 iterations.
+
+### Results
+
+| Model | One-step pred. error (val, rms) | 3 km rollout rel. L2 (median, 40 test scenarios), dx = 25 / 50 / 100 m | Prep (s) | March (s) |
+|---|---|---|---|---|
+| linear, 16 terms, pooled metric code | 0.33 | 0.79 / 0.79 / 0.79 | 1.0 / 0.6 / 0.3 | 0.007 / 0.004 / 0.003 |
+| linear, 128 terms + rank 8, positional metric code | 0.32 | 0.79 / 0.78 / 0.77 | 0.75 / 0.49 / 0.29 | 0.005 / 0.003 / 0.002 |
+| nonlinear autoencoder | 0.55 (reconstruction 0.34) | diverges (NaN) at all dx | – | 0.8 / 0.4 / 0.2 |
+| **oracle**: Galerkin projection of the symbol step (no learning), m = 128 | – | 0.38, 0.32, 1.15 on 3 scenarios; full-space symbol step 0.39, 0.32, 1.17 | | |
+
+**Findings.**
+1. **The latent space is not the bottleneck.** With m = 128, the projected physics step reproduces the
+   full-space symbol step to within 0.01–0.02. Increasing m to 192 or 256 changes nothing.
+2. **The learned latent propagator is the bottleneck.** From 200 scenarios it learns only part of the
+   terrain dependence. The rollout error is 0.79 against 0.39 for the physics projection, and about
+   1.0 for free space.
+   - The linear model's error is the same for dx = 25, 50 and 100 m. The dx conditioning works
+     (semigroup); the terrain conditioning does not.
+   - Neither 8× more affine terms nor a metric encoder that keeps the vertical position helped within
+     4000 iterations.
+3. **The nonlinear autoencoder diverges.** It does not reconstruct well (34 %), and the propagated
+   log-norm drifts until the decoded field overflows. It is not usable for marching without a
+   stability constraint.
+4. **The march is extremely cheap.** It takes 3–7 ms for 3 km, against 2.2–5.3 s for the rational
+   solver: about 1000× faster. The per-terrain preparation (the 30–120 step matrices expm(dx L))
+   takes 0.3–1 s.
+
+**Next step suggested by the oracle.** Use the Galerkin projection of the physics (symbol) step as
+the latent propagator and learn only a correction: A = A_phys(metrics, dx) · expm(dx ΔL(metrics, dx)).
+This starts from 0.39 rather than 1.0. The obstacle is cost. A_phys needs m applications of the
+symbol step per range step, unless it is assembled from a precomputed affine tensor in the symbol
+weights.
