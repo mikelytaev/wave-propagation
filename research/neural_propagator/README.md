@@ -236,3 +236,84 @@ the latent propagator and learn only a correction: A = A_phys(metrics, dx) · ex
 This starts from 0.39 rather than 1.0. The obstacle is cost. A_phys needs m applications of the
 symbol step per range step, unless it is assembled from a precomputed affine tensor in the symbol
 weights.
+
+## 9. Neural rational step and Sobolev training against the JAX oracle (`oracle.py`, `neural_rational.py`, `train_probe.py`)
+
+### Oracle
+
+The reference propagator is written in JAX and is linear in the field. `Oracle` wraps one 25 m step:
+- it takes a 0.25 m window column, interpolates it spectrally to the fine solver grid, and marches 7
+  sub-steps of the reference scheme (Dirichlet top at 420 m);
+- it samples the result back to 0.25 m;
+- `jax.vjp` gives the exact adjoint.
+
+Checks:
+- it reproduces the stored reference columns to 3·10⁻⁸ (2·10⁻⁴ late in the run, where the window
+  cropping matters);
+- the adjoint passes the dot-product test to machine precision;
+- cost: 40 ms per forward step, 100 ms per adjoint.
+
+For a linear step the Jacobian with respect to the field is the operator itself. Sobolev training
+here therefore means matching the operator on probe inputs: by columns with forward probes (v, Pv),
+and by rows with adjoint probes (w, Pᴴw) against the model's adjoint, which also comes from `jax.vjp`.
+- Probe sets: 96 forward + 48 adjoint probes per terrain, 240 terrains. Generation took about 1 h on
+  CPU.
+- *Random* probes: band-limited random columns with κ ≤ K0 sin 40°, half of them localized.
+- *POD* probes: random combinations of the 256 POD modes of the reference fields, with amplitudes
+  proportional to the singular values, i.e. the physical subspace.
+
+### Neural rational step
+
+The reference scheme run on the coarse grid (0.25 m) with long steps:
+- Padé [8/8] factors (1+aL)/(1+bL) of exp(iΔ(√(1+L)−1)), in the ψ form of `helmholtz_tf_jax` (Numerov
+  weight, m = r², het = h_ξ² − 1), plus Liouville rescaling.
+- A top absorbing layer instead of the NLBC.
+- Learned parts: per-row complex corrections of het and log m from a CNN of the metrics (zero for
+  identity metrics), the Numerov weight and the absorber strength. The Padé coefficients can also be
+  trained, but are frozen by default: perturbing a_l and b_l independently breaks the pairing of the
+  factors.
+- It is linear, tridiagonal (lineax) and differentiable.
+
+### Results (3 km rollouts, medians over 40 unseen test scenarios, rows below 200 m)
+
+| Model | Step | Rel. L2 | Max error | March (s) | Setup (s) |
+|---|---|---|---|---|---|
+| **untrained coarse rational** (Padé [8/8], 0.25 m) | 25 m, 1 chain | **0.010** | 0.017 | 0.08 | 0.01 |
+| untrained | 50 m, 2 chains | 0.010 | 0.016 | 0.06 | 0.01 |
+| untrained | 100 m, 4 chains | 0.012 | 0.017 | 0.07 | 0.01 |
+| untrained | 50 m, 1 chain | 0.034 | 0.060 | 0.04 | 0.01 |
+| untrained | 100 m, 2 chains | 0.033 | 0.054 | 0.03 | 0.01 |
+| learned, trajectories only | 25 m | 0.040 | 0.041 | 0.06 | 1.2 |
+| learned, trajectories + random forward probes | 25 m | 0.27 | 0.18 | 0.06 | 1.2 |
+| learned, trajectories + random forward + adjoint probes (Sobolev) | 25 m | 0.32 | 0.20 | 0.06 | 1.1 |
+| learned, trajectories + POD forward probes | 25 m | 0.025 | 0.025 | 0.04 | 0.56 |
+| learned, trajectories + POD forward + adjoint probes (Sobolev) | 25 m | 0.029 | 0.025 | 0.04 | 0.56 |
+| learned, rollout loss (R = 4), Padé coefficients trained | 50 m, 1 chain | 0.092 | 0.072 | 0.03 | 0.72 |
+| learned, Padé coefficients frozen | 50 m, 1 chain | 0.24 | 0.16 | 0.02 | 0.28 |
+| rational reference (optimized grid) | 3.6–5 m, Δη ≈ 0.03 m | ≈10⁻⁴ | – | 2.2–5.3 | – |
+
+### Findings
+
+1. **The strongest result is classical.** The reference's own Padé–Numerov scheme, run on a 9×
+   coarser vertical grid (0.25 m ≈ λ/4) with 7× longer steps (25 m), gives 1 % over 3 km in 0.08 s,
+   about 60× faster than the reference on its optimized grid. With 2–4 chains per step it holds 1 %
+   up to 100 m steps. The grid optimizer is very conservative for these fields: it guarantees the
+   precision for all components up to 45°, everywhere, under the anisotropy and NLBC bounds.
+2. **No learned correction beat the untrained scheme on unseen terrain.**
+   - Training on trajectories alone overfits the 200 terrains (training loss 3·10⁻⁷, validation
+     unchanged): 4 % over 3 km against 1 %.
+   - Larger steps with one chain did not become viable either (9–24 % against 3.4 % untrained).
+3. **Sobolev / operator matching works technically, but the probe distribution decides the outcome.**
+   - Random band-limited probes (≤ 40°) measure the operator where the coarse scheme is inaccurate
+     (34 % on probes versus 0.26 % on fields). In compressed regions their physical angle exceeds
+     the aperture. Matching them pulls the model away from real fields: 27–32 % over 3 km.
+   - Probes from the physical (POD) subspace keep the model close to the untrained scheme: 2.5–2.9 %.
+     They are 10× better than random probes, but still not better than no training.
+   - The adjoint term added nothing beyond the forward probes in either distribution.
+4. **What this suggests.**
+   - For speed, the first lever is classical: choose the grid for the actual field content (an
+     a-posteriori or field-adaptive optimizer, or grids chosen per angle of the expected
+     propagation), not for the worst case.
+   - A learned component then has a small target: the 1 % residual of the coarse scheme. It needs far
+     more terrains than 200, or a correction structure that cannot hurt the typical case, e.g. one
+     confined to the rows and angles where the coarse scheme's dispersion error is known to be large.

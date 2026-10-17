@@ -51,6 +51,10 @@ def make_model(args, key, feats=None):
     a new symbol model; without them a zero basis of the right shape is made
     (skeleton for deserialization)."""
     dx = args.step * DX_OUT
+    if args.model == "nr":
+        from neural_rational import NeuralRationalStep
+        return NeuralRationalStep(dx, key, order=args.order, n_stages=args.stages, refine=args.refine,
+                                  learn=bool(args.learn), width=args.width)
     if args.model == "sym":
         ds = dx / args.stages
         basis = (symbol_basis(feats, ds, args.rank, cols_per_stage=5 * args.step // args.stages)
@@ -80,6 +84,8 @@ def main():
     ap.add_argument("--rank", type=int, default=64)
     ap.add_argument("--learn", type=int, default=1)
     ap.add_argument("--n-res", type=int, default=0)
+    ap.add_argument("--order", type=int, default=8)
+    ap.add_argument("--refine", type=int, default=1)
     ap.add_argument("--iters", type=int, default=6000)
     ap.add_argument("--batch", type=int, default=32)
     ap.add_argument("--lr", type=float, default=2e-3)

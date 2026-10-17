@@ -1,3 +1,5 @@
 data*/
+probes*/
 logs/
 *.eqx
+pod_basis_*.npz

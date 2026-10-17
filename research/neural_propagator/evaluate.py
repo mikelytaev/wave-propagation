@@ -20,6 +20,7 @@ import numpy as np
 
 from common import DATA_DIR, DX_OUT, N_EVAL, reference, sample_scenario
 from models import FreeStep, LearnedSplitStep, SymbolStep, symbol_basis
+from neural_rational import NeuralRationalStep
 from train import HERE, feat_index, load, make_model
 
 RES = os.path.join(HERE, "results")
@@ -45,7 +46,7 @@ def errors(pred, ref):
 def rollout_fn(model):
     """Jitted march over a whole scenario; screens of a split-step model are
     computed in a separate function (they depend on the terrain only)."""
-    if isinstance(model, (LearnedSplitStep, SymbolStep)):
+    if isinstance(model, (LearnedSplitStep, SymbolStep, NeuralRationalStep)):
         screens = eqx.filter_jit(jax.vmap(model.screens))
 
         @eqx.filter_jit
