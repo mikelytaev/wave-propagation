@@ -21,6 +21,8 @@ from pywaveprop.helmholtz_jax import AbstractWaveSpeedModel, LinearSlopeWaveSpee
 from pywaveprop.helmholtz_common import HelmholtzMeshParams2D
 from pywaveprop.uwa_utils import UWAComputationalParams
 from pywaveprop.uwa.field import AcousticPressureField
+from pywaveprop.helmholtz_tf_jax import TerrainFollowingHelmholtzPropagator, TFMedium
+from pywaveprop.terrain_transform import OrthogonalTerrainMap
 
 
 class UWAGaussSourceModel:
@@ -273,6 +275,89 @@ def uwa_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, par
     )
 
 
+def uwa_tf_get_model(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel,
+                     params: UWAComputationalParams) -> TerrainFollowingHelmholtzPropagator:
+    """Rational propagator in orthogonal terrain-following coordinates
+    (``params.terrain_method = 'transform'``).
+
+    ``env.layers[0]`` is the water column (sound speed as a function of depth,
+    density, attenuation) and ``env.layers[1]`` the bottom half-space, whose
+    sound speed profile is a function of the depth *below the seabed*
+    ``env.bathymetry``.  The seabed is the coordinate line ``eta = eta_b``, so the
+    density / sound-speed jump follows the bathymetry exactly; the sea surface is
+    pressure-release.  The bottom of the domain (``params.max_depth_m``) lies in
+    the homogeneous part of the bottom, where the nonlocal boundary condition is
+    imposed.
+    """
+    if env.bathymetry is None or len(env.layers) != 2:
+        raise NotImplementedError("terrain_method='transform' needs bathymetry, a water layer and one bottom layer")
+    params = deepcopy(params)
+    water, bottom = env.layers
+    x_b = np.asarray(env.bathymetry.x_grid_m, dtype=float)
+    d_b = np.asarray(env.bathymetry.height, dtype=float)
+    c_w0 = float(jnp.real(water.sound_speed_profile_m_s(jnp.array([src.depth_m]))[0]))
+    wavelength = c_w0 / src.freq_hz
+    relief = float(d_b.max() - d_b.min())
+    smoothing = params.terrain_smoothing_m
+    if smoothing is None:
+        smoothing = max(float(np.median(np.diff(x_b))), wavelength)
+    transition = params.terrain_transition_m or max(1.5 * relief, 20.0 * wavelength, 4.0 * smoothing)
+    tm = OrthogonalTerrainMap(x_b, d_b, x_max_m=params.max_range_m, kind='strip',
+                              transition_m=transition, eta_b_m=float(d_b.max()), smoothing_m=smoothing)
+    slope = tm.max_slope_deg()
+    min_depth = tm.eta_lab + max(10.0 * wavelength, 0.05 * tm.eta_lab)
+    params.max_depth_m = max(params.max_depth_m or 0.0, min_depth)
+    print(f'bathymetry: relief {relief:.1f} m, max slope {slope:.1f} deg, sediment transition {transition:.1f} m, '
+          f'smoothing {smoothing:.1f} m, domain depth {params.max_depth_m:.1f} m')
+
+    omega = 2 * fm.pi * src.freq_hz
+    eff = UnderwaterEnvironmentModel._effective_speed
+
+    def k2_above(x, z):
+        c = np.asarray(water.sound_speed_profile_m_s(jnp.asarray(z)))
+        return (omega / eff(c, water.attenuation_dm_lambda)) ** 2
+
+    def k2_below(x, z, depth_below_seabed):
+        c = np.asarray(bottom.sound_speed_profile_m_s(jnp.asarray(np.maximum(depth_below_seabed, 0.0))))
+        return (omega / eff(c, bottom.attenuation_dm_lambda)) ** 2
+
+    medium = TFMedium(k2_above=k2_above, k2_below=k2_below, rho_above=float(water.density),
+                      rho_below=float(bottom.density))
+    # The aperture is defined in the water: the longitudinal wavenumbers of the
+    # field are bounded below by min_water(k) cos(aperture), whatever the (faster)
+    # bottom, so the wavenumber interval comes from the water column only.
+    z_probe = np.linspace(0.0, float(d_b.max()), 500)
+    c_water = np.abs(np.asarray(water.sound_speed_profile_m_s(jnp.asarray(z_probe))))
+    k_bounds = (omega / float(c_water.max()), omega / float(c_water.min()))
+    k0 = omega / c_w0
+    aperture = min(src.max_angle_deg() + 2 * slope, 85.0, 0.98 * fm.degrees(fm.asin(min(k_bounds[0] / k0, 1.0))))
+    kz_max = k0 * fm.sin(fm.radians(aperture))
+    return TerrainFollowingHelmholtzPropagator.create(
+        freq_hz=src.freq_hz, terrain_map=tm, medium=medium, kz_max=kz_max, k_bounds=k_bounds,
+        precision=params.precision, rational_approx_order=params.rational_approx_order,
+        mesh_params=HelmholtzMeshParams2D(
+            x_size_m=params.max_range_m, z_size_m=params.max_depth_m,
+            dx_output_m=params.dx_m, x_n_upper_bound=params.x_output_points,
+            dz_output_m=params.dz_m, z_n_upper_bound=params.z_output_points),
+        lower_bc='dirichlet')
+
+
+def uwa_tf_forward_task(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel,
+                        params: UWAComputationalParams) -> AcousticPressureField:
+    """Forward task in terrain-following coordinates; the result carries the
+    physical coordinates ``x_phys`` / ``z_phys`` of the output nodes."""
+    model = uwa_tf_get_model(src, env, params)
+    c0 = float(jnp.real(env.layers[0].sound_speed_profile_m_s(jnp.array([src.depth_m]))[0]))
+    k0 = 2 * fm.pi * src.freq_hz / c0
+    _, z0 = model.initial_points()
+    f = model.compute(src.aperture(k0, jnp.asarray(z0)))
+    res = AcousticPressureField(freq_hz=src.freq_hz, x_grid=model.x_output_grid(),
+                                z_grid=model.eta_computational_grid()[::model.z_grid_scale], field=f)
+    res.x_phys, res.z_phys = model.output_metrics()
+    res.seabed_x, res.seabed_z = model.terrain_map.x_fine, model.terrain_map.boundary_fine
+    return res
+
+
 def uwa_forward_task(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, params: UWAComputationalParams) -> AcousticPressureField:
     """Compute underwater acoustic propagation using the JAX-based solver.
 
@@ -292,6 +377,8 @@ def uwa_forward_task(src: UWAGaussSourceModel, env: UnderwaterEnvironmentModel, 
     AcousticPressureField
         Computed acoustic pressure field.
     """
+    if getattr(params, 'terrain_method', 'staircase') == 'transform' and env.bathymetry is not None:
+        return uwa_tf_forward_task(src, env, params)
     model = uwa_get_model(src, env, params)
     c0 = float(jnp.real(env.ssp(jnp.array([src.depth_m]))[0]))
     k0 = 2 * fm.pi * src.freq_hz / c0

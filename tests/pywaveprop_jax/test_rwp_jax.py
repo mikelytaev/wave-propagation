@@ -75,6 +75,7 @@ from pywaveprop.rwp_jax import (
     MultNProfileModel,
     ProxyWaveSpeedModel,
     GroundMaterial,
+    RoughSeaSurface,
     create_rwp_model,
     rwp_forward_task,
     minmax_k,
@@ -938,6 +939,345 @@ class TestBrewsterAngleNLBC(unittest.TestCase):
             axes[2].set_title(f"z≈{z0:.0f} m | corr={corr:.3f} Δ={median_diff:.1f}dB")
             axes[2].legend()
             _save_fig("brewster_vs_tworay")
+
+
+def _flat_ground_spectral_reference(src, env, x_grid, z_grid):
+    """Exact one-way field of a Gaussian beam over a flat reflecting surface in a
+    homogeneous medium: plane-wave spectrum of the source, each downgoing wave
+    reflected with R(|k_z|) (Fresnel times the roughness factor about the mean
+    level z = 0, RoughSeaSurface.mean_level_reflection). Returns the PE envelope
+    u = psi exp(-i k x)."""
+    from pywaveprop.propagators._utils import reflection_coef
+    k = 2 * np.pi * src.freq_hz / float(env.wave_speed_profile(0.0))
+    k0 = 2 * np.pi * src.freq_hz / 3e8
+    n = 2 ** 16
+    zz = (np.arange(n) - n // 2) * 0.00625
+    ww = np.sqrt(2 * np.log(2)) / (k0 * np.sin(np.radians(src.beam_width_deg) / 2))
+    g = np.exp(-1j * k0 * np.sin(np.radians(src.elevation_angle_deg)) * zz) \
+        * np.exp(-((zz - src.height_m) / ww) ** 2) / (np.sqrt(np.pi) * ww)
+    kz = 2 * np.pi * np.fft.fftfreq(n, d=zz[1] - zz[0])
+    spec = np.fft.fft(np.fft.ifftshift(g))
+    theta = np.degrees(np.arcsin(np.minimum(np.abs(kz) / k, 1)))
+    eps = env.ground_material.complex_permittivity(src.freq_hz)
+    if env.sea_roughness is not None:
+        smooth = lambda t: reflection_coef(1, eps, 90 - t, src.polarization)
+        refl = env.sea_roughness.mean_level_reflection(np.minimum(np.abs(kz), k), smooth, k)
+    else:
+        refl = np.array([reflection_coef(1, eps, 90 - t, src.polarization) for t in theta])
+    kx = np.sqrt(k ** 2 - kz ** 2 + 0j)
+    out = np.empty((len(x_grid), len(z_grid)), complex)
+    for i, x in enumerate(x_grid):
+        ph = np.where(np.abs(kz) < k, np.exp(1j * (kx - k) * x), 0)
+        inc = np.fft.fftshift(np.fft.ifft(spec * ph))
+        ref = np.fft.fftshift(np.fft.ifft(spec * refl * ph))
+        # the reflected wave at height z is the mirrored (image) spectrum at -z
+        out[i] = np.interp(z_grid, zz, inc.real) + 1j * np.interp(z_grid, zz, inc.imag) \
+            + np.interp(-z_grid, zz, ref.real) + 1j * np.interp(-z_grid, zz, ref.imag)
+    return out
+
+
+class TestRoughSeaNLBC(unittest.TestCase):
+    """Lower NLBC over a rough sea surface (Miller-Brown / Ament).
+
+    The analytic continuation of the roughness factor grows off the real k_z
+    axis, so 1 + R has zeros inside the NLBC contour loop. Two remedies:
+    'fit' approximates 1 + R by the zero-free (1 + R_f) exp(K), K a polynomial
+    fitted on the propagating range and kept moderate on the loop (lifting the
+    BC by a small z0 only if needed); 'shift' lifts the BC to the height z0
+    where R = R_f rho exp(2 i k_z z0) is bounded by 1 on the loop. The field is
+    validated against the exact plane-wave-spectrum solution for a Gaussian
+    beam over a flat sea in a homogeneous atmosphere.
+    """
+
+    SEA = GroundMaterial(eps=70, sigma=4)
+
+    @classmethod
+    def _scenario(cls, pol, sigma_m, model='miller_brown', method='fit', reference_height_m=None,
+                  height_m=30.0, elev_deg=5.0, grazing_angle_deg=None):
+        src = RWPGaussSourceModel(freq_hz=3e9, height_m=height_m, beam_width_deg=3.0,
+                                  elevation_angle_deg=elev_deg, polarization=pol)
+        env = TroposphereModel(M0=320, slope=0.0, ground_material=cls.SEA,
+                               sea_roughness=RoughSeaSurface(sigma_m, model=model, method=method,
+                                                             reference_height_m=reference_height_m,
+                                                             grazing_angle_deg=grazing_angle_deg))
+        params = RWPComputationalParams(
+            max_range_m=2 * height_m / fm.tan(fm.radians(elev_deg)) + 100, max_height_m=2.5 * height_m,
+            max_angle_deg=elev_deg + 5, x_output_points=200, z_output_points=300, precision=0.01)
+        return src, env, params
+
+    def _error_vs_exact(self, src, env, params, name):
+        field = rwp_forward_task(src, env, params)
+        x = np.asarray(field.x_grid)
+        z = np.asarray(field.z_grid)
+        u = np.asarray(field.field)[:len(x), :len(z)]
+        ref = _flat_ground_spectral_reference(src, env, x, z)
+        after = slice(len(x) // 3, None)  # past the specular point
+        err = np.linalg.norm(np.abs(u[after]) - np.abs(ref[after])) / np.linalg.norm(np.abs(ref[after]))
+        if PLOT_DIR:
+            fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+            for ax, arr, lbl in [(axes[0], u, "PE, rough-sea NLBC"), (axes[1], ref, "exact")]:
+                ax.pcolormesh(x, z, 20 * np.log10(np.abs(arr).T + 1e-30), shading="auto",
+                              cmap="jet", vmin=-60, vmax=0)
+                ax.set_title(f"{lbl} ({name})")
+                ax.set_xlabel("Range (m)")
+            axes[0].set_ylabel("Height (m)")
+            _save_fig(f"rough_sea_{name}")
+        return err, field
+
+    def test_factor_on_real_axis(self):
+        from scipy.special import i0
+        k_z = np.linspace(0, 10, 51)
+        sigma = 0.2
+        x = 2 * (sigma * k_z) ** 2
+        mb = RoughSeaSurface(sigma).factor(k_z)
+        ament = RoughSeaSurface(sigma, model='ament').factor(k_z)
+        np.testing.assert_allclose(mb, np.exp(-x) * i0(x), rtol=1e-12)
+        np.testing.assert_allclose(ament, np.exp(-x), rtol=1e-12)
+        self.assertAlmostEqual(abs(mb[0] - 1), 0.0, places=14)
+
+    def test_from_wind_speed(self):
+        self.assertAlmostEqual(RoughSeaSurface.from_wind_speed(10).rms_height_m, 0.51)
+        with self.assertRaises(ValueError):
+            RoughSeaSurface(0.1, model='unknown')
+        with self.assertRaises(ValueError):
+            RoughSeaSurface(0.1, method='unknown')
+
+    def test_shifted_reflection_is_mean_level_reflection_at_real_angles(self):
+        """At real grazing angles the BC reflection coefficient is the rough-surface
+        one about the mean level, re-referenced to the plane z0."""
+        from pywaveprop.propagators._utils import reflection_coef
+        rough = RoughSeaSurface(0.3)
+        eps = self.SEA.complex_permittivity(3e9)
+        k = 2 * np.pi * 3e9 / 3e8
+        smooth = lambda th: reflection_coef(1, eps, 90 - th, 'V')
+        z0 = 2.5
+        func = rough.reflection_coef_func(smooth, k, z0)
+        for th in [0.1, 1.0, 5.0, 20.0]:
+            k_z = k * np.sin(np.radians(th))
+            expected = smooth(th) * rough.factor(k_z) * np.exp(2j * k_z * z0)
+            self.assertAlmostEqual(abs(func(th) - expected), 0.0, places=12)
+
+    def test_auto_reference_height_bounds_reflection_on_contour(self):
+        src, env, params = self._scenario('H', 0.3, method='shift')
+        model = create_rwp_model(src, env, params)
+        z0 = model.z_offset_m
+        self.assertGreater(z0, 0.0)
+        self.assertLess(z0, src.height_m)
+        self.assertAlmostEqual(float(model.z_computational_grid()[0]), z0)
+        # |R| <= 1 on the contour loop at z0 and > 1 somewhere below it
+        from pywaveprop.propagators._utils import reflection_coef
+        eps = self.SEA.complex_permittivity(src.freq_hz)
+        k = 2 * np.pi * src.freq_hz / float(env.wave_speed_profile(z0))
+        smooth = lambda th: reflection_coef(1, eps, 90 - th, 'H')
+        k_z = model.lower_nlbc_contour_kz()
+        theta = np.arcsin(k_z / k) * 180 / np.pi
+        for h, bounded in [(z0, True), (0.9 * z0, False)]:
+            func = env.sea_roughness.reflection_coef_func(smooth, k, h)
+            r_max = max(abs(func(t)) for t in theta)
+            if bounded:
+                self.assertLessEqual(r_max, 1 + 1e-6)
+            else:
+                self.assertGreater(r_max, 1.0)
+
+    def test_fit_keeps_boundary_at_mean_level(self):
+        """For moderate roughness the fitted zero-free R~ needs (almost) no lift, matches
+        R_f rho on the propagating range and is zero-free by construction."""
+        src, env, params = self._scenario('H', 0.1)
+        model = create_rwp_model(src, env, params)
+        # no lift, or a negligible one (a fraction of the rms wave height)
+        self.assertLessEqual(model.z_offset_m, 0.1 * env.sea_roughness.rms_height_m)
+        info = model.rough_sea_fit_info
+        self.assertLessEqual(info['fit_error'], env.sea_roughness.fit_tol)
+        self.assertLessEqual(info['max_abs_re_K_on_contour'], env.sea_roughness.fit_max_log)
+        # passive for all propagating waves the NLBC sees
+        self.assertLessEqual(info['max_abs_R_real_axis'], 1 + 1e-6)
+
+    def test_fit_passive_in_trapping_range(self):
+        """Over a duct the fitted R~ is passive in the quarter disc of vertical
+        wavenumbers the trapping layer returns to the surface, so the rough
+        surface cannot resonate with the duct."""
+        src = RWPGaussSourceModel(freq_hz=3e9, height_m=20.0, beam_width_deg=2.0, polarization='H')
+        env = TroposphereModel(N_profile=EvaporationDuctModel(height_m=15.0), ground_material=self.SEA,
+                               sea_roughness=RoughSeaSurface.from_wind_speed(15))
+        params = RWPComputationalParams(max_range_m=3000, max_height_m=100, x_output_points=100, z_output_points=100)
+        model = create_rwp_model(src, env, params)
+        info = model.rough_sea_fit_info
+        self.assertGreater(info['k_z_passive'], 0.0)
+        self.assertLessEqual(info['fit_error'], env.sea_roughness.fit_tol)
+        func = model.rough_sea_refl_coef_func
+        k = 2 * np.pi * src.freq_hz / float(env.wave_speed_profile(0.0))
+        kap = info['k_z_passive']
+        pts = np.concatenate([1j * np.linspace(1e-3, kap, 50), kap * np.exp(1j * np.linspace(0, np.pi / 2, 50)),
+                              np.linspace(1e-3, 2 * kap, 50)])
+        r = [abs(func(np.arcsin(p / k) * 180 / np.pi)) for p in pts]
+        self.assertLessEqual(max(r), 1 + 1e-6)
+
+    def test_fit_matches_continuation_at_creeping_modes(self):
+        """Beyond the horizon the field is carried by creeping modes, which see
+        the boundary below the real k_z axis (arg ~ -60 deg). The fit must follow
+        the continued Miller-Brown coefficient there, or spurious slowly decaying
+        modes appear."""
+        from pywaveprop.propagators._utils import reflection_coef
+        src = RWPGaussSourceModel(freq_hz=3e9, height_m=20.0, beam_width_deg=2.0, polarization='H')
+        env = TroposphereModel(ground_material=self.SEA, sea_roughness=RoughSeaSurface.from_wind_speed(10))
+        params = RWPComputationalParams(max_range_m=3000, max_height_m=100, x_output_points=100, z_output_points=100)
+        model = create_rwp_model(src, env, params)
+        info = model.rough_sea_fit_info
+        self.assertGreater(info['k_z_creep'], 0.0)
+        k = 2 * np.pi * src.freq_hz / float(env.wave_speed_profile(0.0))
+        eps = self.SEA.complex_permittivity(src.freq_hz)
+        z0 = info['reference_height_m']
+        for kz in info['k_z_creep'] * np.array([0.3, 0.6]) * np.exp(-1j * np.pi / 3):
+            theta = np.arcsin(kz / k) * 180 / np.pi
+            exact = reflection_coef(1, eps, 90 - theta, 'H') * env.sea_roughness.factor(kz) * np.exp(2j * kz * z0)
+            fitted = model.rough_sea_refl_coef_func(theta)
+            self.assertLess(abs(np.log((1 + fitted) / (1 + exact))), 1e-2)
+
+    def test_fit_lifts_less_than_shift(self):
+        src, env, params = self._scenario('H', 0.3)
+        z0_fit = create_rwp_model(src, env, params).z_offset_m
+        src, env, params = self._scenario('H', 0.3, method='shift')
+        z0_shift = create_rwp_model(src, env, params).z_offset_m
+        self.assertLess(z0_fit, 0.5 * z0_shift)
+
+    def test_fit_miller_brown_h_pol_matches_exact(self):
+        src, env, params = self._scenario('H', 0.1)
+        err, _ = self._error_vs_exact(src, env, params, "fit_mb_h")
+        self.assertLess(err, 0.03)
+
+    def test_fit_miller_brown_v_pol_matches_exact(self):
+        src, env, params = self._scenario('V', 0.3)
+        err, _ = self._error_vs_exact(src, env, params, "fit_mb_v")
+        self.assertLess(err, 0.03)
+
+    def test_fit_ament_matches_exact(self):
+        src, env, params = self._scenario('H', 0.3, model='ament')
+        err, _ = self._error_vs_exact(src, env, params, "fit_ament_h")
+        self.assertLess(err, 0.03)
+
+    def test_shift_miller_brown_h_pol_matches_exact(self):
+        src, env, params = self._scenario('H', 0.3, method='shift')
+        err, _ = self._error_vs_exact(src, env, params, "shift_mb_h")
+        self.assertLess(err, 0.03)
+
+    def test_shift_miller_brown_v_pol_matches_exact(self):
+        src, env, params = self._scenario('V', 0.1, method='shift')
+        err, _ = self._error_vs_exact(src, env, params, "shift_mb_v")
+        self.assertLess(err, 0.03)
+
+    def test_roughness_reduces_specular_reflection(self):
+        """The reflected beam over a rough sea is weaker than over a smooth one."""
+        src, env, params = self._scenario('H', 0.3)
+        rough = rwp_forward_task(src, env, params)
+        env_smooth = TroposphereModel(M0=320, slope=0.0, ground_material=self.SEA)
+        smooth = rwp_forward_task(src, env_smooth, params)
+        # vertical cut through the reflected beam at z = h/2 (x = 1.5 h / tan(elev))
+        x_r = 1.5 * src.height_m / fm.tan(fm.radians(src.elevation_angle_deg))
+        amp_r = abs(rough.value(x_r, src.height_m / 2))
+        amp_s = abs(smooth.value(x_r, src.height_m / 2))
+        self.assertLess(amp_r, 0.5 * amp_s)
+
+    def test_unshifted_boundary_is_wrong(self):
+        """Regression for the motivation of z0: with the BC at the mean level the
+        continued Miller-Brown factor makes 1 + R vanish inside the contour and
+        the solution departs from the exact one."""
+        src, env, params = self._scenario('H', 0.3, method='shift', reference_height_m=0.0)
+        err, _ = self._error_vs_exact(src, env, params, "mb_h_unshifted")
+        self.assertGreater(err, 0.2)
+
+    def _smooth_sea(self, pol, freq_hz=3e9):
+        from pywaveprop.propagators._utils import reflection_coef
+        eps = self.SEA.complex_permittivity(freq_hz)
+        return lambda th: reflection_coef(1, eps, 90 - th, pol)
+
+    def test_grazing_blend_impedance_constant_and_even(self):
+        """Barrick (1998): the roughness-modified impedance tends to a constant at
+        grazing. The blend is constant below the blend angle, follows
+        Miller-Brown well above it and is even in k_z (no lateral wave)."""
+        k = 2 * np.pi * 3e9 / 3e8
+        for pol in 'HV':
+            smooth = self._smooth_sea(pol)
+            mb = RoughSeaSurface.from_wind_speed(10)
+            blend = RoughSeaSurface.from_wind_speed(10, grazing_angle_deg='rayleigh')
+            k_g = blend.grazing_k_z(k)
+            self.assertAlmostEqual(k_g, 1 / (2 * blend.rms_height_m))
+
+            def kappa(rough, k_z):
+                r = rough.mean_level_reflection(k_z, smooth, k)
+                return k_z * (r - 1) / (r + 1)
+            low = k_g * np.array([1e-4, 1e-3, 1e-2, 0.05])
+            kap_low = kappa(blend, low)
+            np.testing.assert_allclose(kap_low, blend.grazing_impedance(smooth, k) * k, rtol=5e-3)
+            if pol == 'H':
+                # Miller-Brown's H-pol impedance falls ~1/k_z over the same range
+                kap_mb = kappa(mb, low)
+                self.assertGreater(abs(kap_mb[0]) / abs(kap_mb[-1]), 5)
+            # even in k_z
+            kz = k_g * np.array([0.1, 0.5, 2.0])
+            np.testing.assert_allclose(kappa(blend, -kz), kappa(blend, kz), rtol=1e-8)
+            # the model is recovered well above the blend angle
+            high = np.array([20.0, 40.0]) * k_g
+            np.testing.assert_allclose(blend.mean_level_reflection(high, smooth, k),
+                                       mb.mean_level_reflection(high, smooth, k), atol=5e-3)
+            # passive on the real axis
+            kz = k * np.sin(np.radians(np.linspace(1e-4, 89.9, 3000)))
+            self.assertLessEqual(np.max(np.abs(blend.mean_level_reflection(kz, smooth, k))), 1.0)
+            # R -> -1 at grazing, as for the smooth sea
+            self.assertAlmostEqual(abs(blend.mean_level_reflection(1e-9 * k, smooth, k)[0] + 1), 0.0, places=6)
+
+    def test_grazing_blend_without_option_is_model(self):
+        k = 2 * np.pi * 3e9 / 3e8
+        smooth = self._smooth_sea('H')
+        rough = RoughSeaSurface(0.3)
+        kz = np.linspace(0.01, 5, 20)
+        r_f = np.array([smooth(t) for t in np.degrees(np.arcsin(kz / k))])
+        np.testing.assert_allclose(rough.mean_level_reflection(kz, smooth, k), r_f * rough.factor(kz), rtol=1e-12)
+        self.assertEqual(rough.grazing_k_z(k), 0.0)
+        self.assertAlmostEqual(RoughSeaSurface(0.3, grazing_angle_deg=2.0).grazing_k_z(k), k * np.sin(np.radians(2.0)))
+
+    def test_grazing_blend_validation(self):
+        with self.assertRaises(ValueError):
+            RoughSeaSurface(0.3, method='shift', grazing_angle_deg='rayleigh')
+        for bad in ('auto', 0.0, 95.0):
+            with self.assertRaises(ValueError):
+                RoughSeaSurface(0.3, grazing_angle_deg=bad)
+
+    def test_fit_grazing_blend_matches_exact(self):
+        src, env, params = self._scenario('H', 0.3, grazing_angle_deg='rayleigh')
+        err, field = self._error_vs_exact(src, env, params, "fit_mb_blend_h")
+        self.assertLess(err, 0.03)
+        model = create_rwp_model(src, env, params)
+        info = model.rough_sea_fit_info
+        self.assertLessEqual(info['fit_error'], env.sea_roughness.fit_tol)
+        self.assertAlmostEqual(info['k_z_grazing'], 1 / (2 * 0.3))
+        self.assertLess(info['grazing_impedance'].real, 0.0)
+        # the fitted impedance keeps the constant grazing value and has no odd
+        # (lateral-wave) term: K is matched to first order at k_z = 0
+        k = 2 * np.pi * src.freq_hz / float(env.wave_speed_profile(0.0))
+        z0 = model.z_offset_m
+
+        def kappa(kz):
+            r = model.rough_sea_refl_coef_func(np.arcsin(kz / k) * 180 / np.pi) * np.exp(-2j * kz * z0)
+            return kz * (r - 1) / (r + 1)
+        for h in (1e-4, 1e-3):
+            self.assertLess(abs(kappa(h) - kappa(-h)) / abs(kappa(h)), 1e-6)
+            self.assertLess(abs(kappa(h) / k - info['grazing_impedance']), 1e-3 * abs(info['grazing_impedance']))
+
+    def test_grazing_blend_warns_inside_creeping_range(self):
+        """At X band and 15 m/s the Rayleigh blend angle is below the creeping-mode
+        range, where the far field depends on the blend shape."""
+        src = RWPGaussSourceModel(freq_hz=10e9, height_m=20.0, beam_width_deg=2.0, polarization='H')
+        env = TroposphereModel(ground_material=self.SEA,
+                               sea_roughness=RoughSeaSurface.from_wind_speed(15, grazing_angle_deg='rayleigh'))
+        params = RWPComputationalParams(max_range_m=2000, max_height_m=60, x_output_points=50, z_output_points=50)
+        with self.assertWarnsRegex(UserWarning, 'creeping-mode range'):
+            create_rwp_model(src, env, params)
+
+    def test_split_step_methods_reject_roughness(self):
+        src, env, params = self._scenario('H', 0.1)
+        params.approx_method = 'ssf'
+        with self.assertRaises(NotImplementedError):
+            create_rwp_model(src, env, params)
 
 
 class TestRWPField(unittest.TestCase):

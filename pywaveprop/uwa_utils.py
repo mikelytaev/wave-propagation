@@ -6,6 +6,9 @@ class UWAComputationalParams:
     max_range_m: float
     max_depth_m: float = None
     rational_approx_order = None
+    terrain_method = 'staircase'  # bathymetry: 'staircase' (pressure-release below the seabed) or 'transform'
+    terrain_transition_m = None  # 'transform': sediment thickness over which the coordinates become Cartesian
+    terrain_smoothing_m = None  # 'transform': Gaussian smoothing of the bathymetry samples (default: their spacing)
     dx_m: float = None
     dz_m: float = None
     x_output_points: int = None

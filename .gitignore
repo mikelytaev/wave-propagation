@@ -7,3 +7,4 @@ build/
 *.c
 test_reports/
 test_plots/
+papers/

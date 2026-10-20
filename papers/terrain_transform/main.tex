@@ -196,11 +196,11 @@ with $\rho\equiv1$ in tropospheric propagation ($k^2=k_0^2n^2$, $n$ including
 the Earth-flattening term of the modified refractivity $M$).
 \begin{itemize}
 \item \textbf{Troposphere.} $z$ is the height above sea level, the domain is
-$\Omega=\{z>B(x)\}$, $B$ is the terrain, and the ground is perfectly conducting:
+$\Omega=\{z>T(x)\}$, $T$ is the terrain, and the ground is perfectly conducting:
 $\psi=0$ (horizontal polarisation) or $\pd_n\psi=0$ (vertical polarisation) on
-$z=B(x)$.
+$z=T(x)$.
 \item \textbf{Ocean.} $z$ is the depth, the sea surface $z=0$ is pressure
-release ($\psi=0$), and the seabed $z=B(x)$ separates the water (density
+release ($\psi=0$), and the seabed $z=T(x)$ separates the water (density
 $\rho_w$, sound speed $c_w(z)$) from a fluid bottom ($\rho_b$, $c_b$,
 attenuation $\alpha_b$). On it $[\psi]=0$ and $[\rho^{-1}\pd_n\psi]=0$.
 \end{itemize}
@@ -330,7 +330,7 @@ The coordinate lines $\eta=\mathrm{const}$ are the curves $z=Z(x,\eta)$ with
 Z(x,\eta)=\eta+z_{\rm off}+u(x,\eta),
 \end{equation}
 where $u$ is the harmonic extension of the boundary, tapered to zero. Let
-$b(x)=B(x)-z_{\rm off}-\etab$ and $\hat b(\kappa)$ its Fourier transform. With
+$b(x)=T(x)-z_{\rm off}-\etab$ and $\hat b(\kappa)$ its Fourier transform. With
 $t=(\eta-\etab)/L$,
 \begin{equation}\label{eq:kernel}
 \hat u(\kappa,\eta)=\hat b(\kappa)\times
@@ -344,40 +344,40 @@ $t\ge1$.
 \begin{itemize}
 \item \textbf{Troposphere (half-space map).} $\etab=0$, $z_{\rm off}=z_{\rm ref}$.
 The terrain is the line $\eta=0$ and the coordinates relax to $z=\eta+z_{\rm ref}$.
-\item \textbf{Ocean (strip map).} $z_{\rm off}=0$, $\etab=\max B$. The surface
+\item \textbf{Ocean (strip map).} $z_{\rm off}=0$, $\etab=\max T$. The surface
 $z=0$ is $\eta=0$, the seabed is $\eta=\etab$, and the coordinates are
 $z=\eta$ deep in the bottom.
 \end{itemize}
 The family has the following properties.
 \begin{enumerate}
-\item $Z(x,\etab)=B(x)$ exactly, and in the strip $Z(x,0)=0$.
+\item $Z(x,\etab)=T(x)$ exactly, and in the strip $Z(x,0)=0$.
 \item \emph{Identity region}: $Z=\eta+z_{\rm off}$ for $\eta\ge\etal=\etab+L$.
 \item Above the boundary, near it ($w\approx1$), $u$ is harmonic. A feature of
 horizontal scale $\ell$ decays over a height $\sim\ell$, so small-scale relief is
 confined near the boundary, as with a conformal map, and only the large-scale
 relief reaches the taper.
 \item In the water column the default is the $\sigma$-coordinate
-$Z=\eta B(x)/\etab$, with $Z_\eta=B/\etab>0$ for any bathymetry. The harmonic
+$Z=\eta T(x)/\etab$, with $Z_\eta=T/\etab>0$ for any bathymetry. The harmonic
 ($\sinh$) profile keeps the near-conformal property, but the $\eta$-derivative
 of the strip kernel has negative lobes. Next to steep, high relief it then
 overshoots and makes $Z_\eta<0$: on the Bermuda pedestal (\cref{sec:realdata})
 this happens for every smoothing width up to \SI{1}{km}.
 \item \emph{Regularity}: the map is invertible if $Z_\eta>0$. In the water column
-of the strip map $Z_\eta=B/\etab>0$. Above $\etab$ write $u=w(t)U$, where $U$ is
+of the strip map $Z_\eta=T/\etab>0$. Above $\etab$ write $u=w(t)U$, where $U$ is
 the (Poisson) harmonic extension of $b$, so that
 \[
 Z_\eta=1+w\,U_\eta+\frac{w'}{L}\,U .
 \]
 \begin{itemize}
-\item With $z_{\rm ref}=\max B$ (or $\etab=\max B$), $b\le0$, hence $U\le0$ by the
+\item With $z_{\rm ref}=\max T$ (or $\etab=\max T$), $b\le0$, hence $U\le0$ by the
 maximum principle, and $w'\le0$, so the taper term is non-negative and
 $Z_\eta\ge1-\max|U_\eta|$ for every $L$. Here $U_\eta=\mathcal H[b']$ at the
 boundary is a bound on the (smoothed) slopes.
-\item With $z_{\rm ref}=\overline B$ the taper compresses the high parts, and
-$Z_\eta\ge1-\max|U_\eta|-\tfrac{15}{8}\max(B-z_{\rm ref})/L$.
+\item With $z_{\rm ref}=\overline T$ the taper compresses the high parts, and
+$Z_\eta\ge1-\max|U_\eta|-\tfrac{15}{8}\max(T-z_{\rm ref})/L$.
 \end{itemize}
 The implementation checks $Z_\eta>0$ (and $h_\xi>0$) numerically and falls back
-to $z_{\rm ref}=\max B$.
+to $z_{\rm ref}=\max T$.
 \end{enumerate}
 
 The boundary is extended evenly at $x=0$ and at the far end of a padded
@@ -430,7 +430,7 @@ seabed $\eta=\etab$. (a)~Gaussian hill: small-scale relief decays over its own
 width. (b)~$20^\circ$ slope without the even extension at $x=0$: the starting
 trajectory is curved. (c)~Scottish Highlands (\cref{sec:realdata}). (d)~Penetrable
 wedge: $\sigma$-coordinates in the water and the tapered extension in the
-sediment. (e,f)~Bermuda pedestal with $\etab=\max B$ (strong compression of the
+sediment. (e,f)~Bermuda pedestal with $\etab=\max T$ (strong compression of the
 shelf column) and with $\etab=\SI{1200}{m}$ (compression moved into the
 sediment, expansion of the deep water). Panels (c)--(f) are vertically
 exaggerated, so the right angles appear distorted.}
@@ -844,8 +844,8 @@ wavenumber interval of the rational approximation considerably and limits the
 feasible aperture. A range-dependent choice of $\Delta\eta$ is not possible (the
 grid is fixed), but a local check of the error budget, or a map that minimises
 the spread of $h_\xi$, would reduce the pessimism.
-\item \emph{Large depth contrast in the strip map.} With $\etab=\max B$ the
-$\sigma$-coordinates compress a shallow column by $B_{\min}/\max B$. On the Bermuda
+\item \emph{Large depth contrast in the strip map.} With $\etab=\max T$ the
+$\sigma$-coordinates compress a shallow column by $T_{\min}/\max T$. On the Bermuda
 pedestal this factor is $1/36$, so $r$ jumps strongly across the seabed node. A
 smaller $\etab$ reduces the jump at the price of a larger $\max r$ (finer
 $\Delta\eta$). A near-conformal profile with guaranteed $Z_\eta>0$, or a

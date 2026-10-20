@@ -17,6 +17,8 @@
 * Multiple knife-edge diffraction problem solver ([link](https://doi.org/10.1109/TAP.2019.2957085))
 * Wavenumber integration method
 * Python wrappers for [PETOOL](https://www.sciencedirect.com/science/article/pii/S0010465511002669) and [RAM](http://staff.washington.edu/dushaw/AcousticsCode/RamMatlabCode.html)
+* Split-step Fourier propagator with sine / cosine / discrete mixed Fourier transforms and the angle-dependent consistent-field impedance condition of Sprouse & Awadallah (2012), and its rank-adaptive generalisation (`pywaveprop.helmholtz_rassf_jax`): cross approximation of the exact wide-angle one-way symbol, range steps up to the output step, classical SSF recovered at rank one
+* Irregular terrain and bathymetry in orthogonal terrain-following coordinates (`terrain_method = 'transform'` in `RWPComputationalParams` / `UWAComputationalParams`; `pywaveprop.helmholtz_tf_jax`): no staircase, rational approximations of any order without an additional angle limit, the discrete nonlocal boundary condition unchanged, a penetrable seabed whose interface follows the bathymetry (`papers/terrain_transform`)
 * Greene and Claerbout approximations with linear shift map method ([link](https://ieeexplore.ieee.org/abstract/document/8023886))
 * Visualization of the wave fields
 * Real-world environment data: terrain, land cover, bathymetry, Argo sound speed profiles, and NWP-derived tropospheric refractivity (`pywaveprop.environment`)
