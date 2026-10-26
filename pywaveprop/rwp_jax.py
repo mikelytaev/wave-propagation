@@ -38,6 +38,9 @@ class RWPComputationalParams:
     terrain_smoothing_m = None  # 'transform': Gaussian smoothing of the terrain samples (default: their spacing)
     terrain_z_ref = 'mean'  # 'transform': level the coordinate lines relax to: 'mean', 'max', 'min' or metres
     terrain_slope_aperture = True  # 'transform': widen the aperture by twice the maximum terrain slope
+    terrain_beta_mode = 'global'  # 'transform': 'global' or 'column' (one reference wavenumber per class of columns)
+    terrain_beta_classes = 16  # 'transform', terrain_beta_mode='column': number of column classes
+    terrain_absorb_m = None  # 'transform': absorbing layer on top with a Dirichlet condition instead of the NLBC
     dx_m: float = None
     dz_m: float = None
     x_output_points: int = None
@@ -1129,7 +1132,9 @@ def create_rwp_tf_model(src: RWPGaussSourceModel, env: TroposphereModel, params:
         freq_hz=src.freq_hz, terrain_map=tm, medium=TFMedium(k2_above=k2_above),
         kz_max=kz_max, k_bounds=(k_min, k_max), precision=params.precision, mesh_params=mesh_params,
         rational_approx_order=params.rational_approx_order, approx_method=params.approx_method,
-        **bc)
+        beta_mode=params.terrain_beta_mode, n_beta_classes=params.terrain_beta_classes,
+        absorb_m=params.terrain_absorb_m,
+        upper_bc='dirichlet' if params.terrain_absorb_m else 'nlbc', **bc)
 
 
 def rwp_tf_forward_task(src: RWPGaussSourceModel, env: TroposphereModel,

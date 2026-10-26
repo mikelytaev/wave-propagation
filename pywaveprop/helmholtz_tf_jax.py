@@ -25,8 +25,9 @@ is the identity at the top of the domain, where the upper discrete nonlocal
 boundary condition of the parent class is used unchanged.  See
 ``papers/terrain_transform/main.tex``.
 """
+import functools
 import math as fm
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 import jax
@@ -38,6 +39,7 @@ from jax import tree_util
 from pywaveprop.grid_optimizer import get_optimal_grid, get_last_ratinterp_xi_bounds
 from pywaveprop.helmholtz_common import HelmholtzMeshParams2D
 from pywaveprop.helmholtz_jax import RationalHelmholtzPropagator
+from pywaveprop.propagators._utils import pade_propagator_coefs
 from pywaveprop.terrain_transform import OrthogonalTerrainMap
 
 
@@ -70,6 +72,94 @@ def fourth_root_factors(order: int, rotation_deg: float = 45.0):
     return [(in_l(a), in_l(b)) for a, b in zip(p_roots, q_roots)]
 
 
+def column_classes(h_min, h_max, r_max, n_classes):
+    """Group columns by the range of ``h_xi`` on them (bins of
+    ``log h_min + log h_max``).  Returns the class of every column and, per
+    class, ``(h_min, h_max, r_max)`` over its members."""
+    key = np.log(h_min) + np.log(h_max)
+    edges = np.linspace(key.min(), key.max() + 1e-12, n_classes + 1)
+    cls = np.clip(np.searchsorted(edges, key, side='right') - 1, 0, n_classes - 1)
+    used = np.unique(cls)
+    cls = np.searchsorted(used, cls)
+    bounds = [(float(h_min[cls == k].min()), float(h_max[cls == k].max()), float(r_max[cls == k].max()))
+              for k in range(used.size)]
+    return cls, bounds
+
+
+@functools.lru_cache(maxsize=None)
+def pade_coefs_cached(order, beta, dx):
+    return tuple(tuple(v) for v in pade_propagator_coefs(pade_order=order, beta=beta, dx=dx)[0])
+
+
+def class_grid(order, classes, kz_max, k_bounds, required_prec, dx_out, dz_out, z_size, x_size):
+    """Common ``dxi`` and ``deta`` with one reference wavenumber per class.
+
+    ``classes``: ``(h_min, h_max, r_max)`` per class.  A candidate
+    ``dxi = dx_out / n`` is admissible if each class has an entry
+    ``(t_j, delta_j)`` of the Padé error table and a ``beta`` in that entry's
+    admissible interval ``[l_j, r_j]`` with ``beta dxi <= t_j`` (the error at a
+    smaller ``t`` is assumed not larger) and ``delta_j beta / t_j <=
+    required_prec`` (accumulation over the entry's own step, as in the flat
+    optimizer before snapping).  The class takes ``beta = l_j`` of the entry
+    with the largest vertical step; ``deta`` is the smallest class step
+    ``dz (h_min / h_max) / r_max``.  Returns ``(cost, dxi, deta, betas,
+    deltas)`` or ``None``."""
+    from pywaveprop import grid_optimizer as go
+    if order not in go._tables_cache:
+        go._get_optimal_grid_pade(kz_max, *k_bounds, required_prec, propagator_order=order)
+    tab = go._tables_cache[order]
+    T = tab.t_betas[:, None]
+    D = tab.precs[None, :]
+    pre = []
+    for h_min, h_max, r_max in classes:
+        kz = kz_max * h_min
+        k_min, k_max = k_bounds[0] * h_min, k_bounds[1] * h_max
+        a, b = k_min ** 2 - kz ** 2, k_max ** 2
+        if a <= 0:
+            return None
+        lo = np.sqrt(b / (tab.xi_b + 1))
+        hi = np.minimum(np.sqrt(a / (tab.xi_a + 1)), required_prec * T / D)
+        dz_max = min(dz_out * r_max, 2.0 / (0.5 * (k_min + k_max)))
+        pre.append((kz, a, lo, hi, dz_max, (h_min / h_max) / r_max))
+    best = None
+    dz_memo = {}            # the vertical step depends on the class and the table entry only
+    for n in range(1, max(int(fm.ceil(dx_out / 0.01)), 1) + 1):
+        dx = dx_out / n
+        if best is not None and (x_size / dx) * order[1] > best[0]:
+            break
+        betas, deltas, deta = [], [], fm.inf
+        for c, (kz, a, lo, hi, dz_max, factor) in enumerate(pre):
+            ok = lo <= np.minimum(hi, T / dx)
+            if not ok.any():
+                betas = None
+                break
+            # vertical tolerance t delta 2 sqrt(a) / beta (flat optimizer): largest at beta = l
+            score = np.where(ok, T * D / lo, -1.0)
+            i, j = np.unravel_index(int(np.argmax(score)), score.shape)
+            t, delta, beta = float(tab.t_betas[i]), float(tab.precs[j]), float(lo[i, j])
+            if (c, i, j) not in dz_memo:
+                dz_prec = t ** 2 * delta / (t / (2 * fm.sqrt(a) / beta))
+                if go.fourth_order_error_kz(kz, dz_max) < dz_prec:
+                    dz_memo[c, i, j] = dz_max
+                else:
+                    dz_memo[c, i, j] = go.func_binary_search(lambda z: go.fourth_order_error_kz(kz, z), 0.0001,
+                                                             dz_max, dz_prec, 1e-3)
+            dz = dz_memo[c, i, j]
+            if fm.isnan(dz):
+                betas = None
+                break
+            betas.append(beta)
+            deltas.append(delta)
+            deta = min(deta, dz * factor)
+        if betas is None:
+            continue
+        deta = dz_out / fm.ceil(dz_out / deta)
+        cost = (fm.ceil(x_size / dx) + 1) * (fm.ceil(z_size / deta) + 1) * order[1]
+        if best is None or cost < best[0]:
+            best = (cost, dx, deta, betas, deltas)
+    return best
+
+
 @dataclass
 class TFMedium:
     """Medium seen by the terrain-following propagator.
@@ -95,8 +185,18 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
                kz_max, k_bounds, precision, mesh_params: HelmholtzMeshParams2D,
                rational_approx_order=(7, 8), approx_method='pade', lower_bc='dirichlet',
                upper_bc='nlbc', coarse_dxi_m=None, max_table_size=40_000_000, flux_order=2,
-               lower_impedance_alpha=None, impedance_closure='compact'):
+               lower_impedance_alpha=None, impedance_closure='compact', beta_mode='global', n_beta_classes=16,
+               absorb_m=None):
         """Choose the grid, build the coordinate tables and the propagator.
+
+        ``beta_mode='column'``: one reference wavenumber per class of columns
+        (grouped by the range of ``h_xi`` on the column, ``n_beta_classes``
+        bins), so that the Padé approximant covers the local spectrum of each
+        column only instead of the global one (:func:`class_grid`).  The
+        nonlocal upper condition assumes the same step in every column, so this
+        mode needs ``upper_bc='dirichlet'`` with an absorbing layer
+        (``absorb_m`` metres added on top of the domain, damping ``0.02 i k^2``
+        ramped quadratically).
 
         ``lower_bc='impedance'`` imposes the Leontovich condition
         ``d psi / dn + lower_impedance_alpha * psi = 0`` on the ground (see
@@ -141,6 +241,59 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
 
         orders = [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)] \
             if rational_approx_order is None else [tuple(rational_approx_order)]
+        if absorb_m:
+            z_top = terrain_map.z_off + mesh_params.z_size_m
+            k2_phys = medium.k2_above
+
+            def k2_absorbing(x, z):
+                ramp = np.clip((np.asarray(z) - z_top) / absorb_m, 0.0, 1.0) ** 2
+                return np.asarray(k2_phys(x, z), dtype=complex) * (1 + 0.02j * ramp)
+            medium = replace(medium, k2_above=k2_absorbing)
+            mesh_params = replace(mesh_params, z_size_m=mesh_params.z_size_m + absorb_m)
+        beta_classes = None
+        if beta_mode == 'column':
+            if upper_bc == 'nlbc':
+                raise ValueError("beta_mode='column' needs upper_bc='dirichlet' (with absorb_m)")
+            if not mesh_params.dx_output_m or not mesh_params.dz_output_m:
+                raise ValueError("beta_mode='column' needs dx_output_m and dz_output_m")
+            from scipy.ndimage import maximum_filter1d, minimum_filter1d
+            r_col = np.maximum((mp.h_eta / mp.h_xi).max(axis=1), (mp.h_eta_below / mp.h_xi).max(axis=1))
+            # a step reads the columns within dxi / 2 of its midpoint
+            w = 2 * (fm.ceil(dx_max / (xi_p[1] - xi_p[0])) + 1) + 1
+            h_lo = minimum_filter1d(mp.h_xi.min(axis=1), w, mode='nearest')
+            h_hi = maximum_filter1d(mp.h_xi.max(axis=1), w, mode='nearest')
+            cls_p, bounds = column_classes(h_lo, h_hi, maximum_filter1d(r_col, w, mode='nearest'), n_beta_classes)
+            best_c = None
+            for order in orders:
+                g = class_grid(order, bounds, kz_max, k_bounds, precision / mesh_params.x_size_m,
+                               mesh_params.dx_output_m, mesh_params.dz_output_m, mesh_params.z_size_m,
+                               mesh_params.x_size_m)
+                if g is not None and (best_c is None or g[0] < best_c[0]):
+                    best_c = (g[0], order) + g[1:]
+            if best_c is None:
+                raise ValueError("Grid optimization failed for beta_mode='column'")
+            _, order, dx, deta, betas, deltas = best_c
+            x_step = fm.ceil(mesh_params.dx_output_m / dx - 1e-9)
+            z_step = fm.ceil(mesh_params.dz_output_m / deta - 1e-9)
+            x_n = fm.ceil(mesh_params.x_size_m / dx) + 1
+            z_n = fm.ceil(mesh_params.z_size_m / deta) + 1
+            # tables and flux factors keep one global beta: the one of the class of flattest columns
+            beta = betas[int(np.argmin([abs(np.log(b[0] * b[1])) for b in bounds]))]
+            beta_classes = dict(betas=np.array(betas), cls_p=cls_p, dxi_p=float(xi_p[1] - xi_p[0]),
+                                coefs=np.array([pade_coefs_cached(order, bk, dx) for bk in betas], dtype=complex))
+            xi_bounds = None
+            # actual error of each class approximant over its spectrum (tabulated bound: delta)
+            from pywaveprop.grid_optimizer import rational_approx_error
+            kzc = kz_max
+            errs = []
+            for (h_lo_k, h_hi_k, _), bk, ck in zip(bounds, betas, beta_classes['coefs']):
+                xi = np.linspace(((k_bounds[0] * h_lo_k) ** 2 - (kzc * h_lo_k) ** 2) / bk ** 2 - 1,
+                                 (k_bounds[1] * h_hi_k) ** 2 / bk ** 2 - 1, 400)
+                errs.append(float(np.max(rational_approx_error(bk * dx, xi, ck))))
+            beta_classes['errors'] = errs
+            print('beta classes: ' + ', '.join(f'[{b[0]:.3f}, {b[1]:.3f}] -> beta {bk:.4f} err {e:.1e} (<= {d:.0e})'
+                                              for b, bk, e, d in zip(bounds, betas, errs, deltas)))
+            orders = []
         best = None
         for order in orders:
             beta_t, dx_t, dz_t = get_optimal_grid(kzb, kb[0], kb[1], precision / mesh_params.x_size_m,
@@ -168,13 +321,14 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             cost = x_n_t * z_n_t * order[1]
             if best is None or cost < best[0]:
                 best = (cost, order, beta_t, dx_t, deta_t, x_n_t, z_n_t, x_step, z_step, xi_bounds_t)
-        if best is None:
+        if best is None and beta_classes is None:
             raise ValueError(
                 "Grid optimization failed for the terrain-following propagator: the rational approximation "
                 f"cannot cover k in [{kb[0]:.4g}, {kb[1]:.4g}] (metric h_xi in [{hxi_min:.3f}, {hxi_max:.3f}]) "
                 f"with k_z up to {kz_max:.4g} at this precision; reduce the aperture, relax the precision, "
                 "or smooth the boundary / enlarge the transition height")
-        _, order, beta, dx, deta, x_n, z_n, x_step, z_step, xi_bounds = best
+        if beta_classes is None:
+            _, order, beta, dx, deta, x_n, z_n, x_step, z_step, xi_bounds = best
         print(f'rational_approx_order: {order}, beta: {beta}, dxi: {dx}, deta: {deta}')
 
         if terrain_map.kind == 'strip':
@@ -184,6 +338,9 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
 
         tables = cls.build_tables(terrain_map, medium, beta=beta, dxi=dx, deta=deta, x_n=x_n, z_n=z_n,
                                   coarse_dxi_m=coarse_dxi_m, max_table_size=max_table_size)
+        if beta_classes is not None:
+            tables.update(beta_cls=jnp.asarray(beta_classes['betas']), coefs_cls=jnp.asarray(beta_classes['coefs']),
+                          cls_p=jnp.asarray(beta_classes['cls_p']), dxi_p=beta_classes['dxi_p'])
 
         return cls(order=order, beta=beta, dx_m=dx, dz_m=deta, x_n=x_n, z_n=z_n,
                    x_grid_scale=x_step, z_grid_scale=z_step, freq_hz=freq_hz,
@@ -321,6 +478,10 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
                          wave_speed=None, coefs=coefs, upper_nlbc_coefs=upper_nlbc_coefs,
                          approx_method=approx_method, xi_bounds=xi_bounds)
         nlbc_given = upper_nlbc_coefs is not None
+        if tables is not None and 'beta_cls' not in tables:
+            # one reference wavenumber for all columns
+            tables.update(beta_cls=jnp.array([self.beta]), coefs_cls=self.coefs[None], cls_p=jnp.zeros(1, dtype=int),
+                          dxi_p=1e30)
         self.alpha = float(alpha)
         if not nlbc_given and upper_bc == 'nlbc' and self.alpha != 1 / 12:
             # the parent computed the kernels for the Numerov exterior scheme
@@ -338,7 +499,8 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
 
     def _tree_flatten(self):
         t = self.tables
-        dynamic = (t['het'], t['m'], t['rt'], t['rt_half'], t['het_top'], self.upper_nlbc_coefs, t['h_eta0'])
+        dynamic = (t['het'], t['m'], t['rt'], t['rt_half'], t['het_top'], self.upper_nlbc_coefs, t['h_eta0'],
+                   t['beta_cls'], t['coefs_cls'], t['cls_p'])
         static = {
             'order': self.order, 'beta': self.beta, 'dx_m': self.dx_m, 'dz_m': self.dz_m,
             'x_n': self.x_n, 'z_n': self.z_n, 'coefs': self.coefs_t, 'x_grid_scale': self.x_grid_scale,
@@ -346,16 +508,17 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             'xi_bounds': self.xi_bounds, 'lower_bc': self.lower_bc, 'upper_bc': self.upper_bc,
             'flux_order': self.flux_order, 'alpha': self.alpha,
             'lower_impedance_alpha': self.lower_impedance_alpha, 'impedance_closure': self.impedance_closure,
-            'tables_static': (t['rho_top'], t['n_lab'], t['coarse_dxi'], t['n_c']),
+            'tables_static': (t['rho_top'], t['n_lab'], t['coarse_dxi'], t['n_c'], t['dxi_p']),
         }
         return dynamic, static
 
     @classmethod
     def _tree_unflatten(cls, static, dynamic):
         static = dict(static)
-        rho_top, n_lab, coarse_dxi, n_c = static.pop('tables_static')
+        rho_top, n_lab, coarse_dxi, n_c, dxi_p = static.pop('tables_static')
         tables = dict(het=dynamic[0], m=dynamic[1], rt=dynamic[2], rt_half=dynamic[3], het_top=dynamic[4],
-                      h_eta0=dynamic[6], rho_top=rho_top, n_lab=n_lab, coarse_dxi=coarse_dxi, n_c=n_c)
+                      h_eta0=dynamic[6], beta_cls=dynamic[7], coefs_cls=dynamic[8], cls_p=dynamic[9],
+                      rho_top=rho_top, n_lab=n_lab, coarse_dxi=coarse_dxi, n_c=n_c, dxi_p=dxi_p)
         return cls(tables=tables, upper_nlbc_coefs=dynamic[5], **static)
 
     # ---------------------------------------------------------- coefficients
@@ -378,9 +541,9 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         return het, m, rt, rt_half, lerp(t['h_eta0'])
 
     # ------------------------------------------------------------ propagation
-    def _tf_substep(self, a, b, u, het, m, rt, rt_half, h_eta0, upper_bound):
+    def _tf_substep(self, a, b, u, het, m, rt, rt_half, h_eta0, upper_bound, beta=None):
         alpha = self.alpha
-        tau2 = (self.beta * self.dz_m) ** 2
+        tau2 = ((self.beta if beta is None else beta) * self.dz_m) ** 2
         wl = jnp.concatenate((jnp.zeros(1), rt[1:] / rt_half))      # rt_j / rt_{j-1/2}
         wr = jnp.concatenate((rt[:-1] / rt_half, jnp.zeros(1)))     # rt_j / rt_{j+1/2}
 
@@ -457,16 +620,25 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             u = self._tf_substep(b, a, u, *ct, (0.0, 1.0, u[-1]))
         return y.at[:n].set(u)
 
-    def _tf_step(self, initial, upper_convolution, cols_prev, cols_mid, cols_next):
+    def _tf_step(self, initial, upper_convolution, cols_prev, cols_mid, cols_next, k=0):
         """One range step ``B_(n+1)^(-1/4) R(L_(n+1/2)) B_n^(1/4)`` written as
         ``[B_(n+1)^(-1/4) B_mid^(1/4)] R [B_mid^(-1/4) B_n^(1/4)]``: the bracketed
         pairs are the identity in the exterior, so the upper NLBC of the plain
-        rational chain applies unchanged."""
+        rational chain applies unchanged.
+
+        ``R`` uses the reference wavenumber ``beta_k`` of class ``k``:
+        ``exp(i dxi sqrt(B)) = exp(i beta_k dxi) R_k(L_k)``, with
+        ``L_k = (beta / beta_k)^2 (1 + L) - 1``; the envelope keeps the global
+        ``beta`` (factor ``exp(i (beta_k - beta) dxi)``).  The flux factors are
+        exact powers of ``1 + L`` and keep the global ``beta``."""
         if self.flux_order > 0:
             y = self._flux_pair(initial, cols_prev, cols_mid)
         else:
             y = initial * (cols_prev[1] / cols_mid[1]) ** 0.25
         het, m, rt, rt_half, h_eta0 = cols_mid
+        beta_k = self.tables['beta_cls'][k]
+        coefs_k = self.tables['coefs_cls'][k]
+        het = (het + 1) * (self.beta / beta_k) ** 2 - 1
         upper_field = jnp.zeros(len(self.coefs), dtype=complex)
         use_nlbc = self.upper_bc == 'nlbc'
 
@@ -477,10 +649,12 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
                                upper_convolution[i] + self.upper_nlbc_coefs[0, i] @ upper_field)
             else:
                 upper_bound = (0.0, 1.0, 0.0)
-            y1 = self._tf_substep(self.coefs[i][0], self.coefs[i][1], y0, het, m, rt, rt_half, h_eta0, upper_bound)
+            y1 = self._tf_substep(coefs_k[i, 0], coefs_k[i, 1], y0, het, m, rt, rt_half, h_eta0, upper_bound,
+                                  beta=beta_k)
             return y1, upper_field.at[i].set(y1[-1])
 
         y, upper_field = jax.lax.fori_loop(0, len(self.coefs), substep, (y, upper_field))
+        y = y * jnp.exp(1j * (beta_k - self.beta) * self.dx_m)
         if self.flux_order > 0:
             y = self._flux_pair(y, cols_mid, cols_next)
         else:
@@ -504,7 +678,10 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             cols_mid = self._columns_at((i - 0.5) * self.dx_m)
             cols_next = self._columns_at(i * self.dx_m)
             upper_convolution = self._convolution(self.upper_nlbc_coefs, upper_field, i)
-            y1, upper_field_i = self._tf_step(y0, upper_convolution, cols_prev, cols_mid, cols_next)
+            cls_p = self.tables['cls_p']
+            k = cls_p[jnp.clip(jnp.round((i - 0.5) * self.dx_m / self.tables['dxi_p']).astype(jnp.int64),
+                               0, cls_p.shape[0] - 1)]
+            y1, upper_field_i = self._tf_step(y0, upper_convolution, cols_prev, cols_mid, cols_next, k)
             res = jax.lax.cond(i % self.x_grid_scale == 0,
                                lambda: res.at[i // self.x_grid_scale, :].set(y1[::self.z_grid_scale]),
                                lambda: res)

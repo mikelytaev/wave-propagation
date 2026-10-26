@@ -286,6 +286,30 @@ class TestFrontEnds(unittest.TestCase):
         # a lossy ground absorbs: the field near the ground behind the hill is weaker than over PEC
         self.assertLess(np.abs(f.field[-1, :5]).max(), np.abs(pec.field[-1, :5]).max())
 
+    def test_rwp_transform_beta_column(self):
+        # one reference wavenumber per class of columns, absorbing top: same field as the global
+        # beta with the NLBC, on a coarser range grid
+        xs = np.linspace(0, 3000, 61)
+        hs = 150 * np.exp(-((xs - 1500) / 250) ** 2) + 20
+        env = TroposphereModel(terrain=PiecewiseLinearTerrainModel(xs, hs),
+                               ground_material=GroundMaterial(eps=15, sigma=0.005))
+        src = RWPGaussSourceModel(freq_hz=1e8, height_m=60, beam_width_deg=10, elevation_angle_deg=3,
+                                  polarization='V')
+        p = RWPComputationalParams(max_range_m=3000, max_height_m=600, max_angle_deg=30, dx_m=25, dz_m=1)
+        p.terrain_method = 'transform'
+        p.terrain_transition_m = 400
+        p.terrain_smoothing_m = 50
+        p.terrain_slope_aperture = False
+        ref = rwp_forward_task(src, env, p)
+        p.terrain_beta_mode = 'column'
+        p.terrain_absorb_m = 200.0
+        col = rwp_forward_task(src, env, p)
+        n = ref.field.shape[1]
+        np.testing.assert_allclose(col.z_phys[:, :n], ref.z_phys, atol=1e-6)
+        pl_ref, pl_col = ref.path_loss().field, col.path_loss().field[:, :n]
+        inside = (ref.z_phys < 500) & (ref.x_phys > 200) & (pl_ref < 130)
+        self.assertLess(np.median(np.abs(pl_col - pl_ref)[inside]), 0.05)
+
     def test_uwa_transform(self):
         x_b = np.array([0.0, 1000.0, 3000.0, 4000.0])
         d_b = np.array([150.0, 150.0, 80.0, 80.0])
