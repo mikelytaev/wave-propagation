@@ -117,7 +117,9 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         if terrain_map.kind == 'strip':
             deta_p = terrain_map.eta_b / max(round(terrain_map.eta_b / deta_p), 1)
         lev = np.arange(0.0, min(terrain_map.eta_lab + 4 * deta_p, mesh_params.z_size_m) + deta_p / 4, deta_p / 2)
-        xi_p = np.linspace(0.0, mesh_params.x_size_m, max(int(mesh_params.x_size_m / max(terrain_map.L / 4, 1.0)), 16))
+        # the metric extremes sit on the ground, at the scale of the terrain smoothing
+        dxi_p = max(min(terrain_map.L, terrain_map.smoothing_m or terrain_map.L) / 8, 1.0)
+        xi_p = np.linspace(0.0, mesh_params.x_size_m, min(max(int(mesh_params.x_size_m / dxi_p) + 1, 16), 4000))
         mp = terrain_map.metrics(xi_p, lev)
         r_all = np.concatenate([(mp.h_eta / mp.h_xi).ravel(), (mp.h_eta_below / mp.h_xi).ravel()])
         hxi_min, hxi_max = float(mp.h_xi.min()), float(mp.h_xi.max())

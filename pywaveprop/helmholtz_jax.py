@@ -617,11 +617,15 @@ class RationalHelmholtzPropagator:
             # adaptive integration to fail.
             from scipy import linalg as sla
 
+            # compiled once per boundary: the coefficients of the ratio are otherwise
+            # dispatched op by op for every eigenvalue
+            ratio_jit = jax.jit(diff_eq_solution_ratio)
+
             def _scalar_diff_eq(s):
-                s = np.asarray(s)
+                s = np.asarray(s, dtype=complex)
                 if s.ndim == 0:
-                    return complex(diff_eq_solution_ratio(jnp.asarray(s)))
-                return np.array([complex(diff_eq_solution_ratio(jnp.asarray(si))) for si in s])
+                    return complex(ratio_jit(jnp.asarray(s)))
+                return np.array([complex(ratio_jit(jnp.asarray(si))) for si in s])
 
             def nlbc_transformed(f):
                 t = tau * np.exp(1j * f)
