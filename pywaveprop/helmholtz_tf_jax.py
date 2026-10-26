@@ -86,6 +86,18 @@ def column_classes(h_min, h_max, r_max, n_classes):
     return cls, bounds
 
 
+def layer_stretch(eta, eta_a, s_max, ramp):
+    """Height above ``z_off`` and stretching ``s = dz / deta`` of the absorbing
+    layer: ``s`` rises from 1 at ``eta_a`` to ``s_max`` over ``ramp`` (quintic
+    smoothstep, C^2) and stays there; ``z = eta`` below ``eta_a``."""
+    eta = np.asarray(eta, dtype=float)
+    u = np.clip((eta - eta_a) / ramp, 0.0, 1.0)
+    step = u ** 3 * (10 - 15 * u + 6 * u ** 2)
+    step_int = u ** 4 * (2.5 - 3 * u + u ** 2)          # int_0^u step
+    beyond = np.maximum(eta - eta_a - ramp, 0.0)
+    return eta + (s_max - 1) * (ramp * step_int + beyond), 1 + (s_max - 1) * step
+
+
 @functools.lru_cache(maxsize=None)
 def pade_coefs_cached(order, beta, dx):
     return tuple(tuple(v) for v in pade_propagator_coefs(pade_order=order, beta=beta, dx=dx)[0])
@@ -186,7 +198,8 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
                rational_approx_order=(7, 8), approx_method='pade', lower_bc='dirichlet',
                upper_bc='nlbc', coarse_dxi_m=None, max_table_size=40_000_000, flux_order=2,
                lower_impedance_alpha=None, impedance_closure='compact', beta_mode='global', n_beta_classes=16,
-               absorb_m=None):
+               absorb_m=None, absorb_stretch=True, upper_stretch=False, upper_stretch_start_m=None,
+               upper_stretch_ramp_m=None, upper_stretch_s_top=None):
         """Choose the grid, build the coordinate tables and the propagator.
 
         ``beta_mode='column'``: one reference wavenumber per class of columns
@@ -196,7 +209,17 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         nonlocal upper condition assumes the same step in every column, so this
         mode needs ``upper_bc='dirichlet'`` with an absorbing layer
         (``absorb_m`` metres added on top of the domain, damping ``0.02 i k^2``
-        ramped quadratically).
+        ramped quadratically).  ``absorb_stretch``: the layer uses a stretched
+        vertical grid, ``dz / deta = s`` rising smoothly to
+        ``s_max = 1 / (deta kz_max)`` over its lower third (a metric
+        ``h_eta = s`` of the identity region, so the waves of the aperture stay
+        resolved, ``kz s deta <= 1``); the damping is defined in physical height.
+
+        ``upper_stretch``: above the distorted layer (from ``upper_stretch_start_m``
+        in ``eta``, default just above the flux rows) the vertical grid is
+        coarsened smoothly to ``s_top = dz / deta``, the step the error budget of
+        the optimizer allows where ``h_xi = r = 1``.  The upper NLBC is computed
+        for the stretched exterior (:meth:`_calc_upper_nlbc_stretched`).
 
         ``lower_bc='impedance'`` imposes the Leontovich condition
         ``d psi / dn + lower_impedance_alpha * psi = 0`` on the ground (see
@@ -329,6 +352,43 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
                 "or smooth the boundary / enlarge the transition height")
         if beta_classes is None:
             _, order, beta, dx, deta, x_n, z_n, x_step, z_step, xi_bounds = best
+        stretch = None
+        if upper_stretch:
+            if absorb_m:
+                raise ValueError("upper_stretch and absorb_m cannot be combined")
+            if beta_classes is not None and upper_bc == 'nlbc':
+                raise ValueError("the NLBC needs one beta: upper_stretch with beta_mode='global'")
+            kbar = 0.5 * (k_bounds[0] + k_bounds[1])
+            # deta resolves kz h_max on r deta; where h_xi = r = 1 the same budget allows
+            # s deta = deta h_max r_max (and beta s deta < 2 for the NLBC)
+            s_top = max(1.0, min(hxi_max * r_max, 2.0 / kbar / deta)) if upper_stretch_s_top is None \
+                else float(upper_stretch_s_top)
+            lam = 2 * fm.pi / kbar
+            eta_s = upper_stretch_start_m if upper_stretch_start_m is not None else \
+                terrain_map.eta_lab + 4 * lam + 6 * deta
+            ramp_phys = upper_stretch_ramp_m or 20 * lam
+            ramp = ramp_phys / (1 + (s_top - 1) / 2)
+            z_size = mesh_params.z_size_m
+            if z_size > eta_s and s_top > 1.0:
+                stretch = (float(eta_s), float(s_top), float(ramp))
+                # the top may lie inside the ramp: the exterior is then stretched too
+                lo, hi = eta_s, z_size
+                for _ in range(100):
+                    mid = 0.5 * (lo + hi)
+                    lo, hi = (mid, hi) if layer_stretch(mid, *stretch)[0] < z_size else (lo, mid)
+                eta_top = hi
+                z_n_old, z_n = z_n, fm.ceil(eta_top / deta) + 1
+                print(f'upper stretch: s_top {s_top:.2f} from eta {eta_s:.0f} m, {z_n_old} -> {z_n} rows')
+        if absorb_m and absorb_stretch:
+            if upper_bc == 'nlbc':
+                raise ValueError("absorb_stretch needs upper_bc='dirichlet'")
+            z_a = mesh_params.z_size_m - absorb_m
+            s_max = max(1.0, 1.0 / (deta * kz_max))
+            ramp = (absorb_m / 3) / (1 + (s_max - 1) / 2)
+            eta_layer = ramp + (2 * absorb_m / 3) / s_max
+            stretch = (float(z_a), float(s_max), float(ramp))
+            z_n = fm.ceil((z_a + eta_layer) / deta) + 1
+            print(f'absorbing layer: {absorb_m:.0f} m on {fm.ceil(eta_layer / deta)} rows (s_max {s_max:.2f})')
         print(f'rational_approx_order: {order}, beta: {beta}, dxi: {dx}, deta: {deta}')
 
         if terrain_map.kind == 'strip':
@@ -337,7 +397,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             terrain_map = terrain_map.with_eta_b(n_b * deta)
 
         tables = cls.build_tables(terrain_map, medium, beta=beta, dxi=dx, deta=deta, x_n=x_n, z_n=z_n,
-                                  coarse_dxi_m=coarse_dxi_m, max_table_size=max_table_size)
+                                  coarse_dxi_m=coarse_dxi_m, max_table_size=max_table_size, stretch=stretch)
         if beta_classes is not None:
             tables.update(beta_cls=jnp.asarray(beta_classes['betas']), coefs_cls=jnp.asarray(beta_classes['coefs']),
                           cls_p=jnp.asarray(beta_classes['cls_p']), dxi_p=beta_classes['dxi_p'])
@@ -352,7 +412,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
     # ------------------------------------------------------------------ tables
     @staticmethod
     def build_tables(terrain_map: OrthogonalTerrainMap, medium: TFMedium, *, beta, dxi, deta, x_n, z_n,
-                     coarse_dxi_m=None, max_table_size=40_000_000):
+                     coarse_dxi_m=None, max_table_size=40_000_000, stretch=None):
         """Coefficient tables on coarse ``xi`` columns (rows below the identity
         region only) plus the identity-region profiles."""
         n_lab = fm.ceil(terrain_map.eta_lab / deta) + 2
@@ -420,9 +480,15 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             rho_half = rho('above', Xh, Zh)
         rt_half_t = rho_half * r_half
 
-        # identity region (range independent): x = xi, z = eta + z_off
+        # identity region (range independent): x = xi, z = eta + z_off, or the stretched
+        # absorbing layer z = z_off + Z(eta) (metric h_eta = s, h_xi = 1: m = s^2, rt = rho s)
         eta_all = np.arange(z_n) * deta
-        z_all = eta_all + terrain_map.z_off
+        if stretch is None:
+            z_all, s_all, s_half = eta_all + terrain_map.z_off, np.ones(z_n), np.ones(z_n - 1)
+        else:
+            z_rel, s_all = layer_stretch(eta_all, *stretch)
+            z_all = z_rel + terrain_map.z_off
+            s_half = layer_stretch(eta_all[:-1] + deta / 2, *stretch)[1]
         if strip:
             k2_top = np.asarray(medium.k2_below(np.zeros(z_n), z_all, z_all - terrain_map.boundary(np.zeros(1))[0]),
                                 dtype=complex)
@@ -436,6 +502,8 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             h_eta0=jnp.asarray(mt.h_eta[:, 0]),
             rt_half=jnp.asarray(rt_half_t), het_top=jnp.asarray(het_top, dtype=complex),
             rho_top=float(rho_top), n_lab=int(n_lab), coarse_dxi=float(coarse_dxi_m), n_c=int(n_c),
+            m_top=jnp.asarray(s_all ** 2), rt_top=jnp.asarray(rho_top * s_all),
+            rt_half_top=jnp.asarray(rho_top * s_half), stretch=stretch,
         )
 
     # ----------------------------------------------------------------- object
@@ -471,19 +539,26 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         self.flux_order = int(flux_order)
         self.flux_coefs = jnp.array(fourth_root_factors(self.flux_order) if self.flux_order > 0
                                     else np.zeros((0, 2)), dtype=complex)
-        if upper_bc == 'dirichlet' and upper_nlbc_coefs is None:
+        stretched_nlbc = (upper_bc == 'nlbc' and upper_nlbc_coefs is None and tables is not None
+                          and tables.get('stretch') is not None)
+        if (upper_bc == 'dirichlet' or stretched_nlbc) and upper_nlbc_coefs is None:
             upper_nlbc_coefs = jnp.zeros((x_n, max(order), max(order)), dtype=complex)
         super().__init__(order=order, beta=beta, dx_m=dx_m, dz_m=dz_m, x_n=x_n, z_n=z_n,
                          x_grid_scale=x_grid_scale, z_grid_scale=z_grid_scale, freq_hz=freq_hz,
                          wave_speed=None, coefs=coefs, upper_nlbc_coefs=upper_nlbc_coefs,
                          approx_method=approx_method, xi_bounds=xi_bounds)
-        nlbc_given = upper_nlbc_coefs is not None
+        nlbc_given = upper_nlbc_coefs is not None and not stretched_nlbc
+        if tables is not None and 'm_top' not in tables:
+            tables.update(m_top=jnp.ones(z_n), rt_top=jnp.full(z_n, tables['rho_top']),
+                          rt_half_top=jnp.full(z_n - 1, tables['rho_top']), stretch=None)
         if tables is not None and 'beta_cls' not in tables:
             # one reference wavenumber for all columns
             tables.update(beta_cls=jnp.array([self.beta]), coefs_cls=self.coefs[None], cls_p=jnp.zeros(1, dtype=int),
                           dxi_p=1e30)
         self.alpha = float(alpha)
-        if not nlbc_given and upper_bc == 'nlbc' and self.alpha != 1 / 12:
+        if stretched_nlbc:
+            self.upper_nlbc_coefs = self._calc_upper_nlbc_stretched()
+        elif not nlbc_given and upper_bc == 'nlbc' and self.alpha != 1 / 12:
             # the parent computed the kernels for the Numerov exterior scheme
             gamma = (self.het[-1] - self.het[-2]) / self.dz_m
             self.upper_nlbc_coefs = self._calc_upper_nlbc(self.het[-1] - gamma * (self.z_n - 1) * self.dz_m, gamma)
@@ -493,6 +568,87 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         n_margin = fm.ceil(4 * 2 * fm.pi / beta / dz_m) + 4
         self.n_flux = int(min(self.tables['n_lab'] + n_margin, z_n)) if tables is not None else z_n
 
+    def stretched_exterior_ratio(self, n_rows=None):
+        """Scalar function ``R(s) = u_(N-1) / u_N`` of the decaying solution of the
+        exterior equation ``L u = s u`` on the stretched grid (``N`` the top node).
+
+        Rows ``j >= N`` of the scheme with metric ``s_j = dz/deta`` (``m = s^2``,
+        ``w^l_j = s_j / s_(j-1/2)``, ``w^r_j = s_j / s_(j+1/2)``) read
+        ``A-_j u_(j-1) + C_j u_j + A+_j u_(j+1) = 0`` with ``g_j = (beta deta)^2
+        m_j (s - het_j)``, ``A-_j = w^l_j (1 - alpha g_(j-1))``,
+        ``A+_j = w^r_j (1 - alpha g_(j+1))``,
+        ``C_j = -(w^l_j + w^r_j)(1 - alpha g_j) - g_j``.  The ratio
+        ``r_j = u_j / u_(j-1)`` of the minimal solution satisfies
+        ``r_j = -A-_j / (C_j + A+_j r_(j+1))``; the recursion runs down from the
+        first row ``J`` of the uniform tail (``s = s_top``), where ``r_J`` is the
+        exact uniform-grid ratio with step ``s_top deta`` (quadratic root, or the
+        continued fraction of a linear profile).  ``het`` continues linearly in
+        physical height above the top node.  ``n_rows`` overrides the tail start
+        ``J - N`` (for tests: a larger value starts inside the uniform tail)."""
+        from pywaveprop.jax_utils import bessel_ratio_4th_order, sqr_eq
+        t = self.tables
+        eta_a, s_max, ramp = t['stretch']
+        d, al = self.dz_m, self.alpha
+        n_top = self.z_n - 1
+        j_tail = max(n_top, fm.ceil((eta_a + ramp) / d) + 1)
+        if n_rows is not None:
+            j_tail = n_top + int(n_rows)
+        nodes = np.arange(n_top - 1, j_tail + 2)
+        z_rel, s_n = layer_stretch(nodes * d, *t['stretch'])
+        s_up = layer_stretch(nodes * d + d / 2, *t['stretch'])[1]
+        s_dn = layer_stretch(nodes * d - d / 2, *t['stretch'])[1]
+        het_top = np.asarray(t['het_top'])
+        gamma = complex(het_top[-1] - het_top[-2]) / (z_rel[1] - z_rel[0])     # per physical metre
+        het_n = het_top[-1] + gamma * (z_rel - z_rel[1])
+        het_n[0] = het_top[-2]
+        tau2 = (self.beta * d) ** 2
+        m_n, wl, wr = s_n ** 2, s_n / s_dn, s_n / s_up
+        # rows N .. J-1 (index k = j - N + 1 in the node arrays)
+        rows = np.arange(1, j_tail - n_top + 1)
+        wl_r, wr_r = jnp.asarray(wl[rows]), jnp.asarray(wr[rows])
+        m_m, m_0, m_p = (jnp.asarray(m_n[rows + o]) for o in (-1, 0, 1))
+        h_m, h_0, h_p = (jnp.asarray(het_n[rows + o]) for o in (-1, 0, 1))
+        # uniform tail from node J - 1 on: step s_top deta, het = h0 + gamma j dz_eff
+        dz_eff = s_max * d
+        tau2_e = (self.beta * dz_eff) ** 2
+        het_j = complex(het_n[j_tail - n_top + 1])
+        linear = abs(gamma) * dz_eff > 10 * np.finfo(float).eps
+        h0 = het_j - gamma * j_tail * dz_eff
+        b = al * gamma * dz_eff * tau2_e
+        dd = gamma * dz_eff * tau2_e - 2 * b
+        tol = 1e-11 if linear else 1e-7
+
+        def tail(sv):
+            if linear:
+                a_m1 = 1 - al * tau2_e * (sv - h0) - b
+                a_1 = 1 - al * tau2_e * (sv - h0) + b
+                c = -2 + (2 * al - 1) * tau2_e * (sv - h0)
+                return bessel_ratio_4th_order(a_m1, a_1, b, c, dd, j_tail, tol)
+            a = 1 - al * tau2_e * (sv - het_j)
+            c = -2 + (2 * al - 1) * tau2_e * (sv - het_j)
+            return 1 / sqr_eq(a, c, a)
+
+        def ratio(sv):
+            r = 1 / tail(sv)                                   # r_J = u_J / u_(J-1)
+
+            def back(k, r):
+                i = rows.size - 1 - k                          # rows J-1 down to N
+                g_m = tau2 * m_m[i] * (sv - h_m[i])
+                g_0 = tau2 * m_0[i] * (sv - h_0[i])
+                g_p = tau2 * m_p[i] * (sv - h_p[i])
+                a_minus = wl_r[i] * (1 - al * g_m)
+                a_plus = wr_r[i] * (1 - al * g_p)
+                c = -(wl_r[i] + wr_r[i]) * (1 - al * g_0) - g_0
+                return -a_minus / (c + a_plus * r)
+            if rows.size:
+                r = jax.lax.fori_loop(0, rows.size, back, r + 0j)
+            return 1 / r                                       # u_(N-1) / u_N
+        return ratio, tol
+
+    def _calc_upper_nlbc_stretched(self, n_rows=None):
+        ratio, tol = self.stretched_exterior_ratio(n_rows)
+        return self._calc_nlbc(ratio, tol)
+
     def _prepare_het_arrays(self):
         # the parent uses het at the two upper nodes for the NLBC: identity region
         self.het = self.tables['het_top']
@@ -500,7 +656,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
     def _tree_flatten(self):
         t = self.tables
         dynamic = (t['het'], t['m'], t['rt'], t['rt_half'], t['het_top'], self.upper_nlbc_coefs, t['h_eta0'],
-                   t['beta_cls'], t['coefs_cls'], t['cls_p'])
+                   t['beta_cls'], t['coefs_cls'], t['cls_p'], t['m_top'], t['rt_top'], t['rt_half_top'])
         static = {
             'order': self.order, 'beta': self.beta, 'dx_m': self.dx_m, 'dz_m': self.dz_m,
             'x_n': self.x_n, 'z_n': self.z_n, 'coefs': self.coefs_t, 'x_grid_scale': self.x_grid_scale,
@@ -508,17 +664,18 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             'xi_bounds': self.xi_bounds, 'lower_bc': self.lower_bc, 'upper_bc': self.upper_bc,
             'flux_order': self.flux_order, 'alpha': self.alpha,
             'lower_impedance_alpha': self.lower_impedance_alpha, 'impedance_closure': self.impedance_closure,
-            'tables_static': (t['rho_top'], t['n_lab'], t['coarse_dxi'], t['n_c'], t['dxi_p']),
+            'tables_static': (t['rho_top'], t['n_lab'], t['coarse_dxi'], t['n_c'], t['dxi_p'], t['stretch']),
         }
         return dynamic, static
 
     @classmethod
     def _tree_unflatten(cls, static, dynamic):
         static = dict(static)
-        rho_top, n_lab, coarse_dxi, n_c, dxi_p = static.pop('tables_static')
+        rho_top, n_lab, coarse_dxi, n_c, dxi_p, stretch = static.pop('tables_static')
         tables = dict(het=dynamic[0], m=dynamic[1], rt=dynamic[2], rt_half=dynamic[3], het_top=dynamic[4],
                       h_eta0=dynamic[6], beta_cls=dynamic[7], coefs_cls=dynamic[8], cls_p=dynamic[9],
-                      rho_top=rho_top, n_lab=n_lab, coarse_dxi=coarse_dxi, n_c=n_c, dxi_p=dxi_p)
+                      m_top=dynamic[10], rt_top=dynamic[11], rt_half_top=dynamic[12],
+                      rho_top=rho_top, n_lab=n_lab, coarse_dxi=coarse_dxi, n_c=n_c, dxi_p=dxi_p, stretch=stretch)
         return cls(tables=tables, upper_nlbc_coefs=dynamic[5], **static)
 
     # ---------------------------------------------------------- coefficients
@@ -535,9 +692,9 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
 
         n_lab = t['n_lab']
         het = t['het_top'].at[:n_lab].set(lerp(t['het']))
-        m = jnp.ones(self.z_n).at[:n_lab].set(lerp(t['m']))
-        rt = jnp.full(self.z_n, t['rho_top']).at[:n_lab].set(lerp(t['rt']))
-        rt_half = jnp.full(self.z_n - 1, t['rho_top']).at[:n_lab].set(lerp(t['rt_half']))
+        m = t['m_top'].at[:n_lab].set(lerp(t['m']))
+        rt = t['rt_top'].at[:n_lab].set(lerp(t['rt']))
+        rt_half = t['rt_half_top'].at[:n_lab].set(lerp(t['rt_half']))
         return het, m, rt, rt_half, lerp(t['h_eta0'])
 
     # ------------------------------------------------------------ propagation
@@ -696,6 +853,12 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
     def eta_computational_grid(self):
         return np.arange(self.z_n) * self.dz_m
 
+    def _z_identity(self, eta):
+        """Physical height of the identity-region nodes (stretched in the absorbing layer)."""
+        stretch = self.tables.get('stretch') if self.tables is not None else None
+        z = eta if stretch is None else layer_stretch(eta, *stretch)[0]
+        return z + self.terrain_map.z_off
+
     def output_metrics(self):
         """Physical coordinates ``(x, z)`` of the output nodes, each ``(n_x_out, n_z_out)``."""
         xi = np.asarray(self.x_output_grid())
@@ -705,7 +868,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         lev = np.arange(2 * n_lab + 1) * (self.dz_m / 2)
         mt = tm.metrics(xi, lev)
         X = np.repeat(xi[:, None], eta.size, axis=1)
-        Z = np.repeat((eta + tm.z_off)[None, :], xi.size, axis=0)
+        Z = np.repeat(self._z_identity(eta)[None, :], xi.size, axis=0)
         idx = np.arange(0, n_lab, self.z_grid_scale)
         X[:, :idx.size] = mt.x[:, 2 * idx]
         Z[:, :idx.size] = mt.z[:, 2 * idx]
@@ -719,7 +882,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         mt = tm.metrics(np.zeros(1), lev)
         eta = self.eta_computational_grid()
         X = np.zeros(self.z_n)
-        Z = eta + tm.z_off
+        Z = self._z_identity(eta)
         X[:n_lab] = mt.x[0, 0:2 * n_lab:2]
         Z[:n_lab] = mt.z[0, 0:2 * n_lab:2]
         return X, Z

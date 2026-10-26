@@ -41,6 +41,8 @@ class RWPComputationalParams:
     terrain_beta_mode = 'global'  # 'transform': 'global' or 'column' (one reference wavenumber per class of columns)
     terrain_beta_classes = 16  # 'transform', terrain_beta_mode='column': number of column classes
     terrain_absorb_m = None  # 'transform': absorbing layer on top with a Dirichlet condition instead of the NLBC
+    terrain_absorb_stretch = True  # 'transform': stretched vertical grid in the absorbing layer
+    terrain_upper_stretch = False  # 'transform': coarser vertical grid above the distorted layer (NLBC on top)
     dx_m: float = None
     dz_m: float = None
     x_output_points: int = None
@@ -1133,7 +1135,11 @@ def create_rwp_tf_model(src: RWPGaussSourceModel, env: TroposphereModel, params:
         kz_max=kz_max, k_bounds=(k_min, k_max), precision=params.precision, mesh_params=mesh_params,
         rational_approx_order=params.rational_approx_order, approx_method=params.approx_method,
         beta_mode=params.terrain_beta_mode, n_beta_classes=params.terrain_beta_classes,
-        absorb_m=params.terrain_absorb_m,
+        absorb_m=params.terrain_absorb_m, absorb_stretch=params.terrain_absorb_stretch,
+        upper_stretch=params.terrain_upper_stretch,
+        upper_stretch_start_m=getattr(params, 'terrain_upper_stretch_start_m', None),
+        upper_stretch_ramp_m=getattr(params, 'terrain_upper_stretch_ramp_m', None),
+        upper_stretch_s_top=getattr(params, 'terrain_upper_stretch_s_top', None),
         upper_bc='dirichlet' if params.terrain_absorb_m else 'nlbc', **bc)
 
 
@@ -1154,7 +1160,7 @@ def rwp_tf_forward_task(src: RWPGaussSourceModel, env: TroposphereModel,
     f = model.compute(init)
     x_phys, z_phys = model.output_metrics()
     return TerrainFollowingRWPField(
-        x_grid=model.x_output_grid(), z_grid=model.eta_computational_grid()[::model.z_grid_scale] + model.terrain_map.z_off,
+        x_grid=model.x_output_grid(), z_grid=model._z_identity(model.eta_computational_grid()[::model.z_grid_scale]),
         freq_hz=src.freq_hz, field=f, x_phys=x_phys, z_phys=z_phys,
         terrain_x=model.terrain_map.x_fine, terrain_z=model.terrain_map.boundary_fine)
 

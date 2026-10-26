@@ -25,7 +25,7 @@ from pywaveprop.helmholtz_jax import (ConstWaveSpeedModel, LinearSlopeWaveSpeedM
                                       RationalHelmholtzPropagator)
 from pywaveprop.helmholtz_tf_jax import TerrainFollowingHelmholtzPropagator, TFMedium, fourth_root_factors
 from pywaveprop.helmholtz_ssf_jax import impedance_alpha
-from pywaveprop.rwp_jax import (GroundMaterial, ProxyWaveSpeedModel, RWPComputationalParams, RWPGaussSourceModel, TroposphereModel,
+from pywaveprop.rwp_jax import (GroundMaterial, PiecewiseLinearNProfileModel, ProxyWaveSpeedModel, RWPComputationalParams, RWPGaussSourceModel, TroposphereModel,
                                 rwp_forward_task)
 from pywaveprop.rwp_field import TerrainFollowingRWPField
 from pywaveprop.terrain_transform import OrthogonalTerrainMap
@@ -309,6 +309,37 @@ class TestFrontEnds(unittest.TestCase):
         pl_ref, pl_col = ref.path_loss().field, col.path_loss().field[:, :n]
         inside = (ref.z_phys < 500) & (ref.x_phys > 200) & (pl_ref < 130)
         self.assertLess(np.median(np.abs(pl_col - pl_ref)[inside]), 0.05)
+
+    def test_rwp_transform_stretched_nlbc(self):
+        # a beam leaving through the top of a strongly stretched grid: the NLBC derived for the
+        # stretched exterior gives the solution of a taller domain on the same grid
+        xs = np.linspace(0, 2000, 401)
+        hs = 60 * np.exp(-0.5 * ((xs - 1000) / 200) ** 2)
+        z = np.array([0.0, 500.0])
+        env = TroposphereModel(N_profile=PiecewiseLinearNProfileModel.create_from_M_profile(z, 0.118 * z), M0=0.0,
+                               slope=0.118, terrain=PiecewiseLinearTerrainModel(xs, hs),
+                               ground_material=GroundMaterial(eps=25, sigma=0.02))
+        src = RWPGaussSourceModel(freq_hz=1e8, height_m=30, beam_width_deg=10, elevation_angle_deg=15,
+                                  polarization='V')
+
+        def run(top):
+            p = RWPComputationalParams(max_range_m=2000, max_height_m=top, max_angle_deg=30, dx_m=25, dz_m=1)
+            p.terrain_method = 'transform'
+            p.terrain_transition_m = 200
+            p.terrain_smoothing_m = 50
+            p.terrain_slope_aperture = False
+            p.terrain_upper_stretch = True
+            p.terrain_upper_stretch_start_m = 250.0
+            p.terrain_upper_stretch_ramp_m = 600.0
+            p.terrain_upper_stretch_s_top = 4.0
+            return rwp_forward_task(src, env, p)
+        f, tall = run(600.0), run(1000.0)
+        n = f.field.shape[1]
+        np.testing.assert_allclose(tall.z_phys[:, :n], f.z_phys, atol=1e-6)
+        a, b = np.abs(f.field), np.abs(tall.field[:, :n])
+        inside = b > 1e-3 * b.max()
+        self.assertGreater(a[-1, -20:].max(), 0.1 * a[-1].max())    # the beam reaches the top
+        self.assertLess(np.max(np.abs(a - b)[inside] / b[inside]), 1e-5)
 
     def test_uwa_transform(self):
         x_b = np.array([0.0, 1000.0, 3000.0, 4000.0])
