@@ -46,10 +46,15 @@ whereas the proposed scheme reaches $82^\circ$, is 20 to 560 times cheaper, and
 has no maximum angle. Against exact solutions for beams reflected by
 conducting and impedance slopes at up to $70^\circ$, its error is at
 most $3\cdot10^{-3}$, three orders of magnitude below that of the
-staircase and of the shift maps. Absorbing layers must be
+staircase and of the shift maps. Over real ground the staircase errs by
+3--16\% already on a $2^\circ$ slope, because the steps impose the reflection
+coefficient of the wrong grazing angle. Absorbing layers must be
 tuned to the field's angular content and still leave errors up to three orders
-of magnitude above those of the NLBC. A real-terrain example with weather
-model refractivity is presented.
+of magnitude above those of the NLBC. Two real-terrain examples are presented:
+one with weather model refractivity, and a mountain path over wet ground. On
+the mountain path, in V polarization, the staircase overestimates the field
+reflected by the slope by \SI{10}{dB}, twice the effect of the uncertainty in
+the ground parameters.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -78,7 +83,11 @@ set to zero below the terrain column by column. A staircase converges only at
 first order, scatters spuriously at every step, and for steep slopes demands a
 vertical step much smaller than the propagation angle requires. As shown
 below, the staircase error at wide angles does not decrease appreciably even
-with very fine grids.
+with very fine grids. Over real ground the staircase also applies the impedance
+condition with the normal of the step rather than of the terrain, so the
+reflection coefficient is evaluated at the wrong grazing angle; near the
+Brewster angle this changes the reflected field by several decibels even on
+slopes of a few degrees.
 
 The alternative is a change of variables that makes the terrain a coordinate
 line. The Beilis--Tappert shift map \cite{beilis1979coupled}, combined with a
@@ -165,7 +174,10 @@ is confirmed against exact solutions.
 \item A comparison of the discrete NLBC with the absorbing layers used in the
 literature (Section~\ref{sec:absorber}).
 \item Validation against exact wide-angle solutions over conducting and
-impedance slopes, and a demonstration over real terrain (Section~\ref{sec:results}).
+impedance slopes, a comparison with the staircase over gentle impedance slopes,
+and two real-terrain paths. On the second, steep path over wet ground, the
+staircase error is compared with the effect of environmental uncertainty
+(Section~\ref{sec:results}).
 \end{enumerate}
 
 %=====================================================================
@@ -515,8 +527,12 @@ r^{3/2}\beta^2(1+cL)\varphi=c\,r\,\pd_\eta(r^{-1}\pd_\eta\psi)+\beta^2m(1+c\het)
 Every factor of \eqref{eq:flux_pairs} is therefore the flat scheme
 \eqref{eq:substep_flat}, with $\pd_\eta^2$ replaced by the operator
 $r\pd_\eta r^{-1}\pd_\eta$ with the variable coefficient $r=h_\eta/h_\xi$, and with
-an additional weight $m$. Between columns the field is
-rescaled by $(m_{\rm old}/m_{\rm new})^{1/4}$.
+an additional weight $m$. The factors of \eqref{eq:flux_pairs} are evaluated at
+the columns $\xi_n$, $\xi_{n+1/2}$ and $\xi_{n+1}$, and so is the substitution
+$\psi=r^{-1/2}\varphi$. When the scheme passes from factors at a column $\xi_a$
+to factors at the next column $\xi_b$, $\varphi$ is unchanged, so $\psi$ is
+multiplied by $(r_a/r_b)^{1/2}=(m_a/m_b)^{1/4}$, where $m_a=m(\xi_a,\eta)$ and
+$m_b=m(\xi_b,\eta)$.
 
 %=====================================================================
 \section{Discretization}\label{sec:disc}
@@ -704,6 +720,25 @@ computed for a chain of $p+2q$ factors containing reciprocal pairs. The matrix
 function of the inverse $z$-transform becomes defective, and the adaptive
 quadrature of the kernels does not converge. The bracketed form avoids this,
 and the kernels are the same as over flat ground.
+
+Above the transition layer the fine $\Delta\eta$ is needed only for the
+spectrum, which there is narrower than near the ground. The vertical grid can
+therefore be stretched, $z=Z(\eta)$, with $s=dZ/d\eta$ rising smoothly from 1
+to $s_{\rm top}=\min(\max h_\xi r,\,2/(\bar k\Delta\eta))$. In the
+transformed equation $s$ is a metric $h_\eta$ of the Cartesian region
+($m=s^2$, density weight $\rho s$), so the scheme is unchanged. The NLBC
+remains exact: the $z$-transform, the matrix function and the convolution of
+\cite{lytaev2018awpl} do not depend on the vertical grid, and only the scalar
+ratio $u_{N-1}/u_N$ of the decaying exterior solution changes. On the stretched
+grid it satisfies a three-term recurrence with coefficients
+$w^\mp_j(1-\alpha g_{j\mp1})$ and $-(w^-_j+w^+_j)(1-\alpha g_j)-g_j$, where
+$g_j=(\beta\Delta\eta)^2s_j^2(\sigma-\het_j)$ and
+$w^\mp_j=s_j/s_{j\mp1/2}$, and its minimal solution is obtained by a backward
+continued fraction started from the closed-form ratio of the uniform tail
+(step $s_{\rm top}\Delta\eta$). With the top placed inside the stretching,
+this condition reproduces a taller domain to \SI{4e-6}{dB} for a beam reaching
+the top at $15^\circ$, against up to \SI{2e-2}{dB} for the uniform-grid
+condition evaluated with the local step.
 
 %=====================================================================
 \section{Comparison With Shift-Map Finite-Difference PEs}\label{sec:shiftmap}
@@ -1092,6 +1127,60 @@ $|w|=|\Delta_g|/\sin\phi\approx20$, so $|R_h-R|\approx2|1-\sigma|/|w|$ is small
 for both closures, and the error is that of the interior scheme. The compact
 closure costs nothing extra, since the system remains tridiagonal.
 
+\subsection{Staircase over Gentle Impedance Slopes}\label{sec:impstair}
+
+The conducting-slope test of Section~\ref{sec:slope} involves steep beams. To
+check whether the staircase is adequate in the regime of most radio paths,
+grazing incidence on gentle slopes over real ground, the impedance-slope problem
+of Section~\ref{sec:impslope} was solved with slopes $\theta_s=2$--$20^\circ$
+by a classical staircase solver. It uses Pad\'e $[8/8]$ steps with $\beta=k$,
+the Numerov scheme, $\Delta x=\SI{1}{m}$ and $\Delta z=\SI{0.025}{m}$
+($\lambda/40$), sets the field to zero below the ground node of each column, and
+imposes the Leontovich condition $u_z+\alpha u=0$ at that node with the mirror
+closure, i.e., with the vertical normal of the step. On flat ground it reproduces
+the exact solution to $1.2\cdot10^{-5}$. Table~\ref{tab:impstair} compares it
+with the terrain-following solver of Section~\ref{sec:impslope}.
+
+\begin{table}[!t]\centering
+\caption{Impedance Slopes, Beam at $-5^\circ$: Relative Maximum Error}\label{tab:impstair}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{cccccc}\toprule
+& terrain-following & \multicolumn{4}{c}{staircase}\\
+\cmidrule(lr){2-2}\cmidrule(lr){3-6}
+$\theta_s$ & all grounds & wet, H & wet, V & sea, V & conducting\\\midrule
+$2^\circ$ & $3.6\cdot10^{-5}$ & 0.026 & 0.061 & 0.16 & 0.041\\
+$5^\circ$ & $4.7\cdot10^{-5}$ & 0.068 & 0.15 & 0.28 & 0.13\\
+$10^\circ$ & $9.2\cdot10^{-5}$ & 0.21 & 0.27 & 0.39 & 0.30\\
+$20^\circ$ & $8.2\cdot10^{-4}$ & 0.54 & 0.30 & 0.45 & 0.90\\
+\bottomrule\end{tabular}
+\end{table}
+
+\begin{figure*}[!t]\centering
+\includegraphics[width=0.66\textwidth]{impedance_staircase_5deg_V.png}\hspace{2mm}
+\includegraphics[width=0.30\textwidth]{impedance_staircase_5deg_V_error.png}
+\caption{Beam at $-5^\circ$ over a $5^\circ$ wet-ground slope, V polarization.
+Left: exact field, staircase field, and the errors of both solvers. Right:
+maximum error over height versus range.}
+\label{fig:impstair}
+\end{figure*}
+
+Already at $\theta_s=2^\circ$ the staircase error is 3--16\%, and it grows
+with the slope; the terrain-following error stays below
+$10^{-4}$ up to $10^\circ$. Refinement does not help: for $\theta_s=5^\circ$,
+wet ground and V polarization, the error is 0.153 at $\Delta z=\SI{0.025}{m}$,
+0.153 at \SI{0.0125}{m}, and 0.155 when in addition $\Delta x$ is halved. The
+error is systematic, not numerical noise. The steps impose the reflection
+coefficient of the grazing angle to the horizontal instead of to the slope. In
+Fig.~\ref{fig:impstair} the beam meets the slope at $10^\circ$, near the
+Brewster angle of $11^\circ$, where $|R|=0.06$, whereas the steps reflect it
+with $|R(5^\circ)|=0.38$: the reflected beam is \SI{9}{dB} too strong. Over sea
+water the pseudo-Brewster angle lies at a few degrees, so even a $2^\circ$
+slope changes $|R|$ by about 20\% and the staircase error is 16\%. For
+$\theta_s\le5^\circ$ the staircase errs more for V polarization and for sea
+water than over a perfect conductor, whose reflection does not depend on the
+angle, so conducting benchmarks understate the staircase error over real
+ground at grazing incidence.
+
 \subsection{Real Terrain and NWP Refractivity}\label{sec:highlands}
 
 A \SI{300}{MHz} horizontally polarized antenna on a \SI{30}{m} mast stands on
@@ -1134,13 +1223,162 @@ because of the metric spread $h_\xi\in[0.91,1.16]$ and the expansion
 $\max r=1.28$, which enter the grid selection through the global bounds of the grid
 selection rule of Section~\ref{sec:dispersion}.
 
+\subsection{Steep Terrain over Real Ground}\label{sec:steep}
+
+The Highlands path has a perfectly conducting ground and slopes of $11^\circ$. To
+see whether the effect of Section~\ref{sec:impstair} survives on a real path,
+and how it compares with environmental uncertainty, a steeper path with real
+ground was computed. The transmitter stands on the floor of Glen Etive,
+Scottish Highlands (\ang{56.6064}N \ang{4.9986}W, \SI{53}{m}), and radiates
+along a \SI{5.3}{km} path to \ang{56.645}N \ang{5.05}W, up a mountain flank
+that rises to \SI{750}{m}.
+\begin{itemize}
+\item \emph{Source:} \SI{100}{MHz}, \SI{30}{m} mast, beam $10^\circ$ wide and
+tilted $3^\circ$ up, H and V polarization.
+\item \emph{Terrain:} smoothed with $\sigma=\SI{100}{m}$; the maximum slope is
+$23.5^\circ$.
+\item \emph{Ground:} wet ground, $\varepsilon=25$, $\sigma=\SI{0.02}{S/m}$,
+whose Brewster angle for V polarization is about $11^\circ$.
+\item \emph{Atmosphere:} standard, $dM/dz=\SI{0.118}{M/m}$.
+\end{itemize}
+The staircase is the solver of Section~\ref{sec:impstair}: the Leontovich
+condition is imposed at the ground node of every column, and the rational
+coefficients, $\beta$, $\Delta x$ and $\Delta z$ are those chosen by the grid
+optimizer for the same precision. Its aperture is $10^\circ+3^\circ+2\cdot23.5^\circ=60^\circ$,
+since rays reflected by the slope leave at twice the slope from the horizontal.
+Near the ground the same rays stay within one slope of the terrain-following
+coordinate lines, so the terrain-following solver uses
+$10^\circ+3^\circ+23.5^\circ=36.5^\circ$. A terrain-following run with the full
+$60^\circ$ differs from it by at most \SI{0.05}{dB} along the cuts, and its
+grid is ten times larger. At precisions $10^{-2}$ and $10^{-3}$ the
+terrain-following grid has $\Delta\xi=\SI{5}{m}$, $\Delta\eta=0.17$ and
+\SI{0.09}{m}, and 101 and 212 million node solves (nodes times rational
+factors per step); the staircase, with its wider aperture, has
+$\Delta x=\SI{6.25}{m}$, $\Delta z=0.125$ and \SI{0.077}{m}, and 140 and 260
+million. Run alone on a CPU, the terrain-following solver takes 18 and
+\SI{29}{s}, and the package staircase solver on the staircase grid 15 and
+\SI{22}{s}; the terrain-following step also applies the flux factors, which
+are not counted in the node solves.
+
+The reference wavenumber $\beta$ of the terrain-following run has to cover the
+local spectrum $kh_\xi$ of every column. With one $\beta$ per class of columns,
+grouped by the range of $h_\xi$ on the column, the range step grows to
+\SI{8.3}{m} at both precisions. The discrete NLBC of
+Section~\ref{sec:nlbc} assumes the same step in every column, so the upper
+boundary is then an absorbing layer (\SI{300}{m}). Its grid is stretched,
+$dz/d\eta$ rising smoothly to $1/(k_{z,\max}\Delta\eta)$, so that it
+takes 456 rows instead of 1800 at $10^{-2}$. In the transformed equation the stretching is
+a metric $h_\eta=dz/d\eta$ of the Cartesian region, so the scheme is unchanged.
+This run takes 7 and \SI{10}{s}, and its path loss differs from the one with a
+single $\beta$ by \SI{0.007}{dB} (median) and \SI{0.02}{dB} at most.
+
+Two checks support the staircase used here. With the masking of the package
+solver (no ground condition inside the step, field set to zero below the ground
+after it) the same code reproduces the package staircase to \SI{0.01}{dB}
+(median). On a perfectly conducting ground, the staircase with the condition
+imposed at the ground node differs from the terrain-following solution by
+\SI{0.5}{dB} (median, \SI{10}{m} above the ground), and the package staircase
+by \SI{2.1}{dB}. The staircase compared below is therefore the more accurate
+of the two.
+
+\begin{figure*}[!t]\centering
+\includegraphics[width=0.86\textwidth]{heavy_terrain.png}
+\caption{Glen Etive, \SI{100}{MHz}, wet ground. Top: path loss of the
+terrain-following and staircase solvers, V polarization. Middle: the staircase
+minus the terrain-following path loss, and the terrain-following path loss for
+medium ground ($\varepsilon=15$, $\sigma=\SI{0.005}{S/m}$) minus that for wet
+ground, on the same scale; the differences are shown where the path loss is
+below \SI{130}{dB}. Bottom: path loss \SI{50}{m} above the ground; the grey band is
+the spread of the terrain-following solution over the two grounds and
+$dM/dz=0.118\pm\SI{0.039}{M/m}$.}
+\label{fig:steep}
+\end{figure*}
+
+\begin{table}[!t]\centering
+\caption{Glen Etive: Path-Loss Differences (dB), V Polarization, Median $|\Delta|$ / Mean $\Delta$}\label{tab:steep}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}\toprule
+height above ground & 0--100 m & 100--500 m & 500--2000 m\\\midrule
+staircase $-$ terrain-following & 0.9 / $-0.7$ & 4.2 / $-4.6$ & 9.4 / $-10.7$\\
+medium $-$ wet ground & 0.5 / $-0.4$ & 4.0 / $-2.6$ & 5.6 / $-3.9$\\
+$dM/dz\pm\SI{0.039}{M/m}$ & 0.01 / 0.00 & 0.03 / 0.00 & 0.03 / 0.00\\
+\bottomrule\end{tabular}
+\end{table}
+
+Fig.~\ref{fig:steep} and Table~\ref{tab:steep} show the result. The
+terrain-following solution is converged: the precisions $10^{-2}$ and
+$10^{-3}$ agree to better than \SI{0.01}{dB} along the cuts. The staircase is
+converged with respect to its own grid as well: its two precisions differ by
+\SI{0.02}{dB} (median). The difference between the solvers is therefore
+systematic. In H polarization it is small, at most \SI{1.6}{dB} (median) at any height,
+because $|R_H|$ of wet ground varies only from 0.98 to 0.84 between $3^\circ$
+and $25^\circ$. In V polarization it grows with height. Close to the ground,
+where the direct field dominates, it is \SI{0.9}{dB}, comparable to the effect of
+replacing wet by medium ground. In the fan of rays reflected by the flank
+(\SI{500}{m} to \SI{2}{km} above the ground) the staircase field is
+\SI{10.7}{dB} too strong on average, twice the effect of the ground
+parameters, and the error persists under refinement. The cause is that of
+Section~\ref{sec:impstair}. A ray tilted $3^\circ$ up meets a $20^\circ$ slope at
+$23^\circ$, where $|R_V|=0.33$, whereas the steps reflect it at $3^\circ$, where
+$|R_V|=0.58$. This accounts for about \SI{5}{dB}. The rest is consistent with
+the rays closer to the horizontal, for which the steps see $|R_V|$ approaching
+one. The steps
+also add spurious steep rays above the first slope (Fig.~\ref{fig:steep}, top
+right). The refractivity gradient matters little on a \SI{5}{km} path: its
+uncertainty changes the path loss by less than \SI{0.1}{dB}.
+
+The comparison qualifies the conclusion drawn from the Highlands path. At
+receivers near the ground the staircase error is comparable to the effect of
+the ground parameters, which are rarely known better than the two grounds used
+here. For elevated receivers over steep terrain, such as aircraft, unmanned
+aerial vehicles or a radar looking up the slope, it is about twice that
+effect, and the error is a bias of one sign: the staircase reflects the V
+beam as if the ground were a better conductor. Unlike the effect of the
+ground parameters, this bias cannot be reduced by better data.
+
 %=====================================================================
 \section{Discussion and Limitations}
 
 \begin{itemize}
+\item \emph{When the staircase suffices.} Over smoothed terrain with a
+perfectly conducting ground (Section~\ref{sec:highlands}) the two solvers differ
+by about \SI{1}{dB} at \SI{10}{m} above the ground, which is below the usual
+uncertainty of refractivity, elevation data and ground parameters, and the
+staircase is several times cheaper. Near the ground of a steep path over wet
+ground the difference is still comparable to the effect of the ground
+parameters (Section~\ref{sec:steep}). For such coverage estimates the
+staircase is adequate. The terrain-following solver matters where the staircase
+error is of order one or systematic: steep slopes and wide-angle reflections
+(Section~\ref{sec:slope}), and real ground, where the steps impose the
+reflection coefficient of the wrong grazing angle
+(Section~\ref{sec:impstair}). On a real mountain path this makes the field
+reflected by the slope \SI{10}{dB} too strong in V polarization, twice the
+effect of the ground parameters, for elevated receivers
+(Section~\ref{sec:steep}). That error is not reduced by refinement, it is
+tied to the terrain and therefore the same in every run, and it does not average
+out over an ensemble of environments as their uncertainty does. A method whose
+error stalls under refinement also cannot serve as a reference: without a
+convergent solver one cannot show that the numerical error is smaller than the
+environmental one.
+\item \emph{Dependence on the terrain.} In the staircase the field depends on
+the terrain height through the index of the ground node, i.e., discontinuously,
+so its derivatives with respect to the terrain or to ground parameters on the
+steps are not defined. In the proposed coordinates the terrain enters through
+smooth coefficient tables, and the solution depends smoothly on it. This is a
+prerequisite for gradient-based inversion and sensitivity analysis. The
+propagator is written in JAX, but the map is at present computed in NumPy, so
+derivatives with respect to the terrain are not yet available.
 \item \emph{Cost.} The grid is chosen with the extreme values of $h_\xi$ and $r$
-over the whole domain, which is pessimistic for strongly distorted maps; a
-local error budget or a map minimizing the spread of $h_\xi$ would reduce it.
+over the whole domain. On the path of Section~\ref{sec:steep}, for the same
+aperture, this reduces the range step from \SI{15.9}{m} on flat ground to
+\SI{5.5}{m} and the vertical step by a factor of 2. One reference wavenumber
+per class of columns recovers part of the range step (\SI{8.3}{m}); the
+vertical factor comes from the stretching of the map and remains. The
+aperture, in contrast, can be smaller than for the staircase: angles are
+measured from the coordinate lines, which near the ground follow the slope.
+There one slope instead of two suffices and makes the grid ten times smaller.
+With both, the terrain-following run takes about half as long as the staircase
+(\SI{7}{s} against \SI{15}{s} at $10^{-2}$).
 \item \emph{Smoothness.} The terrain must be $C^2$. Knife edges, cliffs and
 overhangs are smoothed over the scale $\sigma$, and very steep relief requires
 a larger transition height.
@@ -1168,7 +1406,10 @@ wide-angle benchmark the method is two to three orders of magnitude more
 accurate than the staircase. A compact closure of the Leontovich condition
 reflects every resolved wave with an error bounded uniformly in the ground
 parameters, and keeps the error below $10^{-3}$ over impedance slopes for
-both polarizations. Compared with the shift-map
+both polarizations, where a staircase errs by several percent already on
+gentle slopes. On a mountain path over wet ground the staircase
+overestimates the field reflected by the slope by \SI{10}{dB}, which is more
+than the uncertainty of the ground parameters. Compared with the shift-map
 finite-difference PEs, it has no grid-independent slope error and no maximum
 propagation angle, and it costs one to three orders of magnitude less at
 moderate angles. Unlike absorbing layers, the discrete transparent boundary

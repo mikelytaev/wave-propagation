@@ -1,0 +1,242 @@
+[
+ {
+  "slope_deg": 2.0,
+  "pol": "H",
+  "theta_max_deg": 17.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.5711986642890533,
+  "err": 3.581592186336342e-05,
+  "err_ground": 8.655161715939697e-07,
+  "time_s": 10.807989120483398,
+  "x_n": 241,
+  "z_n": 4401,
+  "dx": 2.5,
+  "dz": 0.09090909090909091,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "wet ground"
+ },
+ {
+  "slope_deg": 2.0,
+  "pol": "V",
+  "theta_max_deg": 17.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.5711986642890533,
+  "err": 3.3709630086387964e-05,
+  "err_ground": 2.1344533522028868e-05,
+  "time_s": 9.986398696899414,
+  "x_n": 241,
+  "z_n": 4401,
+  "dx": 2.5,
+  "dz": 0.09090909090909091,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "wet ground"
+ },
+ {
+  "slope_deg": 2.0,
+  "pol": "V",
+  "theta_max_deg": 17.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.5711986642890533,
+  "err": 3.571221385408534e-05,
+  "err_ground": 3.50315973789387e-05,
+  "time_s": 9.532273769378662,
+  "x_n": 241,
+  "z_n": 4401,
+  "dx": 2.5,
+  "dz": 0.09090909090909091,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "sea water"
+ },
+ {
+  "slope_deg": 5.0,
+  "pol": "H",
+  "theta_max_deg": 23.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.39269908169872414,
+  "err": 4.420971193629509e-05,
+  "err_ground": 1.947341575681454e-06,
+  "time_s": 14.999002456665039,
+  "x_n": 241,
+  "z_n": 6401,
+  "dx": 2.5,
+  "dz": 0.0625,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "wet ground"
+ },
+ {
+  "slope_deg": 5.0,
+  "pol": "V",
+  "theta_max_deg": 23.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.39269908169872414,
+  "err": 3.866856101357181e-05,
+  "err_ground": 3.7145914478177656e-05,
+  "time_s": 15.637592554092407,
+  "x_n": 241,
+  "z_n": 6401,
+  "dx": 2.5,
+  "dz": 0.0625,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "wet ground"
+ },
+ {
+  "slope_deg": 5.0,
+  "pol": "V",
+  "theta_max_deg": 23.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.39269908169872414,
+  "err": 4.700616244104927e-05,
+  "err_ground": 4.700616244104927e-05,
+  "time_s": 16.830020666122437,
+  "x_n": 241,
+  "z_n": 6401,
+  "dx": 2.5,
+  "dz": 0.0625,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "sea water"
+ },
+ {
+  "slope_deg": 10.0,
+  "pol": "H",
+  "theta_max_deg": 33.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.23271056693257725,
+  "err": 9.152362904273772e-05,
+  "err_ground": 2.57546192351796e-06,
+  "time_s": 28.77012538909912,
+  "x_n": 241,
+  "z_n": 10801,
+  "dx": 2.5,
+  "dz": 0.037037037037037035,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "wet ground"
+ },
+ {
+  "slope_deg": 10.0,
+  "pol": "V",
+  "theta_max_deg": 33.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.23271056693257725,
+  "err": 2.9551032121220426e-05,
+  "err_ground": 2.9038316715815858e-05,
+  "time_s": 27.68471622467041,
+  "x_n": 241,
+  "z_n": 10801,
+  "dx": 2.5,
+  "dz": 0.037037037037037035,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "wet ground"
+ },
+ {
+  "slope_deg": 10.0,
+  "pol": "V",
+  "theta_max_deg": 33.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.23271056693257725,
+  "err": 8.07340324509191e-05,
+  "err_ground": 3.526853665576957e-05,
+  "time_s": 27.301217317581177,
+  "x_n": 241,
+  "z_n": 10801,
+  "dx": 2.5,
+  "dz": 0.037037037037037035,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "sea water"
+ },
+ {
+  "slope_deg": 20.0,
+  "pol": "H",
+  "theta_max_deg": 53.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.12566370614359174,
+  "err": 0.000805110075664516,
+  "err_ground": 5.354083009857869e-08,
+  "time_s": 57.09724521636963,
+  "x_n": 241,
+  "z_n": 29024,
+  "dx": 2.5,
+  "dz": 0.02,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "wet ground"
+ },
+ {
+  "slope_deg": 20.0,
+  "pol": "V",
+  "theta_max_deg": 53.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.12566370614359174,
+  "err": 0.0008172798590400014,
+  "err_ground": 3.1090351095551636e-07,
+  "time_s": 59.358598709106445,
+  "x_n": 241,
+  "z_n": 29024,
+  "dx": 2.5,
+  "dz": 0.02,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "wet ground"
+ },
+ {
+  "slope_deg": 20.0,
+  "pol": "V",
+  "theta_max_deg": 53.0,
+  "precision": 0.01,
+  "closure": "compact",
+  "k_deta": 0.12566370614359174,
+  "err": 0.0008087828844436811,
+  "err_ground": 8.646976473010678e-08,
+  "time_s": 62.31813049316406,
+  "x_n": 241,
+  "z_n": 29024,
+  "dx": 2.5,
+  "dz": 0.02,
+  "order": [
+   7,
+   8
+  ],
+  "ground": "sea water"
+ }
+]
