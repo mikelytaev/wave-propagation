@@ -16,10 +16,34 @@ Helmholtz propagator
 .. automodule:: pywaveprop.helmholtz_jax
    :members:
 
+Terrain-following rational propagator
+-------------------------------------
+
+.. automodule:: pywaveprop.helmholtz_tf_jax
+   :members:
+
+.. automodule:: pywaveprop.terrain_transform
+   :members:
+
 Split-step Fourier propagator
 -----------------------------
 
 .. automodule:: pywaveprop.helmholtz_ssf_jax
+   :members:
+
+Rank-adaptive split-step Fourier propagator
+-------------------------------------------
+
+.. automodule:: pywaveprop.helmholtz_rassf_jax
+   :members:
+
+Split-step wavelet propagator
+-----------------------------
+
+.. automodule:: pywaveprop.helmholtz_ssw_jax
+   :members:
+
+.. automodule:: pywaveprop.utils.wavelets
    :members:
 
 Tropospheric radio wave propagation

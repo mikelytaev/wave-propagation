@@ -67,6 +67,55 @@ class RWPField:
         return res
 
 
+class TerrainFollowingRWPField(RWPField):
+    """Field computed in terrain-following coordinates.
+
+    ``field[i, j]`` is the field at the computational node ``(x_grid[i], z_grid[j])``
+    whose physical position is ``(x_phys[i, j], z_phys[i, j])``; the two
+    coincide above the transition layer.  ``terrain_x`` / ``terrain_z`` describe
+    the (smoothed) ground used by the solver.
+    """
+
+    def __init__(self, x_grid, z_grid, freq_hz, field, x_phys, z_phys, terrain_x=None, terrain_z=None):
+        super().__init__(x_grid=x_grid, z_grid=z_grid, freq_hz=freq_hz, field=field)
+        self.x_phys = np.asarray(x_phys)
+        self.z_phys = np.asarray(z_phys)
+        self.terrain_x = None if terrain_x is None else np.asarray(terrain_x)
+        self.terrain_z = None if terrain_z is None else np.asarray(terrain_z)
+
+    def path_loss(self, gamma=0):
+        res = deepcopy(self)
+        wavelength = 3e8 / self.freq_hz
+        x = np.maximum(self.x_phys, 2e-16)
+        res.field = (-20 * np.log10(np.abs(self.field) + 2e-16) + 20 * np.log10(4 * np.pi)
+                     + 10 * np.log10(x) - 30 * np.log10(wavelength) + gamma * x * 1e-3)
+        return res
+
+    def on_regular_grid(self, x_grid, z_grid, values=None):
+        """Resample ``|field|`` (or ``values`` given on the computational nodes)
+        onto the Cartesian grid ``x_grid x z_grid``; NaN under the ground.
+
+        Each computational row is interpolated in ``x`` first and each resulting
+        column in ``z``: both are monotone because the map is regular.
+        """
+        v = np.abs(self.field) if values is None else np.asarray(values)
+        x_grid = np.asarray(x_grid, dtype=float)
+        z_grid = np.asarray(z_grid, dtype=float)
+        n_rows = v.shape[1]
+        vx = np.empty((x_grid.size, n_rows))
+        zx = np.empty((x_grid.size, n_rows))
+        for j in range(n_rows):
+            vx[:, j] = np.interp(x_grid, self.x_phys[:, j], v[:, j], left=np.nan, right=np.nan)
+            zx[:, j] = np.interp(x_grid, self.x_phys[:, j], self.z_phys[:, j], left=np.nan, right=np.nan)
+        out = np.full((x_grid.size, z_grid.size), np.nan)
+        for i in range(x_grid.size):
+            ok = np.isfinite(zx[i]) & np.isfinite(vx[i])
+            if ok.sum() < 2:
+                continue
+            out[i] = np.interp(z_grid, zx[i, ok], vx[i, ok], left=np.nan, right=np.nan)
+        return out
+
+
 class RWPRandomField:
     """Collection of field samples for Monte Carlo simulation."""
 

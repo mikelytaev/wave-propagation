@@ -1,4 +1,4 @@
-"""Split-step Fourier vs rational (Padé) finite-difference JAX propagators.
+"""Split-step Fourier / wavelet vs rational (Padé) finite-difference JAX propagators.
 
 Runs both solvers on a few tropospheric problems (standard atmosphere over
 PEC, evaporation duct, hill terrain, V-polarization over a dielectric near
@@ -59,16 +59,18 @@ for name, (src, env, params, heights) in cases.items():
     print(f'=== {name}')
     fd = run(src, env, params, 'pade')
     ssf = run(src, env, params, 'ssf')
-    fig, axes = plt.subplots(2, 2, figsize=(14, 8))
-    for ax, f, label in zip(axes[0], (fd, ssf), ('Padé FD', 'SSF')):
+    ssw = run(src, env, params, 'ssw')
+    fig, axes = plt.subplots(2, 3, figsize=(20, 8))
+    for ax, f, label in zip(axes[0], (fd, ssf, ssw), ('Padé FD', 'SSF', 'SSW')):
         amp = 20 * np.log10(np.abs(f.field).T + 1e-30)
         vmax = float(np.max(amp[:, len(f.x_grid) // 10:]))
         ax.pcolormesh(f.x_grid, f.z_grid, amp, shading='auto', cmap='jet', vmin=vmax - 60, vmax=vmax)
         ax.set_title(f'{label}: {name}')
         ax.set_xlabel('Range (m)')
         ax.set_ylabel('Height (m)')
+    axes[1, 2].axis('off')
     for ax, z in zip(axes[1], heights):
-        for f, label in zip((fd, ssf), ('Padé FD', 'SSF')):
+        for f, label in zip((fd, ssf, ssw), ('Padé FD', 'SSF', 'SSW')):
             iz = int(np.argmin(np.abs(f.z_grid - z)))
             ax.plot(f.x_grid, 20 * np.log10(np.abs(f.field[:, iz]) + 1e-30), label=label)
         ax.set_title(f'z = {z} m')

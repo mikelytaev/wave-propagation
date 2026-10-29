@@ -237,8 +237,8 @@ class TestSSFPropagatorBasics(unittest.TestCase):
             for alpha in (0.3 + 0.2j, 2.0 - 1.5j, -0.4 + 3.0j):
                 model = self._make(lower_bc='impedance', alpha=alpha)
                 model._spectral_mult = jnp.ones_like(model._spectral_mult)
-                model._surface_mult = jnp.asarray(1.0 + 0j)
-                model._surface_mult_top = jnp.asarray(1.0 + 0j)
+                model._dmft.surface_mult = jnp.asarray(1.0 + 0j)
+                model._dmft.surface_mult_top = jnp.asarray(1.0 + 0j)
                 z = model.z_computational_grid()
                 u = jnp.exp(-((z - 80.0) / 20.0) ** 2) * jnp.exp(0.3j * z) + 0.2 * jnp.cos(0.05 * z)
                 u_back = model._spectral_step_impedance(u)
@@ -594,6 +594,199 @@ class TestSSFvsRationalFD(unittest.TestCase):
                       xlabel="Range (m)", ylabel="dB")
             rep.params("At x = 500 m, z = 100 m", ssf_ratio_db=float(ratio_db), theory_db=float(theory_db))
             rep.check("relative error of the attenuation", abs(ratio_db - theory_db) / abs(theory_db), "<", 0.02)
+            rep.assert_all()
+
+
+def _half_space_exact(k0, eps, pol, u0_fun, x_grid, z_grid, half_width_m=800.0):
+    """Exact plane-wave-spectrum solution over a flat homogeneous ground.
+
+    Every downgoing component ``p < 0`` of the free-space field of ``u0_fun``
+    is reflected into ``-p`` with the exact (Fresnel) coefficient
+    ``(p + alpha) / (p - alpha)``, ``alpha(p) = sqrt((eps - 1) k0^2 + p^2) [/ eps]``
+    (Sprouse & Awadallah 2012, eq. 19); the reduced field ``u = psi exp(-i k0 x)``
+    is returned on ``x_grid`` x ``z_grid`` (``z >= 0``).
+    """
+    dz = 2 * np.pi / k0 / 16
+    n = int(2 * half_width_m / dz)
+    zz = (np.arange(n) - n // 2) * dz
+    spec = np.fft.fft(np.fft.ifftshift(u0_fun(zz)))
+    p = 2 * np.pi * np.fft.fftfreq(n, dz)
+    alpha = np.sqrt((eps - 1) * k0 ** 2 + p.astype(complex) ** 2)
+    if pol == 'V':
+        alpha = alpha / eps
+    refl = np.where(p < 0, (p + alpha) / (p - alpha), 0.0)
+    spec = spec + (spec * refl)[(-np.arange(n)) % n]
+    q = np.sqrt(k0 ** 2 - p.astype(complex) ** 2)
+    q = np.where(q.imag < 0, -q, q)
+    iz = np.round(np.asarray(z_grid) / dz).astype(int) + n // 2
+    return np.array([np.fft.fftshift(np.fft.ifft(spec * np.exp(1j * (q - k0) * x)))[iz] for x in np.asarray(x_grid)])
+
+
+class TestConsistentFieldImpedance(unittest.TestCase):
+    """Angle-dependent (consistent-field) impedance condition of Sprouse &
+    Awadallah (2012) versus the angle-independent DMFT and exact solutions."""
+
+    freq = 2.25e9
+    k0 = 2 * fm.pi * 2.25e9 / 3e8
+
+    def _gauss(self, h, bw_deg, el_deg):
+        """Gaussian source of the paper, eq. 47."""
+        k0, bw, el = self.k0, fm.radians(bw_deg), fm.radians(el_deg)
+        return lambda z: (fm.sqrt(k0) * fm.tan(bw) * np.exp(-0.5 * k0 ** 2 * (z - h) ** 2 * fm.tan(bw) ** 2
+                                                            + 1j * k0 * (z - h) * fm.sin(el)))
+
+    def _make(self, lower_bc, eps, pol, **kw):
+        k0 = self.k0
+        dz = 3 * (2 * fm.pi / k0) / 8
+        return SSFHelmholtzPropagator.create(
+            freq_hz=self.freq, wave_speed=ConstWaveSpeedModel(3e8), kz_max=k0, k_bounds=(k0, k0), precision=0.01,
+            mesh_params=HelmholtzMeshParams2D(x_size_m=150.0, z_size_m=100.0, dx_output_m=0.5, dz_output_m=dz),
+            lower_bc=lower_bc, lower_impedance_alpha=impedance_alpha(k0, eps, pol), lower_eps=eps,
+            polarization=pol, dx_m=0.5, dz_m=dz, **kw)
+
+    def _solve_all(self, eps, pol, u0_fun):
+        """Exact field plus DMFT, CF (published split) and CF (even split) fields.
+        All solvers start from the exact field at x = 0, so the comparison is
+        not affected by the (half-space) initial-value ambiguity."""
+        models = {"DMFT (Leontovich)": self._make('impedance', eps, pol),
+                  "CF, paper split": self._make('impedance_cf', eps, pol, cf_split='paper'),
+                  "CF, even split": self._make('impedance_cf', eps, pol)}
+        m = models["DMFT (Leontovich)"]
+        x, z = np.asarray(m.x_output_grid()), np.asarray(m.z_output_grid())
+        ref = _half_space_exact(self.k0, eps, pol, u0_fun, x, z)
+        init = _half_space_exact(self.k0, eps, pol, u0_fun, [0.0], np.asarray(m.z_computational_grid()))[0]
+        fields = {k: np.asarray(mod.compute(init)) for k, mod in models.items()}
+        errs = {k: float(np.linalg.norm(f - ref) / np.linalg.norm(ref)) for k, f in fields.items()}
+        return x, z, ref, fields, errs
+
+    def _report(self, rep, eps, pol, x, z, ref, fields, errs):
+        rep.params("Setup", freq_hz=self.freq, eps=eps, polarization=pol, dz_m=3 * 2 * fm.pi / self.k0 / 8,
+                   dx_m=0.5, cf_delta=0.1)
+        rep.field2d("Exact solution and the three split-step solutions.", {"exact": ref, **fields}, x, z,
+                    dyn_range_db=80.0)
+        rep.field2d("Error |u - u_exact| (same colour scale as the fields).",
+                    {k: f - ref + 1e-30 * np.max(np.abs(ref)) for k, f in fields.items()}, x, z, dyn_range_db=80.0)
+        rep.table("Relative L2 error over the whole domain", ["method", "relative error"],
+                  [[k, v] for k, v in errs.items()])
+
+    def test_brewster_v_pol_paper_case(self):
+        with TestReport(self, """
+            The case of Fig. 2-4 of Sprouse & Awadallah (2012): 2.25 GHz, V-pol
+            Gaussian beam (1 deg half-width, -35 deg elevation, 25 m height) hitting a
+            lossless eps = 2 ground near the Brewster angle arcsin(1/sqrt(3)) = 35.3 deg,
+            dz = 3 lambda / 8. The exact solution (plane-wave spectrum with Fresnel
+            reflection) has a null along the Brewster direction in the reflected beam.
+            The angle-independent Leontovich/DMFT condition misses it (grazing-angle
+            impedance). The consistent-field (CF) condition with the even splitting
+            weight must match the exact field to 1 % (relative L2) and must be at least
+            ten times more accurate than the DMFT. The published splitting weight
+            (eqs. 44-45, delta = 0.1, below-ground taper) is reported for reference.
+            """) as rep:
+            eps, pol = 2.0, 'V'
+            x, z, ref, fields, errs = self._solve_all(eps, pol, self._gauss(25.0, 1.0, -35.0))
+            self._report(rep, eps, pol, x, z, ref, fields, errs)
+            ix = int(np.argmin(np.abs(x - 140.0)))
+            rep.lines("Vertical cut at x = 140 m through the reflected beam (|u| in dB); the exact "
+                      "field has the Brewster null.", z,
+                      {k: 20 * np.log10(np.abs(f[ix]) + 1e-30) for k, f in {"exact": ref, **fields}.items()},
+                      xlabel="Height (m)", ylabel="|u| (dB)")
+            rep.check("CF (even split) relative L2 error", errs["CF, even split"], "<", 1e-2)
+            rep.check("DMFT / CF (even split) error ratio", errs["DMFT (Leontovich)"] / errs["CF, even split"],
+                      ">", 10.0)
+            rep.check("CF (paper split) better than DMFT", errs["CF, paper split"], "<", errs["DMFT (Leontovich)"])
+            rep.assert_all()
+
+    def test_h_pol_is_exact(self):
+        with TestReport(self, """
+            Same geometry with H-polarisation. There is no Brewster root, the even
+            splitting weight is negligible everywhere and the CF step is exact for
+            a field satisfying the plane-wave impedance condition, so the CF result
+            must match the exact solution to round-off (relative L2 < 1e-8).
+            """) as rep:
+            eps, pol = 2.0, 'H'
+            x, z, ref, fields, errs = self._solve_all(eps, pol, self._gauss(25.0, 1.0, -35.0))
+            self._report(rep, eps, pol, x, z, ref, fields, errs)
+            rep.check("CF (even split) relative L2 error", errs["CF, even split"], "<", 1e-8)
+            rep.assert_all()
+
+    def test_upward_brewster_source(self):
+        for h, bw in ((10.0, 5.0), (3.0, 10.0)):
+            with self.subTest(h=h, bw=bw), TestReport(self, f"""
+                    V-pol source at {h:g} m with a {bw:g} deg beam pointing upwards at the
+                    Brewster angle (35.3 deg, eps = 2). Upgoing components at the Brewster
+                    root cannot be represented by the consistent-field decomposition
+                    u~ = (1 - p / alpha) v~ (eq. 43); the splitting must route them through
+                    the free-space path without instability. All methods must stay
+                    within 1 % of the exact solution.
+                    """, title=f"upward Brewster source h={h:g} m", suffix=f"h{h:g}") as rep:
+                eps, pol = 2.0, 'V'
+                x, z, ref, fields, errs = self._solve_all(eps, pol, self._gauss(h, bw, 35.3))
+                self._report(rep, eps, pol, x, z, ref, fields, errs)
+                for k, v in errs.items():
+                    rep.check(f"{k} relative L2 error", v, "<", 1e-2)
+                rep.assert_all()
+
+    def test_rwp_cf_vs_pade_and_two_ray(self):
+        params = RWPComputationalParams(max_range_m=10000.0, max_height_m=300.0, dx_m=50.0, dz_m=1.0)
+        for pol, eps, sigma in (('V', 3.0, 0.0), ('V', 80.0, 4.0), ('H', 3.0, 0.0)):
+            with self.subTest(pol=pol, eps=eps, sigma=sigma), TestReport(self, f"""
+                    Long-range problem through the RWP front-end
+                    (params.ssf_impedance_bc = 'cf'): 300 MHz, antenna at 30 m, 5 deg beam,
+                    {pol}-pol over eps = {eps}, sigma = {sigma} S/m, homogeneous atmosphere.
+                    The CF result must agree with the Padé FD solver (Fresnel-coefficient
+                    NLBC) to 0.05 dB in the median and 0.2 dB at most, and with the
+                    two-ray model like the DMFT does.
+                    """, title=f"CF impedance RWP {pol}-pol eps={eps:g} sigma={sigma:g}",
+                                                                   suffix=f"{pol}_eps{eps:g}") as rep:
+                src = RWPGaussSourceModel(freq_hz=300e6, height_m=30.0, beam_width_deg=5.0, polarization=pol)
+                env = TroposphereModel(slope=0, ground_material=GroundMaterial(eps=eps, sigma=sigma))
+                p = deepcopy(params)
+                p.ssf_impedance_bc = 'cf'
+                model = create_rwp_ssf_model(src, env, p)
+                rep.check("lower_bc", model.lower_bc, "==", 'impedance_cf')
+                _report_setup(rep, src, env, params, model)
+                cf = _run(src, env, p, 'ssf')
+                dmft = _run(src, env, params, 'ssf')
+                fd = _run(src, env, params, 'pade')
+                two_ray = _two_ray_field(src, cf.x_grid, cf.z_grid, eps=eps, sigma=sigma)
+                rep.field2d("Padé FD, SSF with the DMFT and SSF with the CF condition.",
+                            {"Padé FD": fd.field, "SSF DMFT": dmft.field, "SSF CF": cf.field}, cf.x_grid, cf.z_grid)
+                rows = []
+                for z_m in (5.0, 30.0, 100.0):
+                    cf_fd = _db_stats(fd, cf, z_m, x_skip=0.3, floor_db=-30, normalize=True)
+                    dm_fd = _db_stats(fd, dmft, z_m, x_skip=0.3, floor_db=-30, normalize=True)
+                    cf_tr = _db_stats(two_ray, cf, z_m, x_skip=0.3, floor_db=-30, normalize=True)
+                    dm_tr = _db_stats(two_ray, dmft, z_m, x_skip=0.3, floor_db=-30, normalize=True)
+                    rows.append([f"{z_m:g}", cf_fd[0], cf_fd[2], dm_fd[0], dm_fd[2], cf_tr[0], cf_tr[2],
+                                 dm_tr[0], dm_tr[2]])
+                    rep.check(f"CF vs Padé median at z = {z_m:g} m", cf_fd[0], "<", 0.05, "dB")
+                    rep.check(f"CF vs Padé max at z = {z_m:g} m", cf_fd[2], "<", 0.2, "dB")
+                    rep.check(f"CF vs two-ray median at z = {z_m:g} m", cf_tr[0], "<", 0.1, "dB")
+                    rep.check(f"CF vs two-ray max at z = {z_m:g} m", cf_tr[2], "<", 0.5, "dB")
+                rep.table("|dB| differences (x > 30 % of the range, points within 30 dB of the cut maximum)",
+                          ["z (m)", "CF-Padé median", "CF-Padé max", "DMFT-Padé median", "DMFT-Padé max",
+                           "CF-2ray median", "CF-2ray max", "DMFT-2ray median", "DMFT-2ray max"], rows)
+                rep.assert_all()
+
+    def test_invalid_parameters(self):
+        with TestReport(self, """
+            The CF condition needs the ground permittivity, supports flat ground
+            only and rejects unknown splitting weights.
+            """) as rep:
+            cases = (("no lower_eps", dict(lower_bc='impedance_cf'), ValueError),
+                     ("terrain", dict(lower_bc='impedance_cf', lower_eps=2.0,
+                                      lower_terrain=PiecewiseLinearTerrainModel(jnp.array([0.0, 150.0]),
+                                                                                jnp.array([0.0, 0.0]))), ValueError),
+                     ("unknown split", dict(lower_bc='impedance_cf', lower_eps=2.0, cf_split='foo'), ValueError))
+            k0 = self.k0
+            for label, kw, exc in cases:
+                with self.assertRaises(exc):
+                    SSFHelmholtzPropagator.create(
+                        freq_hz=self.freq, wave_speed=ConstWaveSpeedModel(3e8), kz_max=k0, k_bounds=(k0, k0),
+                        precision=0.01, mesh_params=HelmholtzMeshParams2D(x_size_m=150.0, z_size_m=100.0,
+                                                                          dx_output_m=0.5, dz_output_m=0.05),
+                        **kw)
+                rep.check(f"{label} raises", True, "==", True)
             rep.assert_all()
 
 

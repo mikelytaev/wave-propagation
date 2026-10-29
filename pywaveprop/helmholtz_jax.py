@@ -424,7 +424,7 @@ class RationalHelmholtzPropagator:
                  x_grid_scale: int, z_grid_scale: int, freq_hz: float, wave_speed,
                  rho=None, lower_terrain=None, upper_terrain=None, coefs=None, lower_nlbc_coefs=None, upper_nlbc_coefs=None,
                  lower_refl_coef_func=None, has_lower_nlbc: bool = False,
-                 approx_method='pade', xi_bounds=None, lower_layer=None):
+                 approx_method='pade', xi_bounds=None, lower_layer=None, z_offset_m: float = 0.0):
         self.order = order
         self.beta = beta
         self.dx_m = dx_m
@@ -459,6 +459,12 @@ class RationalHelmholtzPropagator:
         self.lower_terrain = lower_terrain
         self.upper_terrain = upper_terrain
         self.lower_layer = lower_layer
+        # Physical height of the lowest grid node: the computational domain is
+        # [z_offset_m, z_offset_m + (z_n - 1) * dz_m] (used to lift the lower
+        # boundary above a rough sea surface, see pywaveprop.rwp_jax.RoughSeaSurface).
+        self.z_offset_m = float(z_offset_m)
+        if self.z_offset_m != 0.0 and any(v is not None for v in (rho, lower_terrain, upper_terrain, lower_layer)):
+            raise ValueError("z_offset_m is only supported without rho, terrain and lower layer")
         self._prepare_het_arrays()
         gamma = (self.het[-1] - self.het[-2]) / self.dz_m
         # beta_param is the exterior het value at the upper boundary, adjusted
@@ -466,7 +472,10 @@ class RationalHelmholtzPropagator:
         beta_nlbc = self.het[-1] - gamma * (self.z_n - 1) * self.dz_m
         self.upper_nlbc_coefs = upper_nlbc_coefs if upper_nlbc_coefs is not None else self._calc_upper_nlbc(beta_nlbc, gamma)
 
-        self.has_lower_nlbc = bool(has_lower_nlbc or lower_refl_coef_func is not None or lower_nlbc_coefs is not None)
+        # ``lower_nlbc_coefs`` alone does not switch the lower NLBC on: the pytree
+        # round trip passes the zero placeholder below together with the static
+        # flag, and a zero kernel would turn the Dirichlet row into u_1 = 0.
+        self.has_lower_nlbc = bool(has_lower_nlbc or lower_refl_coef_func is not None)
         if self.has_lower_nlbc:
             if lower_nlbc_coefs is not None:
                 self.lower_nlbc_coefs = lower_nlbc_coefs
@@ -480,8 +489,11 @@ class RationalHelmholtzPropagator:
 
 
     def _prepare_het_arrays(self):
-        k_arr = 2 * jnp.pi * self.freq_hz / self.wave_speed.on_regular_grid(
-            RegularGrid(start=0, dx=self.dz_m, n=self.z_n))
+        if self.z_offset_m == 0.0:
+            c_arr = self.wave_speed.on_regular_grid(RegularGrid(start=0, dx=self.dz_m, n=self.z_n))
+        else:
+            c_arr = self.wave_speed(self.z_computational_grid())
+        k_arr = 2 * jnp.pi * self.freq_hz / c_arr
         self.het = jnp.array(k_arr ** 2 / self.beta ** 2 - 1.0, dtype=complex)
 
         if self.rho is not None:
@@ -547,7 +559,7 @@ class RationalHelmholtzPropagator:
         return self.x_computational_grid()[::self.x_grid_scale]
 
     def z_computational_grid(self):
-        return jnp.arange(0, self.z_n) * self.dz_m
+        return self.z_offset_m + jnp.arange(0, self.z_n) * self.dz_m
 
     def z_output_grid(self):
         return self.z_computational_grid()[::self.z_grid_scale]
@@ -569,6 +581,7 @@ class RationalHelmholtzPropagator:
             'has_lower_nlbc': self.has_lower_nlbc,
             'approx_method': self.approx_method,
             'xi_bounds': self.xi_bounds,
+            'z_offset_m': self.z_offset_m,
         }
         return dynamic, static
 
@@ -604,11 +617,15 @@ class RationalHelmholtzPropagator:
             # adaptive integration to fail.
             from scipy import linalg as sla
 
+            # compiled once per boundary: the coefficients of the ratio are otherwise
+            # dispatched op by op for every eigenvalue
+            ratio_jit = jax.jit(diff_eq_solution_ratio)
+
             def _scalar_diff_eq(s):
-                s = np.asarray(s)
+                s = np.asarray(s, dtype=complex)
                 if s.ndim == 0:
-                    return complex(diff_eq_solution_ratio(jnp.asarray(s)))
-                return np.array([complex(diff_eq_solution_ratio(jnp.asarray(si))) for si in s])
+                    return complex(ratio_jit(jnp.asarray(s)))
+                return np.array([complex(ratio_jit(jnp.asarray(si))) for si in s])
 
             def nlbc_transformed(f):
                 t = tau * np.exp(1j * f)
@@ -653,6 +670,53 @@ class RationalHelmholtzPropagator:
 
         return self._calc_nlbc(diff_eq_solution_ratio, inv_z_transform_rtol)
 
+    def _lower_mu(self, s, beta_het):
+        """Decaying root ``mu`` (``|mu| < 1``) of the discrete (4th-order) vertical
+        equation in the homogeneous half-space above the lower boundary
+        (NumPy, vectorised over ``s``)."""
+        s = np.asarray(s, dtype=complex)
+        a = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta_het)
+        c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta_het)
+        # a mu^2 + c mu + a = 0: the roots are mu and 1/mu
+        sq = np.sqrt(c ** 2 - 4 * a * a + 0j)
+        mu1, mu2 = (-c + sq) / (2 * a), (-c - sq) / (2 * a)
+        return np.where(np.abs(mu1) > np.abs(mu2), mu2, mu1)
+
+    def lower_nlbc_contour_kz(self, n_phi: int = 4096):
+        """Vertical wavenumbers ``k_z = log(mu) / (i dz)`` at the lower boundary
+        sampled along the inverse z-transform contour ``|xi| = tau``.
+
+        The samples trace a closed loop in the first quadrant of the ``k_z``
+        plane whose interior is the image of ``|xi| > tau``: the lower reflection
+        coefficient has to be analytic there, and ``1 + R`` zero-free, for the
+        nonlocal BC to be causal and stable.
+        """
+        num = np.array(self.coefs[:, 0])
+        den = np.array(self.coefs[:, 1])
+        m_size = len(num)
+        # denser sampling near xi = tau, which maps onto small k_z
+        phi = np.concatenate([np.linspace(0, 2 * np.pi, n_phi, endpoint=False),
+                              np.logspace(-7, -1, 200), 2 * np.pi - np.logspace(-7, -1, 200)])
+        s_vals = []
+        for f in phi:
+            t = self.inv_z_transform_tau * np.exp(1j * f)
+            if m_size == 1:
+                s_vals.append(np.array([(1 - t) / (-num[0] + den[0] * t)]))
+                continue
+            matrix_a = np.diag(den, 0) - np.diag(num[1:], -1)
+            matrix_a[0, -1] += -num[0]
+            matrix_a[0, 0] *= t
+            matrix_b = np.diag(-np.ones(m_size)) + np.diag(np.ones(m_size - 1), -1) + 0j
+            matrix_b[0, -1] = 1.0
+            matrix_b[0, 0] *= t
+            s_vals.append(np.linalg.eigvals(np.linalg.solve(matrix_a, matrix_b)))
+        mu = self._lower_mu(np.concatenate(s_vals), complex(self.het[0]))
+        return np.log(mu) / (1j * self.dz_m)
+
+    # relative tolerance of the adaptive inverse z-transform quadrature of the
+    # lower NLBC; its error is amplified by up to tau**x_n = 1000 at the last step
+    lower_nlbc_rtol = 1e-7
+
     def _calc_lower_nlbc(self, refl_coef_func, beta_het=0.0):
         """Lower NLBC for an angle-dependent reflection coefficient.
 
@@ -661,25 +725,29 @@ class RationalHelmholtzPropagator:
         from the homogeneous half-space solution and adjusted for the boundary
         impedance via ``(1/mu + R*mu) / (1 + R)``.
 
+        The grazing angle is complex along the inverse z-transform contour, so
+        ``refl_coef_func`` must be the analytic continuation of the physical
+        reflection coefficient, with ``1 + R`` free of zeros inside the contour
+        loop (see :meth:`lower_nlbc_contour_kz`).
+
         ``beta_het`` is the exterior heterogeneity value at the lower boundary,
         i.e. ``het[0] = k[0]**2 / beta**2 - 1``.
         """
-        inv_z_transform_rtol = 1e-7
-        beta = beta_het
+        inv_z_transform_rtol = self.lower_nlbc_rtol
         # Physical wavenumber at the boundary: k[0] = beta_ref * sqrt(1 + het[0]).
         # The Fresnel reflection coefficient requires the physical grazing angle,
         # not the angle in the beta-parameterized reference medium.
         k_boundary = self.beta * cm.sqrt(1 + beta_het)
 
         def diff_eq_solution_ratio(s):
-            a_m1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
-            a_1 = 1 - self.alpha * (self.beta * self.dz_m) ** 2 * (s - beta)
-            c = -2 + (2 * self.alpha - 1) * (self.beta * self.dz_m) ** 2 * (s - beta)
-            mu = sqr_eq(a_1, c, a_m1)
-            mu_c = complex(mu)
+            mu_c = complex(self._lower_mu(complex(s), beta_het))
             theta = cm.asin(1 / (1j * k_boundary * self.dz_m) * cm.log(mu_c)) / cm.pi * 180
-            refl_coef = refl_coef_func(theta)
-            return (1 / mu_c + refl_coef * mu_c) / (1 + refl_coef)
+            refl_coef = complex(refl_coef_func(theta))
+            if abs(refl_coef) <= 1:
+                return (1 / mu_c + refl_coef * mu_c) / (1 + refl_coef)
+            # same ratio divided through by R: stays finite for large |R|
+            refl_coef_inv = 1 / refl_coef
+            return (refl_coef_inv / mu_c + mu_c) / (refl_coef_inv + 1)
 
         return self._calc_nlbc(diff_eq_solution_ratio, inv_z_transform_rtol)
 
