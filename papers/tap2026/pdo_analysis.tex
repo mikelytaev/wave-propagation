@@ -1,0 +1,671 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\het}{\nu}
+\newcommand{\pd}{\partial}
+\newcommand{\Op}{\operatorname{Op}^w}
+\newcommand{\etal}{\eta_{\ell}}
+
+\title{The Terrain-Following One-Way Equation as a Pseudodifferential Problem}
+\author{Note accompanying the TAP 2026 manuscript (\texttt{main.tex})}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The Liouville-transformed equation $\varphi_{\xi\xi}+B\varphi=0$ (equation
+(11) of the manuscript) is read in the language of pseudodifferential
+operators: $\xi$ is the evolution variable and $B$ is an operator in $\eta$
+with $\xi$-dependent coefficients.
+\begin{itemize}
+\item We compute the exact Weyl symbol of $B$. Its principal part is the local
+  dispersion relation, and it has no first-order part. The only corrections are
+  two zeroth-order terms of relative size $(\lambda/\ell)^2$: the potential $V$
+  of the manuscript, and a term $r_\eta^2/(4r^4)$ that the operator form keeps
+  implicitly.
+\item The one-way factorization (13) is the symbol expansion of the operator
+  Riccati equation. We give its next term, which reduces to the classical
+  second-order WKB correction.
+\item The Bremmer coupling series makes the neglected backward wave explicit.
+  Its local part reproduces the second-order term. Genuine backscatter is
+  $O(\varepsilon^\infty)$, exponentially small for smoothed terrain. The flux
+  pairs are the interface transmission coefficients without the staircase
+  reflection loss.
+\item The flux-conserving step, the rational propagator, the per-class
+  reference wavenumber, the dispersion analysis, the vertical stretching and the
+  nonuniform range step are then statements about symbols.
+\item The same calculus explains why the shift map has an error floor that does
+  not vanish under refinement, and why no local top boundary absorbs grazing
+  waves.
+\end{itemize}
+\end{abstract}
+
+\section{Setting and conventions}
+
+\paragraph{The equation.} In orthogonal coordinates $(\xi,\eta)$ with scale factors
+$h_\xi,h_\eta$ and anisotropy $r=h_\eta/h_\xi$, the Helmholtz equation reads
+(manuscript (7))
+\begin{equation}\label{eq:helm}
+\pd_\xi(r\pd_\xi\psi)+\pd_\eta(r^{-1}\pd_\eta\psi)+h_\xi h_\eta k^2\psi=0 .
+\end{equation}
+With $\psi=r^{-1/2}\varphi$ it becomes (manuscript (11))
+\begin{equation}\label{eq:liou}
+\varphi_{\xi\xi}+B\varphi=0,\qquad
+B\varphi=r^{-1/2}\pd_\eta\!\left(r^{-1}\pd_\eta(r^{-1/2}\varphi)\right)+(k^2h_\xi^2-V)\varphi,
+\end{equation}
+with $V=(r^{1/2})_{\xi\xi}/r^{1/2}$.
+
+\paragraph{Quantization.} Let $D=-i\pd_\eta$ and let $q$ be the variable dual
+to $\eta$; $q$ is the computational vertical wavenumber of Section VII of the
+manuscript. For a function $a(\eta,q)$, depending on $\xi$ as a parameter, the
+Weyl quantization is
+\[
+\Op(a)u(\eta)=\frac1{2\pi}\iint e^{i(\eta-\eta')q}\,a\!\left(\tfrac{\eta+\eta'}2,q\right)u(\eta')\,d\eta'\,dq .
+\]
+Real symbols give symmetric operators. Composition is given by the Moyal product
+\begin{equation}\label{eq:moyal}
+a\#b=ab+\frac i2\{a,b\}-\frac18\left(a_{qq}b_{\eta\eta}-2a_{q\eta}b_{q\eta}+a_{\eta\eta}b_{qq}\right)+\dots,\qquad
+\{a,b\}=a_qb_\eta-a_\eta b_q .
+\end{equation}
+Odd-order terms are antisymmetric in $(a,b)$. Hence $a\#a=a^2+O(\pd^4)$, and the
+symbol of a commutator is $i\{a,b\}$ to leading order.
+
+\paragraph{The small parameter.} Let $\ell$ be the shortest length on which the
+metric varies: the smoothing length of the terrain, or the transition height
+$L$. The expansion parameter is $\varepsilon=1/(k\ell)$. In rescaled variables
+$\eta/\ell$ and $q/k$, every derivative of a coefficient brings one factor
+$\varepsilon$; this is the semiclassical calculus with $\hbar=\varepsilon$
+\cite{zworski,dimassi}. Symbols are graded by powers of $\varepsilon$. We write
+$a=a_0+\varepsilon a_1+\varepsilon^2a_2+\dots$ but keep the physical
+variables in the formulas.
+
+\section{The symbol of $B$}
+
+\paragraph{Exact Weyl symbol.} For any smooth $g$ we have
+$\Op(g\,q^2)=\tfrac14(D^2g+2DgD+gD^2)$. Moreover
+$D^2g+gD^2=2DgD-g''$, so
+\begin{equation}\label{eq:DgD}
+DgD=\Op\!\left(g\,q^2+\tfrac14 g''\right).
+\end{equation}
+With $f=r^{-1/2}$ and $g=r^{-1}$, moving $f$ through $D$ gives
+$fDgDf=D(f^2g)D-(ff'g)'+g f'^2$. The derivative part of $B$ is
+$-fDgDf$. Using \eqref{eq:DgD} for $f^2g=r^{-2}$, the second derivatives of $r$
+cancel and only a square of $r_\eta$ is left:
+\begin{equation}\label{eq:symbol}
+\boxed{\;b(\xi,\eta,q)=k^2h_\xi^2-\frac{q^2}{r^2}-V-\frac{r_\eta^2}{4r^4}\;},
+\qquad B=\Op(b)\ \text{exactly}.
+\end{equation}
+The identity $r^{-1/2}(r^{-1}(r^{-1/2}u)')'=(r^{-2}u')'+\tfrac14(r^{-2})''u-\tfrac14r'^2r^{-4}u$
+behind \eqref{eq:symbol} was checked numerically to working precision.
+
+\paragraph{Principal symbol: the dispersion relation.} The principal symbol is
+\[
+b_0=k^2h_\xi^2-\frac{q^2}{r^2}.
+\]
+Let $\kappa$ be dual to $\xi$. The characteristic set of
+\eqref{eq:liou} is $\kappa^2=b_0$, that is,
+$(\kappa/h_\xi)^2+(q/h_\eta)^2=k^2$: the local plane waves of the manuscript.
+With $q=kh_\eta\sin\theta$, where $\theta$ is the angle to the level curve,
+\begin{equation}\label{eq:angle}
+b_0=k^2h_\xi^2\cos^2\theta,\qquad \sqrt{b_0}=kh_\xi\cos\theta .
+\end{equation}
+
+\paragraph{No first-order part.} The symbol \eqref{eq:symbol} is real, with
+nothing of order $\varepsilon^1$. This is the symbol form of ``$B$ is symmetric
+in $L^2(d\eta)$''. It matters: a first-order (subprincipal) term would be an
+imaginary part of order $\varepsilon q$, which transports amplitude across
+$\eta$ and makes $B$ non-normal. The original equation \eqref{eq:helm}, divided
+by $r$, has first-order terms in both variables: $(r_\xi/r)\pd_\xi$ and
+$(\pd_\eta r^{-1})/r^{-1}\cdot\pd_\eta$. The Liouville substitution is the gauge
+that removes them. The price is the two zeroth-order terms of order
+$\varepsilon^2$:
+\begin{itemize}
+\item $V=(r^{1/2})_{\xi\xi}/r^{1/2}$ from the $\xi$ direction. Since $\xi$ is
+  the evolution variable and is not quantized, this term has to be written
+  explicitly, and the scheme computes it by a second difference along the
+  columns.
+\item $W=r_\eta^2/(4r^4)$ from the $\eta$ direction. It is not written in the
+  manuscript and does not need to be: the scheme discretizes the operator form
+  $r\pd_\eta r^{-1}\pd_\eta$, which contains $W$ exactly.
+\end{itemize}
+Both are $O((\lambda/\ell)^2)$ relative to $k^2h_\xi^2$, which is the size
+stated after (11) for $V$.
+
+\paragraph{The vertical stretching.} A stretching $\eta=Z(\eta')$ with
+$s=dZ/d\eta'$ multiplies $h_\eta$ by $s$. In \eqref{eq:symbol} this replaces $r$
+by $rs$, so $q'/(h_\eta s)$ is the physical vertical wavenumber. This is the
+symbol form of ``a stretching is a metric'' (\texttt{nonuniform\_grids.md},
+Section 1).
+
+\section{One-way factorization as a symbol expansion}
+
+\paragraph{The Riccati equation.} Seek $\varphi_\xi=i\Lambda\varphi$ with
+$\Lambda=\Op(\lambda)$. Then \eqref{eq:liou} requires
+\begin{equation}\label{eq:riccati}
+\Lambda^2-i\Lambda_\xi=B
+\quad\Longleftrightarrow\quad
+\lambda\#\lambda-i\pd_\xi\lambda=b .
+\end{equation}
+We expand $\lambda=\lambda_0+\lambda_1+\lambda_2+\dots$, with $\lambda_j$ of
+order $\varepsilon^j$ relative to $\lambda_0$, and $\pd_\xi$ of a symbol counts
+as one order.
+
+\paragraph{Order 0.} $\lambda_0^2=b_0$. The outgoing root is
+$\lambda_0=\sqrt{b_0}$, with $\operatorname{Im}\sqrt{b_0}\ge0$; for evanescent
+waves ($b_0<0$) it decays in $\xi$.
+
+\paragraph{Order 1.} The first Moyal term of $\lambda\#\lambda$ vanishes, so
+$2\lambda_0\lambda_1-i\pd_\xi\lambda_0=0$ and
+\begin{equation}\label{eq:lambda1}
+\lambda_1=\frac i2\frac{\pd_\xi\lambda_0}{\lambda_0}=\frac i4\frac{\pd_\xi b}{b}.
+\end{equation}
+This is the term $\tfrac i4B^{-1}B_\xi$ of (13) in the manuscript, and the
+manuscript's ``treated as commuting'' is exact at this order. Indeed,
+$\tfrac i4B^{-1}B_\xi$ has the symbol
+$\tfrac i4[b_\xi/b+\tfrac i2\{b^{-1},b_\xi\}+\dots]$, whose correction is of
+order $\varepsilon^2$. The operator ordering only matters from the next order
+on.
+
+\paragraph{Order 2.} Collecting the terms of order $\varepsilon^2$ in
+\eqref{eq:riccati}, including the second Moyal term of $\lambda_0\#\lambda_0$,
+gives
+\begin{equation}\label{eq:lambda2}
+\lambda_2=\frac1{2\sqrt b}\left[\frac{5\,b_\xi^2}{16\,b^2}-\frac{b_{\xi\xi}}{4b}
++\frac14\left(\pd_q^2\lambda_0\,\pd_\eta^2\lambda_0-(\pd_q\pd_\eta\lambda_0)^2\right)\right].
+\end{equation}
+\begin{itemize}
+\item If $b$ does not depend on $\eta$, the last bracket vanishes. What remains
+  is the classical second-order WKB correction
+  $\tfrac5{32}Q'^2Q^{-5/2}-\tfrac18Q''Q^{-3/2}$ for $y''+Qy=0$: a check of the
+  expansion.
+\item The bracket is the phase-space curvature of the one-way symbol. Together
+  with the ordering ambiguity of $\tfrac i4B^{-1}B_\xi$ (a term $\propto
+  \{b^{-1},b_\xi\}$), it is what the manuscript calls ``second-order terms and
+  commutators $[B,B_\xi]$'', whose symbol is $i\{b,b_\xi\}$.
+\item All of these are $O(\varepsilon^2)$. Over a transition region of length
+  $\ell_\xi$ they accumulate a phase of order $k\ell_\xi\varepsilon^2$.
+\end{itemize}
+
+\paragraph{Limits of the expansion.}
+\begin{itemize}
+\item \emph{Smoothness.} The expansion needs $\varepsilon\ll1$. The terrain
+  smoothing and the transition height are what keep the metric smooth on the
+  wavelength scale.
+\item \emph{Turning points.} The expansion fails where $b_0=0$, i.e.\
+  $\theta\to90^\circ$ to the marching direction, because $\sqrt{b_0}$ is not
+  smooth there. Backscatter is not captured; this is the general limit of
+  one-way methods \cite{fishman,dehoop}. Section~\ref{sec:bremmer} quantifies it. Within the aperture, $b_0\ge
+  k^2h_\xi^2\cos^2\theta_{\max}>0$ keeps the field away from it.
+\end{itemize}
+
+\section{Flux and the factors $B^{\pm1/4}$}
+
+\paragraph{Flux.} The flux $\mathcal F=\operatorname{Re}\langle\varphi,\sqrt
+B\varphi\rangle$ is the quadratic form with symbol $\sqrt{b_0}$, by (14) of the
+manuscript. By \eqref{eq:angle} it is the squared amplitude times
+$kh_\xi\cos\theta$, which is the WKB amplitude law of the manuscript.
+
+\paragraph{Conjugation.} The variable $\chi=B^{1/4}\varphi$ obeys
+\[
+\chi_\xi=B^{1/4}\left(i\sqrt B-\tfrac14B^{-1}B_\xi\right)\varphi+\left(B^{1/4}\right)_\xi\varphi
+=i\sqrt B\chi+O(\varepsilon^2),
+\]
+because $(B^{1/4})_\xi$ has the symbol $\tfrac14b^{-3/4}b_\xi$ up to
+$O(\varepsilon^2)$. The conjugation removes $\lambda_1$ exactly. So the
+transport term is a gauge of order $\varepsilon$, and the flux-conserving step
+is a gauge-corrected exponential.
+
+\paragraph{The flux pairs.} In (15) of the manuscript the middle factor
+$e^{i\Delta\xi\sqrt{B_{n+1/2}}}$ commutes exactly with $B_{n+1/2}^{\pm1/4}$: all
+three are functions of one operator, and for symbols $\{F(b),G(b)\}=F'G'\{b,b\}=0$.
+The two brackets have the symbols
+\[
+\left(\frac{b_{n+1/2}}{b_{n+1}}\right)^{1/4}=1-\frac{\Delta\xi}8\frac{\pd_\xi b}{b}+O(\Delta\xi^2),\qquad
+\left(\frac{b_n}{b_{n+1/2}}\right)^{1/4}=1-\frac{\Delta\xi}8\frac{\pd_\xi b}{b}+O(\Delta\xi^2).
+\]
+\begin{itemize}
+\item They are the identity wherever the two columns coincide, in particular in
+  the exterior.
+\item Their composition with the exponential is exact up to Poisson brackets
+  between neighbouring columns,
+  $\{b_n,b_{n+1/2}\}=\tfrac{\Delta\xi}2\{b,\pd_\xi b\}+\dots$. These are the
+  neglected commutators of the previous section, now per step.
+\end{itemize}
+
+\paragraph{The rotated Padé factors.} Milinazzo's rotation of the factors
+$(1+L)^{\pm1/4}$ moves their poles off the evanescent part of the symbol range
+$b<0$. A pair of factors at slightly different columns, whose symbols almost
+cancel, then no longer has a pole at almost the same real point, which is where
+the spurious amplification arose.
+
+\section{The Bremmer coupling series}\label{sec:bremmer}
+
+The one-way equation drops the backward wave. The Bremmer series
+\cite{bremmer,atkinson,dehoop} keeps both waves and treats their coupling as a
+perturbation. It shows what the one-way step neglects, and how large that is.
+
+\paragraph{Splitting.} Let $B>0$ on the propagating part of the spectrum, with
+$\Lambda=B^{1/2}$ and $Q=B^{1/4}$, so that $Q^2=\Lambda$ and $Q^{-1}BQ^{-1}=\Lambda$
+exactly. Define the flux-normalized amplitudes $u_\pm$ by
+\begin{equation}\label{eq:split}
+\varphi=Q^{-1}(u_++u_-),\qquad \varphi_\xi=iQ(u_+-u_-),\qquad
+u_\pm=\tfrac12\left(Q\varphi\mp iQ^{-1}\varphi_\xi\right).
+\end{equation}
+Substituting into \eqref{eq:liou} gives, with no approximation,
+\begin{equation}\label{eq:coupled}
+\pd_\xi\begin{pmatrix}u_+\\u_-\end{pmatrix}
+=\begin{pmatrix}i\Lambda+T & \mathcal R\\ \mathcal R & -i\Lambda+T\end{pmatrix}
+\begin{pmatrix}u_+\\u_-\end{pmatrix},\qquad
+T=\tfrac12\left[Q_\xi,Q^{-1}\right],\quad
+\mathcal R=\tfrac12\left(Q_\xi Q^{-1}+Q^{-1}Q_\xi\right).
+\end{equation}
+\begin{itemize}
+\item $Q_\xi$ and $Q^{-1}$ are symmetric, so $T$ is antisymmetric and $\mathcal R$
+  is symmetric. Hence
+  $\pd_\xi\left(\|u_+\|^2-\|u_-\|^2\right)=0$: the coupled system conserves the
+  flux exactly, and $\|u_\pm\|^2$ are the forward and backward fluxes.
+\item The symbols follow from the Moyal product \eqref{eq:moyal}, whose
+  first-order term cancels in the anticommutator and survives in the
+  commutator:
+  \begin{equation}\label{eq:RT}
+  \rho:=\operatorname{symbol}(\mathcal R)=\frac{\pd_\xi b}{4b}\bigl(1+O(\varepsilon^2)\bigr),\qquad
+  \operatorname{symbol}(T)=\frac i{32}\frac{\{b,\pd_\xi b\}}{b^2}+O(\varepsilon^3).
+  \end{equation}
+  Relative to $\lambda_0=\sqrt b$, the coupling $\rho$ is of order
+  $\varepsilon$ and $T$ of order $\varepsilon^2$. $T$ is the commutator
+  $[B,B_\xi]$ that the manuscript neglects, and it is a pure phase.
+\item In the exterior, and wherever the columns do not change, $\rho=0$ and
+  $T=0$, and the two waves decouple exactly.
+\end{itemize}
+
+\paragraph{The series.} Let $G_\pm(\xi,\xi')$ be the propagators of
+$\pd_\xi\mp i\Lambda-T$. For flux-normalized variables they are unitary. With
+the incident field given at $\xi=0$ and no backward wave entering from the far
+end $\xi=X$,
+\[
+u_+(\xi)=G_+(\xi,0)u_+(0)+\int_0^\xi G_+(\xi,\xi')\mathcal R u_-(\xi')\,d\xi',\qquad
+u_-(\xi)=-\int_\xi^X G_-(\xi,\xi')\mathcal R u_+(\xi')\,d\xi'.
+\]
+Iterating, starting from $u_-=0$, gives the Bremmer series. Its terms alternate
+between forward and backward propagation, with one scattering by $\mathcal R$ at
+each turn.
+\begin{itemize}
+\item The zeroth term $u_+=G_+u_+(0)$ is the one-way equation in the variable
+  $\chi=B^{1/4}\varphi$ of the previous section. When $u_-=0$,
+  \eqref{eq:split} gives $u_+=Q\varphi=\chi$ exactly. The flux-conserving step
+  of the manuscript is the zeroth Bremmer term, with $T$ dropped.
+\item Because $G_\pm$ are unitary, the $n$-th term is bounded by
+  $\left(\int_0^X\|\mathcal R\|\,d\xi\right)^n$. The series therefore converges
+  geometrically when $\int\|\mathcal R\|d\xi<1$. By \eqref{eq:RT} this
+  integral is $\tfrac12$ of the total variation of $\log(h_\xi\cos\theta)$
+  along the path, which is small for the smoothed terrains of the manuscript
+  as long as $\cos\theta$ stays away from $0$.
+\end{itemize}
+
+\paragraph{Two parts of the first reflection.} Take a forward wave
+$u_+\approx e^{i\Phi}$, with $\Phi_\xi=\lambda_0$, and consider one column
+first. The first backward term is
+\begin{equation}\label{eq:back}
+u_-(\xi)=-e^{-i\Phi(\xi)}\int_\xi^X\rho(\xi')\,e^{2i\Phi(\xi')}\,d\xi' .
+\end{equation}
+Integration by parts splits it into a local part and a remainder:
+\[
+u_-(\xi)=\underbrace{\frac{\rho}{2i\lambda_0}\,e^{i\Phi(\xi)}}_{\text{slaved, local}}
+\;+\;\underbrace{e^{-i\Phi(\xi)}\int_\xi^X\left(\frac{\rho}{2i\lambda_0}\right)_{\xi'}e^{2i\Phi(\xi')}\,d\xi'}_{\text{genuine backscatter}} .
+\]
+\begin{itemize}
+\item \emph{The slaved part} travels forward with the wave: its phase is
+  $e^{+i\Phi}$, not $e^{-i\Phi}$. It is a local dressing of size
+  $\varepsilon$ that vanishes where the metric stops changing, and it is not a
+  reflected wave. Fed back into the $u_+$ equation through $\mathcal R$, it
+  changes the forward rate by $\rho\cdot\rho/(2i\lambda_0)$, so the effective
+  one-way symbol becomes $\lambda_0-\rho^2/(2\lambda_0)$. Undoing the
+  transformation \eqref{eq:split} adds the gauge term $-\pd_\xi(\rho/2\lambda_0)$.
+  With $\rho=b_\xi/(4b)$ this gives
+  \[
+  -\frac{\rho^2}{2\lambda_0}-\pd_\xi\frac{\rho}{2\lambda_0}
+  =\frac{5\,b_\xi^2}{32\,b^{5/2}}-\frac{b_{\xi\xi}}{8\,b^{3/2}},
+  \]
+  which is exactly $\lambda_2$ of \eqref{eq:lambda2} without $\eta$ dependence.
+  So the second-order terms of the one-way expansion are the near-diagonal
+  part of the double reflection. They are local and of order $\varepsilon^2$,
+  and they can be added to the one-way operator without any backward
+  propagation.
+\item \emph{The genuine backscatter} is an oscillatory integral with phase
+  $2\Phi$ and $\Phi_\xi=\lambda_0\ge kh_\xi\cos\theta_{\max}>0$. It has no
+  stationary point. Each further integration by parts gains a factor
+  $\varepsilon$, so it is $O(\varepsilon^\infty)$ for a smooth metric. If the
+  metric is analytic in a strip of width $\delta$ around the real $\xi$ axis,
+  it is exponentially small, about $e^{-2kh_\xi\cos\theta\,\delta}$.
+\end{itemize}
+
+\paragraph{Check.} For $y''+b(x)y=0$ with $b=k^2(1+a\tanh(x/\ell))$ and
+$a=0.3$, the exact reflection coefficient and the first Bremmer term
+$\left|\int\rho\,e^{2i\Phi}dx\right|$ are:
+\begin{center}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+$k\ell$ & $0.5$ & $1$ & $2$ & $3$ \\
+\midrule
+$|R|$ exact & $1.07\cdot10^{-1}$ & $4.45\cdot10^{-2}$ & $4.44\cdot10^{-3}$ & $3.55\cdot10^{-4}$ \\
+first Bremmer term & $1.07\cdot10^{-1}$ & $4.43\cdot10^{-2}$ & $4.41\cdot10^{-3}$ & $3.53\cdot10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+The two agree to within $0.6\%$. The decay is exponential in $k\ell$, at about
+the rate $e^{-\pi k_{\min}\ell}$ set by the poles of $\tanh$ at distance
+$\pi\ell/2$ from the real axis.
+
+\paragraph{Multidimensional picture.} In phase space, $\mathcal R$ couples the
+forward sheet $\kappa=+\lambda_0(\eta,q)$ to the backward sheet
+$\kappa=-\lambda_0(\eta,q)$. Within the aperture the two sheets are separated
+by $2\lambda_0\ge2kh_-\cos\theta_{\max}$. An operator with a smooth symbol
+cannot transfer energy between disjoint characteristic sets beyond
+$O(\varepsilon^\infty)$, which is the microlocal form of the non-stationary
+phase above. The sheets meet only where $b_0=0$. There $\rho=b_\xi/(4b)$ and
+$1/\lambda_0$ blow up, and the series stops being a perturbation series. This
+is the turning-point limit of the one-way method again, now as a statement
+about coupling.
+
+\paragraph{What the one-way step neglects.} The Bremmer series ranks the
+neglected terms:
+\begin{enumerate}
+\item the phase $T$ and the slaved coupling, $O(\varepsilon^2)$, both local.
+  These are the second-order terms and commutators named in the manuscript,
+  and they could be included in a one-way step;
+\item genuine backscatter: $O(\varepsilon^\infty)$, exponentially small for
+  analytic (for example Gaussian-smoothed) terrain.
+\end{enumerate}
+The smoothing of the terrain is therefore not just a numerical convenience. A
+kink in $T(x)$ makes the metric non-analytic. The backscatter then decays
+only algebraically in $k$: it is edge diffraction, which no one-way method
+represents. This is the generalized Bremmer series of de~Hoop
+\cite{dehoop}. Choosing $\Lambda$ to include higher terms of the Riccati
+expansion pushes $\mathcal R$ to higher order, and in the limit the forward
+and backward waves are decoupled to all orders.
+
+\paragraph{The flux pairs as interface transmission.} The column-by-column
+step replaces the continuous metric by a staircase in $\xi$. At an interface
+between columns with roots $\lambda_a$ and $\lambda_b=\lambda_a(1+\delta)$,
+continuity of $\varphi$ and $\varphi_\xi$ gives the amplitude transmission
+$t=2\lambda_a/(\lambda_a+\lambda_b)$ and reflection
+$\delta/(2+\delta)$. In flux-normalized form,
+\[
+t=\left(\frac{\lambda_a}{\lambda_b}\right)^{1/2}\tau=\left(\frac{b_a}{b_b}\right)^{1/4}\tau,\qquad
+\tau=\frac{2\sqrt{\lambda_a\lambda_b}}{\lambda_a+\lambda_b}=1-\frac{\delta^2}8+O(\delta^3),
+\]
+with $\tau^2+|\delta/(2+\delta)|^2=1$.
+\begin{itemize}
+\item The flux pairs of (15) are exactly the factor $(b_a/b_b)^{1/4}$, so the
+  step is the staircase transmission with $\tau$ set to $1$.
+\item This is the better choice. Here $\delta\approx2\rho\,\Delta\xi$, so each
+  interface reflects a flux of about $\rho^2\Delta\xi^2$. Over a length
+  $\ell_\xi$ the staircase would remove a forward flux of order
+  $\rho^2\ell_\xi\Delta\xi$ through backscatter. That loss is an artefact of
+  the staircase: it vanishes as $\Delta\xi\to0$, and the reflections of the
+  continuous metric cancel by phase as shown above.
+\item Taking $\tau=1$ removes the artefact and conserves the forward flux
+  exactly. This is the discrete counterpart of the zeroth Bremmer term.
+\end{itemize}
+
+\paragraph{Caveat: evanescent part.} For $b<0$ the roots $\Lambda$ and $Q$ are
+complex and $T$, $\mathcal R$ lose their (anti)symmetry. The splitting
+\eqref{eq:coupled} still holds algebraically with the decaying branch, but it
+no longer carries a flux interpretation. Evanescent components do not
+propagate, so the estimates above concern the propagating sector.
+
+\paragraph{Can the existing JAX propagators implement this series?}
+Yes, as a computational framework, but not by simply running the existing
+one-way solver forward and backward. The repository's
+\texttt{RationalHelmholtzPropagator} and \texttt{SSFHelmholtzPropagator}
+advance a single reduced field in range; their \texttt{compute} methods do
+not expose the transverse Helmholtz operator $B$, its square root, or a
+backward amplitude. In particular, reversing the range loop is not the
+inverse of a lossy, terrain-masked step and would not impose the two-end
+boundary conditions in the Bremmer integral equations.
+
+The reusable parts are the JAX arrays, terrain and heterogeneity sampling,
+vertical discretizations, boundary-condition machinery, and compiled range
+loops. A first implementation for the existing flat-coordinate 2D problem
+can form a discrete transverse operator $B_j$ at each range column using the
+same vertical stencil (rational solver) or spectral multiplier (SSF solver).
+On its propagating subspace, apply $B_j^{1/2}$ and $B_j^{1/4}$ with the
+existing spectral representation where available, or a rational/Krylov
+approximation for the finite-difference operator. Then compute the discrete
+coupling from the change in $Q_j=B_j^{1/4}$, preferably as the symmetric
+formula in \eqref{eq:coupled}; this avoids differentiating a noisy terrain
+profile. JAX's \texttt{lax.scan}/\texttt{fori\_loop} can march $u_+$ from the
+source and $u_-$ from the far-range no-incoming-wave boundary, and repeat the
+two sweeps to sum a chosen number of Bremmer reflections. The far boundary
+and all range-dependent terrain masks must be included in this two-point
+iteration rather than inherited from the one-way absorber.
+
+This is a moderate new solver layer, not a small option on \texttt{compute}.
+The most direct prototype is SSF with a flat, lossless domain and a smooth
+range-varying medium: its vertical spectrum makes the roots and flux
+normalization accessible. The rational finite-difference solver can follow
+once a stable matrix-function action and compatible flux form are specified.
+The current top absorbing layer and lossy/complex media also need separate
+care, since the unitary $G_\pm$ and conserved flux used in the convergence
+bound apply only to the self-adjoint propagating problem. Validate first
+against a range-dependent 1D profile with an exact reflection coefficient,
+then compare the zeroth and first Bremmer orders against the existing
+one-way result. Thus the existing JAX infrastructure is suitable, but a
+faithful two-way implementation requires explicit discrete factorization and
+a two-boundary iteration.
+
+\section{The rational step: functional calculus}
+
+\paragraph{Symbol of the step.} For $B=\Op(b)$ symmetric and a smooth function
+$F$, the semiclassical functional calculus gives
+\begin{equation}\label{eq:funcalc}
+F(B)=\Op\!\left(F\circ b\right)+O(\varepsilon^2)
+\end{equation}
+\cite{helffer,dimassi}. The $O(\varepsilon)$ correction vanishes in the Weyl
+calculus. Apply this to $F=R$, the rational step (3), in the variable
+$L=B/\beta^2-1$:
+\[
+\operatorname{symbol}\bigl(R(L)\bigr)=R\!\left(\frac{b}{\beta^2}-1\right)+O(\varepsilon^2),
+\qquad
+\operatorname{symbol}\bigl(e^{i\beta\Delta\xi(\sqrt{1+L}-1)}\bigr)=e^{i\Delta\xi(\sqrt b-\beta)}+O(\varepsilon^2).
+\]
+So the error of the rational approximation is, to leading order, a pointwise
+function on phase space,
+\[
+E(\xi,\eta,q)=\left|R\!\left(\tfrac{b}{\beta^2}-1\right)-e^{i\Delta\xi(\sqrt b-\beta)}\right| .
+\]
+
+\paragraph{The error budget.} What has to be small is $E$ on the support of
+the field in phase space: its wavefront set, or in practice the support of its
+Wigner function. By \eqref{eq:angle}, for angles up to the aperture
+$\theta_{\max}$ the symbol $b$ ranges over
+$[k_{\min}^2h_-^2\cos^2\theta_{\max},\,k_{\max}^2h_+^2]$, with
+$h_\pm=\max/\min h_\xi$. These are the rescaled bounds with which the grid
+optimizer is called (Section VII of the manuscript). The ``local
+equivalence'' is the statement that $E$ depends on the metric only through this
+range.
+
+\paragraph{Per-class reference wavenumber.} On one column, $b$ takes values only
+in that column's $h_\xi$ range. With $\beta_k$ chosen per class, the Padé
+approximant has to cover a narrower interval of $b/\beta_k^2-1$
+(\texttt{beta\_mode='column'}). The envelope factor
+$e^{i(\beta_k-\beta)\Delta\xi}$ is a constant phase and does not change the
+symbol.
+
+\paragraph{Where the field lives in phase space: bicharacteristics.} The
+support of the field is not a property of one column. It is transported by the
+Hamiltonian flow of the one-way symbol,
+\begin{equation}\label{eq:rays}
+\frac{d\eta}{d\xi}=-\pd_q\sqrt{b_0},\qquad \frac{dq}{d\xi}=\pd_\eta\sqrt{b_0},
+\end{equation}
+and reflected at the ground by the boundary symbol (manuscript (21)).
+\begin{itemize}
+\item A ray reflected by a slope $\theta_s$ leaves with up to
+  $\theta_{\max}+2\theta_s$ to the horizontal.
+\item Once the terrain flattens, its local symbol range is that of a flat
+  column, but its $q$ is still large.
+\item This is why the nonuniform range step (\texttt{range\_steps='class'})
+  failed when the aperture did not include the slopes. Each class's step was
+  sized for the $q$ range of its own columns, while the field there carried
+  the larger $q$ produced upstream. The error budget has to be evaluated on
+  the transported support, i.e.\ with the slope-widened aperture
+  (\texttt{nonuniform\_grids.md}, Section 7).
+\end{itemize}
+
+\section{Discrete symbols}
+
+\paragraph{The discrete symbol of the scheme.} The discrete scheme has a
+discrete symbol in $q\in(-\pi/\Delta\eta,\pi/\Delta\eta]$. For frozen
+coefficients it is manuscript (18),
+\[
+L_h(q)=\het-\frac4{\tau^2r^2}\frac{\sigma}{1-4\alpha\sigma},\qquad \sigma=\sin^2\frac{q\Delta\eta}2,
+\]
+which replaces $b/\beta^2-1=\het-q^2/(\beta r)^2$ by a periodic function that
+agrees with it to $O((q\Delta\eta)^6)$ for $\alpha=1/12$. The step's symbol is
+$R(L_h(q))$, and the dispersion error (19) is the distance between this and the
+exact symbol of the previous section.
+
+\paragraph{Local equivalence.} Manuscript (20) says that the full discrete
+symbol depends on the metric only through the products $h_\xi\Delta\xi$,
+$h_\eta\Delta\eta$ and $\beta/h_\xi$. That is a statement about symbols: in
+physical variables, the discrete symbol of a distorted cell equals the flat
+discrete symbol on the effective grid.
+
+\paragraph{Variable coefficients.} The weighted second difference with
+half-node values $r_{j\pm1/2}$ is the discrete analogue of the operator form in
+\eqref{eq:liou}. Its discrete Weyl symbol has the same structure as
+\eqref{eq:symbol}: no first-order part, and a zeroth-order correction that
+converges to $W$ as $\Delta\eta\to0$. This is the discrete form of the remark
+that $W$ is carried implicitly.
+
+\paragraph{The vertical step rule.} The error of $L_h$ is a function of
+$q\Delta\eta=k\sin\theta\cdot h_\eta s\Delta\eta$, by \eqref{eq:angle} with
+$h_\eta\to h_\eta s$. Bounding it at every level requires
+$\max_\xi h_\eta s\,\Delta\eta\le\Delta z_{\rm phys}$. This is the interior
+stretching rule (\texttt{nonuniform\_grids.md}, Section 6). The manuscript's
+uniform rule bounds the same quantity by the cruder $h_+\max r$.
+
+\section{The shift map in symbols}
+
+Write the shift-map equation as
+$\psi_{xx}-2s\psi_{x\zeta}+(1+s^2)\psi_{\zeta\zeta}+k^2\psi=0$, with $s=T'$. Its
+symbol in $(\kappa,q)$, the duals of $(x,\zeta)$, is
+$-\kappa^2+2s\kappa q-(1+s^2)q^2+k^2$, so the outgoing root is
+\begin{equation}\label{eq:shift}
+\kappa=sq+\sqrt{k^2-q^2}.
+\end{equation}
+\begin{itemize}
+\item \emph{The obstruction.} The one-way symbol has a part $sq$ that is odd
+  in $q$. No function of a single symmetric second-order vertical operator
+  without a first-order term has a symbol with an odd part. This is the symbol
+  form of ``no function of a single vertical operator is the exact propagator''
+  (manuscript, Section III).
+\item \emph{The gauge.} The gauge (23) multiplies by $e^{ik_0s\zeta}$, which
+  translates the dual variable, $q=q'+k_0s$. Combined with the range phase it
+  gives
+  \[
+  \kappa'=sq'+\tfrac{k_0s^2}2+\sqrt{k^2-(q'+k_0s)^2}-k_0 .
+  \]
+  If the square root is truncated at second order, the narrow-angle (NA)
+  symbol, the terms linear in $q'$ and the constants cancel and
+  $\kappa'=-q'^2/(2k_0)$ exactly: the BT transformation is exact for the
+  narrow-angle PE. The higher terms of the root involve $(q'+k_0s)^4,\dots$ and
+  do not cancel.
+\item \emph{The floor.} A wide-angle PE uses the symbol $k_0[f(-q'^2/k_0^2)-1]$,
+  an even function of $q'$, while the exact $\kappa'$ is not even beyond
+  second order. The difference is the floor (25). It is a mismatch of symbols,
+  independent of the grid, so no refinement removes it.
+\item \emph{The orthogonal map.} The exact one-way symbol is $\sqrt{b_0}$, a
+  function of the symbol of the single operator $B$, so no floor arises.
+\end{itemize}
+
+\section{The top boundary}
+
+\paragraph{Continuous exterior.} Above the transition height, $h_\xi=h_\eta=1$
+and the exterior is invariant in $x$. In the Fourier variable $\kappa$ (dual to
+$x$), the field there is $e^{i\sqrt{k^2-\kappa^2}\,z}$, so the transparent
+condition is
+\[
+\pd_z\psi=i\,\Op_x\!\left(\sqrt{k^2-\kappa^2}\right)\psi .
+\]
+This is a pseudodifferential operator in the evolution variable $x$, hence a
+convolution in range. That is why the exact NLBC (5) carries the whole history.
+Its symbol has branch points at $\kappa=\pm k$, i.e.\ at vertical wavenumber
+$k_z=0$: waves that graze the top.
+
+\paragraph{Discrete exterior.} In the scheme, the $z$-transform variable $t$
+plays the role of $e^{i\kappa\Delta x}$, and the scalar exterior ratio
+$R(\lambda)=u_{N-1}/u_N$ is the discrete symbol of the condition. Here
+$\lambda=\beta^2(1+\sigma)$ is the spectral variable of the $\beta$-free
+operator $A$ (\texttt{nonuniform\_grids.md}, Section 8). $R(\lambda)$ has the
+discrete branch point where the two roots
+$\mu=e^{\pm ik_z\Delta z}$ meet, again at $k_z=0$.
+
+\paragraph{Local conditions are rational approximations.} A boundary condition
+that is local in range, such as an absorbing layer or a complex-step layer of
+$M$ rows, has an exterior ratio that is a rational function of $\lambda$ with
+finitely many poles. A rational function cannot approximate a square root
+uniformly up to its branch point:
+\begin{itemize}
+\item on the band $k_z\Delta z\in[\theta_{\min},\theta_{\max}]$ the best error
+  decays geometrically in $M$, with a rate that depends on
+  $\log(\theta_{\max}/\theta_{\min})$ \cite{newman,idk};
+\item as $\theta_{\min}\to0$ the rate goes to zero.
+\end{itemize}
+In the continuous picture the layer's complex thickness $\Lambda$ gives a
+reflection of about $e^{-2k_z\operatorname{Im}\Lambda}$, which tends to $1$ as
+$k_z\to0$ for any finite layer. The complex layer of the code is the optimal-grid
+construction of \cite{idk,adgk} applied to the Numerov exterior. The observed
+rows (8, 12, 16 and 34 rows for $5\cdot10^{-3}$, $2\cdot10^{-4}$,
+$10^{-5}$ and $10^{-6}$ over $0.5$--$30^\circ$) show this geometric rate.
+
+\paragraph{Why the layer serves every class.} For per-class $\beta_k$, Padé
+chains and range steps, the exterior equation of every substep is
+$(A-\lambda)w=0$ with the same $A$. A condition expressed as a function of
+$\lambda$, i.e.\ of the symbol of $A$ alone, is therefore valid for all of
+them. The convolution NLBC is not: it is a function of $t$, and the relation
+between $t$ and $\lambda$ changes with the class.
+
+\section{Summary of orders}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+term & symbol & order \\
+\midrule
+dispersion relation & $b_0=k^2h_\xi^2-q^2/r^2$ & $1$ \\
+first-order (transport) part of $B$ & $0$ (Liouville gauge) & --- \\
+$V$, $W$ & $(r^{1/2})_{\xi\xi}/r^{1/2}$, $r_\eta^2/(4r^4)$ & $\varepsilon^2$ \\
+transport term of the one-way equation & $\tfrac i4 b_\xi/b$ & $\varepsilon$ (removed by $B^{1/4}$) \\
+commutators, second-order WKB & \eqref{eq:lambda2}, $i\{b,b_\xi\}$ & $\varepsilon^2$ \\
+flux pairs at neighbouring columns & $\{b_n,b_{n+1/2}\}$ & $\varepsilon\,\Delta\xi$ \\
+Bremmer coupling $\mathcal R$ & $b_\xi/(4b)$ & $\varepsilon$ \\
+\quad slaved part (local) & $-\rho^2/(2\lambda_0)$, part of $\lambda_2$ & $\varepsilon^2$ \\
+\quad genuine backscatter & $\int\rho\,e^{2i\Phi}d\xi$ & $\varepsilon^\infty$ ($e^{-2kh\cos\theta\,\delta}$) \\
+staircase reflection loss (avoided by flux pairs) & $\rho^2\Delta\xi^2$ per step & $\varepsilon^2\Delta\xi$ total \\
+rational step vs exponential & $R(b/\beta^2-1)-e^{i\Delta\xi(\sqrt b-\beta)}$ & set by the optimizer \\
+Numerov symbol & $L_h(q)-(b/\beta^2-1)$ & $(q\Delta\eta)^6$ \\
+shift map, wide angle & odd part of $sq+\sqrt{k^2-q^2}$ & $O(1)$, grid independent \\
+local top condition & rational approximation of $\sqrt{\cdot}$ near $k_z=0$ & geometric in $M$, not uniform \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{thebibliography}{10}
+\bibitem{zworski} M.~Zworski, \emph{Semiclassical Analysis}. Providence, RI: AMS, 2012.
+\bibitem{dimassi} M.~Dimassi and J.~Sj\"ostrand, \emph{Spectral Asymptotics in the Semi-Classical Limit}. Cambridge Univ. Press, 1999.
+\bibitem{helffer} B.~Helffer and D.~Robert, ``Calcul fonctionnel par la transformation de Mellin et op\'erateurs admissibles,'' \emph{J. Funct. Anal.}, vol.~53, pp.~246--268, 1983.
+\bibitem{fishman} L.~Fishman and J.~J.~McCoy, ``Derivation and application of extended parabolic wave theories,'' \emph{J. Math. Phys.}, vol.~25, pp.~285--308, 1984.
+\bibitem{dehoop} M.~V.~de~Hoop, ``Generalization of the Bremmer coupling series,'' \emph{J. Math. Phys.}, vol.~37, pp.~3246--3282, 1996.
+\bibitem{bremmer} H.~Bremmer, ``The W.K.B. approximation as the first term of a geometric-optical series,'' \emph{Comm. Pure Appl. Math.}, vol.~4, pp.~105--115, 1951.
+\bibitem{atkinson} F.~V.~Atkinson, ``Wave propagation and the Bremmer series,'' \emph{J. Math. Anal. Appl.}, vol.~1, pp.~255--276, 1960.
+\bibitem{newman} D.~J.~Newman, ``Rational approximation to $|x|$,'' \emph{Michigan Math. J.}, vol.~11, pp.~11--14, 1964.
+\bibitem{idk} D.~Ingerman, V.~Druskin and L.~Knizhnerman, ``Optimal finite difference grids and rational approximations of the square root. I. Elliptic problems,'' \emph{Comm. Pure Appl. Math.}, vol.~53, pp.~1039--1066, 2000.
+\bibitem{adgk} S.~Asvadurov, V.~Druskin, M.~N.~Guddati and L.~Knizhnerman, ``On optimal finite-difference approximation of PML,'' \emph{SIAM J. Numer. Anal.}, vol.~41, pp.~287--305, 2003.
+\end{thebibliography}
+
+\end{document}

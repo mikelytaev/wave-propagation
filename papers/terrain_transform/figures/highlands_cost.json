@@ -1,0 +1,98 @@
+{
+ "st_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "st",
+  "precision": 0.001,
+  "time_s": 80.413081407547,
+  "dx": 10.0,
+  "dz": 0.03773584905660377,
+  "z_n": 991
+ },
+ "st_0.01": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "st",
+  "precision": 0.01,
+  "time_s": 50.43286371231079,
+  "dx": 12.5,
+  "dz": 0.06896551724137931,
+  "z_n": 991
+ },
+ "tf_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tf",
+  "precision": 0.001,
+  "time_s": 786.8466446399689
+ },
+ "tf_0.01": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tf",
+  "precision": 0.01,
+  "time_s": 297.5943479537964
+ },
+ "tfcol_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfcol",
+  "precision": 0.001,
+  "time_s": 366.9715313911438
+ },
+ "tfcol_0.01": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfcol",
+  "precision": 0.01,
+  "time_s": 139.03531694412231
+ },
+ "tfcoli_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfcoli",
+  "precision": 0.001,
+  "time_s": 278.990478515625
+ },
+ "tfcoli_0.01": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfcoli",
+  "precision": 0.01,
+  "time_s": 111.36209487915039
+ },
+ "tfi_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfi",
+  "precision": 0.001,
+  "time_s": 378.1958944797516
+ },
+ "tfi_0.01": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfi",
+  "precision": 0.01,
+  "time_s": 233.10458278656006
+ },
+ "tfup_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfup",
+  "precision": 0.001,
+  "time_s": 443.71058106422424
+ },
+ "tfup_0.01": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfup",
+  "precision": 0.01,
+  "time_s": 267.80327701568604
+ },
+ "dense_tf_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tf",
+  "precision": 0.001,
+  "time_s": 847.0631375312805
+ },
+ "dense_tfcoli_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfcoli",
+  "precision": 0.001,
+  "time_s": 281.64720153808594
+ },
+ "dense_tfi_0.001": {
+  "cycle": "2026-10-09T12:00Z",
+  "variant": "tfi",
+  "precision": 0.001,
+  "time_s": 380.52994179725647
+ }
+}

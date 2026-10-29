@@ -408,3 +408,83 @@ the illuminated map in the height bands 0–100 / 100–500 / 500–2000 m:
 - The Δη factor (h_min/h_max)/r_max is now evaluated per class, but the
   binding class still has r_max = 1.35. That part comes from the vertical
   stretching itself.
+
+## 9. Vertical step following the distortion (`interior_stretch=True`)
+
+§5 chooses one $\Delta\eta$ for the whole map from the product of two global
+extremes, $h_{\xi,\max}\,r_{\max}$. The local requirement is on the physical
+vertical step. At a node, the local scheme has vertical wavenumber
+$k_z h_\xi$ on the step $r\,\Delta\eta$, so the product is
+$k_z h_\eta\Delta\eta$. Hence the condition is
+$$
+h_\eta(\xi,\eta)\,\Delta\eta\le h_{\xi,\min}\,\Delta z ,
+$$
+with $\Delta z$ the step returned by the flat optimizer (the same linear
+rescaling as §5.4). Two consequences:
+
+- **Pointwise bound.** $\max h_\eta$ is smaller than
+  $h_{\xi,\max}\,r_{\max}$, because the two extremes are not at the same point:
+  $h_\xi$ is extreme on the ground, $r$ around mid-height of the transition
+  layer. On the Highlands path the values are 1.27 against 1.52, and for the
+  200 m hill 1.28 against 1.51.
+- **Level by level.** $Q(\eta)=\max_\xi h_\eta(\xi,\eta)$ varies with height
+  and is 1 above the layer. A stretching $\eta=Z(\eta')$ with rate
+  $s=dZ/d\eta'=Q_{\max}/Q(\eta)$ keeps the worst physical step
+  $\max_\xi h_\eta s\,\Delta\eta'$ the same on every level.
+
+**Implementation.**
+- **Composite map.** The stretching composes with the orthogonal map. The
+  coordinates stay orthogonal, $h_\xi$ is unchanged and
+  $h_\eta\to h_\eta s$. The tables, the identity region and the impedance
+  closure ($h_{\eta}$ on the ground) therefore take $h_\eta s$; $V$ does not
+  change, because $s$ does not depend on $\xi$.
+- **Profile.** $Q$ is sampled on levels independent of the domain height.
+  It is replaced by a smooth upper envelope: a max filter and a Gaussian on
+  $\log Q$, of width $\max(4\lambda, L/40)$, tapered to 1 above the layer.
+- **Rounding.** $\Delta\eta'$ is still rounded down to align the output rows.
+  The loss is returned through the scale $s(0)=h_{\xi,\min}\Delta z/(Q_{\max}\Delta\eta')\ge1$,
+  because the stretching gives up the alignment anyway.
+- **Table.** $\eta'(\eta)=\int d\eta/s$ is tabulated (Simpson) and inverted by
+  Newton iterations on its cubic Hermite interpolant.
+- **Upper condition.** With the NLBC, $s\le 2/(\bar k\Delta\eta')$ and the
+  exterior is the stretched one of `nlbc_nonuniform.md`. With an absorbing
+  layer, $s$ rises further to $1/(\Delta\eta' k_{z,\max})$ inside the layer.
+- **Per-class β.** Class $c$ allows the physical step
+  $D_c=\Delta\eta_c\,q_c$, with $q_c$ the largest $h_\eta$ of the class and
+  $Q_c(\eta)$ its profile. The rate is then
+  $s(\eta)\,\Delta\eta'=\min_c D_c/Q_c(\eta)$, i.e. a single profile
+  $q_{\rm eff}=\max_c Q_c\,D_{\min}/D_c$.
+- **Exclusions.** It replaces `upper_stretch` and is not available for the
+  strip map.
+
+**Checks.** The script is `scripts/tap_highlands_cost.py`. The hills run on a
+3 km path at 300 MHz, compared with the uniform grid at $10^{-4}$:
+- A constant $s$ reproduces the uniform grid with the same physical step to
+  $2.5\cdot10^{-11}$ at the common rows. $s\equiv1$ reproduces it to $10^{-11}$.
+- 200 m hill, $10^{-3}$: 16107 rows instead of 21767, 27.7 s instead of 36.7 s;
+  largest error $8.1\cdot10^{-5}$ against $7.9\cdot10^{-5}$ for the uniform grid.
+  At $10^{-2}$: 4274 instead of 5775 rows, $3.5\cdot10^{-3}$ against $2.8\cdot10^{-3}$.
+- NLBC: domain tops of 500 and 900 m on the same stretched grid, with the beam
+  leaving through the top, agree to $7.6\cdot10^{-7}$ (200 m hill) and
+  $6.5\cdot10^{-13}$ (60 m hill).
+- **Comparing runs.** On uniform grids the output rows of all runs sit at
+  the same heights ($\eta=j\,\Delta z_{\rm out}$). On a stretched grid they do
+  not, and interpolating $|u|$ from 2 m rows at $\lambda=1$ m produces dB-level
+  differences that are not solver error. Comparisons therefore use dense
+  output (0.25 m) and the complex reference interpolated along the same
+  trajectory.
+
+**Highlands path** (CPU, each run alone; dense output for the comparison):
+
+| run | rows at $10^{-2}$ / $10^{-3}$ | time at $10^{-2}$ / $10^{-3}$ | 10 m above ground, vs uniform at $10^{-3}$ |
+|---|---|---|---|
+| one β, uniform | 49888 / 89144 | 298 / 787 s | — |
+| one β, interior stretch | 36400 / 65194 | 233 / 378 s | 0.058 dB median, 0.16 p90, 0.52 max |
+| β per class + absorbing layer, uniform | — | 139 / 367 s | — |
+| β per class + absorbing layer, interior stretch | 35500 / 69087 | 111 / 279 s | 0.048 dB median, 0.14 p90, 0.46 max |
+| staircase | — | 50 / 80 s | 1.0 dB median |
+
+The differences are below the 0.12 dB that separates the uniform grid's own
+$10^{-2}$ and $10^{-3}$ solutions. At $10^{-3}$, one β gains more time
+(−52 %) than rows (−27 %). The same happened with `upper_stretch` (−44 % time
+for −13 % rows); the cause has not been isolated.

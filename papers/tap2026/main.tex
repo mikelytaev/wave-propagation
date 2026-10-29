@@ -1211,17 +1211,22 @@ refractivity averaged along the path.}
 
 Each solver is converged with respect to its own grid. The two precision
 settings ($10^{-2}$ and $10^{-3}$) differ, at \SI{10}{m} above the ground, by
-\SI{0.08}{dB} (median) for the terrain-following solver and by \SI{0.15}{dB} for
+\SI{0.12}{dB} (median) for the terrain-following solver and by \SI{0.15}{dB} for
 the staircase. The two solvers differ by \SI{1.1}{dB} at \SI{10}{m} and
-\SI{0.44}{dB} at \SI{50}{m} above the ground. The largest differences, up to a
+\SI{0.43}{dB} at \SI{50}{m} above the ground. The largest differences, up to a
 few decibels, occur on the slopes facing the transmitter, where the staircase
 solution carries small-scale ripple consistent with scattering by the steps
-(Section~\ref{sec:slope}). The terrain-following runs took 468 and \SI{1390}{s}
-on a CPU, against 73 and \SI{117}{s} for the staircase. The terrain-following
-grid ($\Delta x=\SI{3.1}{m}$, $\Delta\eta=0.034$ and \SI{0.019}{m}) is finer
-because of the metric spread $h_\xi\in[0.91,1.16]$ and the expansion
-$\max r=1.28$, which enter the grid selection through the global bounds of the grid
-selection rule of Section~\ref{sec:dispersion}.
+(Section~\ref{sec:slope}). Run alone on a CPU, the terrain-following solver
+takes 298 and \SI{787}{s}, and the staircase 50 and \SI{80}{s}. The
+terrain-following grid ($\Delta x=\SI{3.1}{m}$, $\Delta\eta=0.033$ and
+\SI{0.018}{m}) is finer than the staircase grid ($\Delta x=12.5$ and
+\SI{10}{m}, $\Delta z=0.069$ and \SI{0.038}{m}) because of the metric spread
+$h_\xi\in[0.91,1.21]$ and the expansion $\max r=1.26$, which enter the grid
+selection through the global bounds of the grid selection rule of
+Section~\ref{sec:dispersion}. With one reference wavenumber per class of
+columns and an absorbing layer on top (Section~\ref{sec:steep}) the runs take
+139 and \SI{367}{s}, and the path loss changes by 0.003 and \SI{0.04}{dB}
+(median); the staircase remains 2.8 and 4.6 times cheaper.
 
 \subsection{Steep Terrain over Real Ground}\label{sec:steep}
 
@@ -1344,7 +1349,7 @@ ground parameters, this bias cannot be reduced by better data.
 perfectly conducting ground (Section~\ref{sec:highlands}) the two solvers differ
 by about \SI{1}{dB} at \SI{10}{m} above the ground, which is below the usual
 uncertainty of refractivity, elevation data and ground parameters, and the
-staircase is several times cheaper. Near the ground of a steep path over wet
+staircase is three to ten times cheaper. Near the ground of a steep path over wet
 ground the difference is still comparable to the effect of the ground
 parameters (Section~\ref{sec:steep}). For such coverage estimates the
 staircase is adequate. The terrain-following solver matters where the staircase
