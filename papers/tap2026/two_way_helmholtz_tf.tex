@@ -1,0 +1,674 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{mathrsfs}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\pd}{\partial}
+\newcommand{\Op}{\operatorname{Op}^{w}}
+\newcommand{\Rop}{\mathcal R}
+\newcommand{\Top}{\mathcal T}
+\newcommand{\Bop}{\mathcal B}
+\newcommand{\Lop}{\Lambda}
+\newcommand{\eps}{\varepsilon}
+
+\title{A Two-Way Higher-Order Helmholtz Propagator in Orthogonal Terrain-Following Coordinates: A Bremmer--Pseudodifferential Formulation}
+\author{Mikhail S. Lytaev}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We formulate a two-way range-marching method for the scalar Helmholtz equation
+over irregular terrain. An orthogonal terrain-following map turns the boundary
+into a coordinate line and leaves an identity region above the coordinate
+transition. A Liouville transformation then writes the equation as
+$\varphi_{\xi\xi}+B(\xi)\varphi=0$, where $B$ is a symmetric vertical
+pseudodifferential operator. On a propagating spectral subspace, its positive
+square root defines flux-normalized forward and backward amplitudes. Their
+exact coupled evolution has diagonal one-way generators and a symmetric
+Bremmer interaction operator. Iterating the corresponding two-point integral
+equations gives successive reflection orders while preserving the distinction
+between local higher-order corrections and genuine backscatter. Weyl symbols
+identify the principal dispersion relation, the leading coupling, and the
+first commutator correction. We then describe a discrete realization that
+reuses the metric sampling and high-order vertical rational solves of an
+existing terrain-following propagator, while making clear which matrix
+fractional-power and two-boundary components a two-way implementation still
+requires. This paper gives the formulation and an implementation blueprint;
+it does not report numerical results for a completed two-way solver.
+\end{abstract}
+
+\section{Introduction}
+
+One-way parabolic-equation (PE) solvers are effective when the field is
+predominantly directed along a preferred range coordinate. They omit the
+backward-going component, however, and cannot represent reflections generated
+by range variation except through errors or ad hoc corrections. Bremmer's
+coupling series provides a systematic alternative: decompose the field into
+forward and backward waves, propagate each component with a one-way operator,
+and couple the two components through an interaction operator
+\cite{bremmer,dehoop,gautesen}.
+
+For irregular terrain, the coordinate choice matters to every part of this
+construction. Staircase boundaries introduce artificial range discontinuities;
+shift maps retain a mixed derivative in the full Helmholtz equation. We use an
+orthogonal terrain-following map of the type developed for the high-order PE
+in \cite{lytaev_tf}. It straightens the lower boundary, has no mixed
+derivative, and becomes the identity above a finite transition layer. This
+geometry gives a particularly direct setting for a two-way operator
+factorization.
+
+The result below is an analytical and numerical-method formulation, not a
+claim that the current JAX terrain-following code already solves the two-way
+problem. That code advances one range direction. A two-way solver additionally
+needs discrete operator roots, a backward sweep, and a two-point range
+boundary solve. Our aim is to specify those pieces in a form that reuses the
+existing terrain metric and high-order vertical discretization.
+
+\paragraph{Scope.} We treat a time-harmonic scalar field at fixed frequency,
+with constant density in the derivation and a real, smooth wavenumber
+$k(\xi,\eta)$. The propagating part of the spectrum is assumed to stay away
+from a turning point. Loss, variable density, interfaces, and evanescent
+modes can be included in the discrete model, but they remove some of the
+self-adjointness and flux-unitarity statements made here. Those extensions
+are identified where relevant.
+
+\section{Orthogonal terrain-following Helmholtz equation}
+
+Let $(\xi,\eta)$ denote orthogonal coordinates with scale factors
+$h_\xi(\xi,\eta)>0$ and $h_\eta(\xi,\eta)>0$. Write
+$r=h_\eta/h_\xi$. In two dimensions,
+\begin{equation}\label{eq:laplace}
+  \Delta\psi=\frac{1}{h_\xi h_\eta}
+  \left[\pd_\xi(r\pd_\xi\psi)+\pd_\eta(r^{-1}\pd_\eta\psi)\right].
+\end{equation}
+The map is chosen so that $\eta=0$ follows the terrain (or seabed),
+$\xi$ labels orthogonal trajectories, and $h_\xi=h_\eta=1$ in an exterior
+identity region. The construction in \cite{lytaev_tf} obtains the level curves
+from a smoothed harmonic extension of the boundary and follows them with
+orthogonal trajectories. In particular, it avoids a mixed $\xi$--$\eta$
+derivative in \eqref{eq:laplace}.
+
+The scalar Helmholtz equation $\Delta\psi+k^2\psi=0$ is therefore
+\begin{equation}\label{eq:metrichelm}
+  \pd_\xi(r\pd_\xi\psi)+\pd_\eta(r^{-1}\pd_\eta\psi)
+  +h_\xi h_\eta k^2\psi=0.
+\end{equation}
+Apply the Liouville scaling
+\begin{equation}\label{eq:liouville}
+  \psi=r^{-1/2}\varphi.
+\end{equation}
+After division by $r^{1/2}$, equation \eqref{eq:metrichelm} becomes
+\begin{equation}\label{eq:rangeeq}
+  \pd_\xi^2\varphi+B(\xi)\varphi=0,
+\end{equation}
+where the operator in $\eta$ is
+\begin{equation}\label{eq:Bdef}
+  B\varphi=r^{-1/2}\pd_\eta\!\left[r^{-1}\pd_\eta
+  (r^{-1/2}\varphi)\right]+\bigl(k^2h_\xi^2-V\bigr)\varphi,
+  \qquad
+  V=\frac{\pd_\xi^2(r^{1/2})}{r^{1/2}}.
+\end{equation}
+For real coefficients and compatible self-adjoint vertical boundary
+conditions, $B(\xi)$ is symmetric in $L^2(d\eta)$. The term $V$ is an
+explicit range-direction potential. The vertical divergence form in
+\eqref{eq:Bdef} must be retained in a discretization to preserve symmetry and
+the associated flux identity.
+
+The orthogonal map has an identity exterior. This permits the same physical
+outgoing or incoming vertical boundary condition to be imposed above the
+terrain transition as in a flat computational domain. It also localizes the
+range variation of the metric, a useful property for both the Bremmer
+coupling and its numerical truncation.
+
+\section{Weyl symbol and local dispersion}
+
+We use $D_\eta=-i\pd_\eta$ and let $q$ be its dual variable. For a symbol
+$a(\xi,\eta,q)$, Weyl quantization is
+\begin{equation}\label{eq:weyl}
+  \Op(a)u(\eta)=\frac{1}{2\pi}\iint e^{i(\eta-\eta')q}
+  a\!\left(\xi,\frac{\eta+\eta'}2,q\right)u(\eta')\,d\eta'\,dq.
+\end{equation}
+The Weyl product has expansion
+\begin{equation}\label{eq:moyal}
+ a\# c=ac+\frac{i}{2}\{a,c\}
+ -\frac18\left(a_{qq}c_{\eta\eta}-2a_{q\eta}c_{q\eta}
+ +a_{\eta\eta}c_{qq}\right)+\cdots,
+ \qquad \{a,c\}=a_\eta c_q-a_qc_\eta.
+\end{equation}
+Thus the symbol of a commutator starts with $i\{a,c\}$, while the first
+derivative term cancels for the Weyl symbol of a square.
+
+For $D=-i\pd_\eta$ and smooth $g$, the identity
+\begin{equation}\label{eq:DgD}
+  DgD=\Op\!\left(gq^2+\frac14g_{\eta\eta}\right)
+\end{equation}
+gives the exact Weyl symbol of \eqref{eq:Bdef}:
+\begin{equation}\label{eq:bexact}
+  B=\Op(b),\qquad
+  b=k^2h_\xi^2-\frac{q^2}{r^2}-V-
+  \frac{r_\eta^2}{4r^4}.
+\end{equation}
+The principal symbol is
+\begin{equation}\label{eq:bprincipal}
+  b_0=k^2h_\xi^2-\frac{q^2}{r^2}.
+\end{equation}
+The characteristic equation of \eqref{eq:rangeeq} is
+$\kappa^2=b_0$, with $\kappa$ dual to $\xi$. In terms of the physical
+vertical wavenumber $q/h_\eta$ and range wavenumber $\kappa/h_\xi$, this is
+\begin{equation}\label{eq:dispersion}
+  \left(\frac{\kappa}{h_\xi}\right)^2+
+  \left(\frac{q}{h_\eta}\right)^2=k^2.
+\end{equation}
+For a ray angle $\theta$ measured from the level curve,
+$q=kh_\eta\sin\theta$ and
+$\sqrt{b_0}=kh_\xi\cos\theta$. The forward and backward characteristic
+sheets are separated by $2\sqrt{b_0}$ wherever the propagating aperture
+stays away from grazing incidence.
+
+If metric coefficients vary on length $\ell$ and the characteristic
+wavenumber is $k$, the semiclassical parameter is $\eps=(k\ell)^{-1}$.
+The two zeroth-order corrections in \eqref{eq:bexact}, $V$ and
+$r_\eta^2/(4r^4)$, are of relative order $\eps^2$ for a smoothly varying
+metric. The exact symbol is real; it has no order-$\eps$ imaginary
+subprincipal part in this Liouville gauge.
+
+\section{Exact forward--backward splitting}
+
+On a spectral subspace where $B(\xi)$ is positive and bounded away from zero,
+define its positive roots
+\begin{equation}\label{eq:roots}
+  \Lambda=B^{1/2},\qquad Q=B^{1/4},\qquad Q^2=\Lambda.
+\end{equation}
+All powers here are operator powers at the same $\xi$. Decompose the field
+and its range derivative as
+\begin{equation}\label{eq:split}
+  \varphi=Q^{-1}(u_++u_-),\qquad
+  \varphi_\xi=iQ(u_+-u_-),
+\end{equation}
+or, equivalently,
+\begin{equation}\label{eq:splitinv}
+  u_\pm=\frac12\left(Q\varphi\mp iQ^{-1}\varphi_\xi\right).
+\end{equation}
+The signs are fixed so that for a constant $B$, $u_+$ evolves as
+$e^{+i\Lambda\xi}$ and $u_-$ as $e^{-i\Lambda\xi}$.
+
+Differentiate \eqref{eq:splitinv}, use \eqref{eq:rangeeq}, and retain the
+$\xi$-dependence of $Q$. This gives the exact coupled system
+\begin{equation}\label{eq:coupled}
+  \pd_\xi\begin{pmatrix}u_+\\u_-\end{pmatrix}=
+  \begin{pmatrix}i\Lambda+T & \Rop\\
+                  \Rop & -i\Lambda+T\end{pmatrix}
+  \begin{pmatrix}u_+\\u_-\end{pmatrix},
+\end{equation}
+with
+\begin{equation}\label{eq:TRexact}
+  T=\frac12[Q_\xi,Q^{-1}],\qquad
+  \Rop=\frac12(Q_\xi Q^{-1}+Q^{-1}Q_\xi).
+\end{equation}
+For real self-adjoint $Q$, $T^*=-T$ and $\Rop^*=\Rop$. Hence
+\begin{equation}\label{eq:flux}
+  \pd_\xi\left(\|u_+\|^2-\|u_-\|^2\right)=0.
+\end{equation}
+The invariant is the net range-directed flux. The individual squared norms
+are the forward and backward fluxes in this normalization.
+
+Equation \eqref{eq:coupled} is exact on the chosen positive spectral subspace.
+The one-way approximation sets $u_-=0$ and discards the feedback through
+$\Rop$. The two-way model retains it. If $B$ has evanescent or nonpositive
+eigenvalues, the positive-root construction and the unitary flux
+interpretation do not apply to those modes. A practical implementation must
+either separate them from the propagating aperture, use a complex branch with
+appropriate incoming/outgoing boundary conditions, or work with an alternative
+first-order state-space factorization.
+
+\section{Pseudodifferential expansion of the coupling}
+
+Let $\lambda=b^{1/2}$ on the propagating symbol region. Functional calculus
+gives, to principal Weyl order,
+\begin{equation}\label{eq:symbolroots}
+  \sigma(\Lambda)=\lambda+O(\eps^2),\qquad
+  \sigma(Q)=b^{1/4}+O(\eps^2).
+\end{equation}
+The first correction to the square-root symbol follows directly from
+$\lambda_W\#\lambda_W=b$. With $\lambda_0=\sqrt b$,
+\begin{equation}\label{eq:sqrtcorrection}
+  \sigma(\Lambda)=\lambda_0+\lambda_2+O(\eps^4),\qquad
+  \lambda_2=\frac{(\lambda_0)_{\eta\eta}(\lambda_0)_{qq}
+  -(\lambda_0)_{\eta q}^{,2}}{8\lambda_0}.
+\end{equation}
+This term records the phase-space curvature of the dispersion surface. It
+can be included in the diagonal phase when the leading-symbol rational
+approximation is not accurate enough; equivalently, one can construct a
+corrected symbol of $L_\beta$ from the same operator functional calculus.
+The anticommutator in \eqref{eq:TRexact} has the principal symbol
+\begin{equation}\label{eq:Rsymbol}
+  \rho:=\sigma(\Rop)=\frac{b_\xi}{4b}+O(\eps^3),
+\end{equation}
+where the displayed term is order $\eps$ relative to $\lambda$. The first
+Poisson-bracket contribution cancels in this anticommutator. For the
+commutator,
+\begin{equation}\label{eq:Tsymbol}
+  \sigma(T)=\frac{i}{32}\frac{\{b,b_\xi\}}{b^2}+O(\eps^3),
+\end{equation}
+which begins at order $\eps^2$ relative to the principal one-way rate. The
+commutator is skew-adjoint and contributes a phase/transport correction to
+each directional component.
+
+At leading order the interaction is therefore the logarithmic range
+variation of the local longitudinal wavenumber:
+\begin{equation}\label{eq:rhoangle}
+  \rho\simeq\frac14\pd_\xi\log b_0.
+\end{equation}
+For a narrow ray packet this reduces to the corresponding derivative of
+$kh_\xi\cos\theta$. The coupling vanishes in the identity exterior when the
+medium is also range-independent there.
+
+\paragraph{Higher-order directional diagonalization.} A higher-order
+one-way symbol can be constructed by eliminating the off-diagonal coupling
+order by order. To state the recursion, write
+$A_+=i\Lambda+T$ and $A_-=-i\Lambda+T$ and represent a locally forward
+subspace as a graph $u_-=K(\xi)u_+$. Invariance of this graph under
+\eqref{eq:coupled} requires the operator Riccati equation
+\begin{equation}\label{eq:graphriccati}
+  K_\xi=\Rop+A_-K-KA_+-K\Rop K.
+\end{equation}
+If $k$ is the Weyl symbol of $K$, this becomes the symbol Riccati equation
+\begin{equation}\label{eq:graphriccatisymbol}
+  k_\xi=\rho+a_-\# k-k\# a_+-k\#\rho\# k,
+  \qquad a_\pm=\sigma(A_\pm).
+\end{equation}
+The leading symbol equation has denominator $2i\lambda$; it is solvable as
+long as the forward and backward sheets remain separated. Expanding $K$ in
+powers of $\eps$ and substituting back into the $u_+$ equation produces
+successive local corrections to a one-way generator. This is the
+pseudodifferential counterpart of higher-order WKB factorization
+\cite{fishman,stolk}. It does not replace the nonlocal two-way solution near
+a turning point or a strong reflector.
+
+\section{Bremmer series and boundary-value formulation}
+
+Let $G_+(\xi,s)$ and $G_-(\xi,s)$ be evolution operators for the diagonal
+generators $A_+$ and $A_-$:
+\begin{equation}\label{eq:G}
+  \pd_\xi G_\pm(\xi,s)=A_\pm(\xi)G_\pm(\xi,s),\qquad
+  G_\pm(s,s)=I.
+\end{equation}
+For real self-adjoint $B$, these propagators are unitary on the propagating
+subspace. Given an incident forward field at $\xi=0$ and no incoming
+backward field at $\xi=X$, the exact variation-of-constants equations are
+\begin{align}
+  u_+(\xi)&=G_+(\xi,0)u_+(0)+
+  \int_0^\xi G_+(\xi,s)\Rop(s)u_-(s)\,ds,\label{eq:volterra+}\\
+  u_-(\xi)&=-\int_\xi^X G_-(\xi,s)\Rop(s)u_+(s)\,ds.
+  \label{eq:volterra-}
+\end{align}
+These equations form a two-point boundary-value problem. Substitution of
+\eqref{eq:volterra-} into \eqref{eq:volterra+}, followed by iteration, yields
+the Bremmer series. Each additional round trip introduces two interactions
+with $\Rop$ and one additional pair of directional propagations. A first
+backward approximation follows by substituting the zeroth forward field
+$u_+^{(0)}(s)=G_+(s,0)u_+(0)$ into \eqref{eq:volterra-}:
+\begin{equation}\label{eq:firstreflection}
+  u_-^{(1)}(\xi)=-\int_\xi^X G_-(\xi,s)\Rop(s)G_+(s,0)u_+(0)\,ds.
+\end{equation}
+
+For a single propagating mode with phase $\Phi_\xi=\lambda>0$, the first
+reflection has the oscillatory form
+\begin{equation}\label{eq:oscillatory}
+  u_-^{(1)}(\xi)=-e^{-i\Phi(\xi)}
+  \int_\xi^X \rho(s)e^{2i\Phi(s)}u_+(0)\,ds.
+\end{equation}
+Integration by parts separates a locally slaved component, of relative size
+$O(\eps)$, from a rapidly oscillating reflected remainder. Feeding the local
+component back into the forward equation produces order-$\eps^2$ corrections,
+including the familiar second-order WKB terms. Genuine backscatter is
+controlled by the regularity of the range variation and the separation of
+the two characteristic sheets. With $C^m$ coefficients, compactly supported
+range variation, and no stationary phase point, repeated integration by parts
+gives algebraic decay with the available number of derivatives. A
+$C^\infty$ profile gives superalgebraic decay; an exponential estimate
+requires analytic continuation and corresponding contour-deformation
+hypotheses. A merely $C^2$ terrain map does not justify an
+$O(\eps^\infty)$ or exponential claim.
+
+For the operator series, a sufficient small-coupling condition is
+\begin{equation}\label{eq:smallcoupling}
+  \int_0^X\|\Rop(s)\|\,ds<1.
+\end{equation}
+Under unitary diagonal propagation, this bounds successive integral
+iterations. It is sufficient rather than necessary; near grazing, a turning
+point, a sharp interface, or a strong reflector the series may require a
+different preconditioner or a direct block boundary solve.
+
+\section{Weyl-symbol propagators and rational approximation}
+
+\subsection{Symbol evolution and Bremmer terms}
+
+Let $\mathbf u=(u_+,u_-)^T$ and let $\mathbf a$ be the matrix Weyl symbol of
+the generator in \eqref{eq:coupled}:
+\begin{equation}\label{eq:amatrix}
+  \mathbf a=\begin{pmatrix}a_+&\rho\\\rho&a_-\end{pmatrix},
+  \qquad a_+=i\lambda+t,\quad a_-=-i\lambda+t,
+\end{equation}
+where $\lambda=\sigma(\Lambda)$, $t=\sigma(T)$, and $\rho=\sigma(\Rop)$.
+For a $2\times2$ symbol matrix, $\# $ denotes matrix multiplication with
+Weyl products in the entries. The propagator symbol $\mathbf g(\xi,s)$ is
+defined by
+\begin{equation}\label{eq:starprop}
+  \pd_\xi\mathbf g(\xi,s)=\mathbf a(\xi)\#\mathbf g(\xi,s),
+  \qquad \mathbf g(s,s)=\mathbf I.
+\end{equation}
+Thus the exact symbol solution is a range-ordered \emph{star exponential},
+not the pointwise exponential of the integrated symbol. At leading
+semiclassical order, $\#$ becomes ordinary multiplication and
+\begin{equation}\label{eq:leadingprop}
+  \pd_\xi\mathbf g_0=\mathbf a_0\mathbf g_0.
+\end{equation}
+The next terms follow by substituting the Moyal expansion \eqref{eq:moyal}
+into \eqref{eq:starprop}; they include phase-space derivatives and account
+for noncommutation of the vertical operators at different ranges.
+
+The diagonal propagator symbols $g_\pm(\xi,s)$ satisfy
+\begin{equation}\label{eq:diagonalstar}
+  \pd_\xi g_\pm(\xi,s)=a_\pm(\xi)\# g_\pm(\xi,s),
+  \qquad g_\pm(s,s)=1.
+\end{equation}
+The first reflected field is the operator with symbol
+\begin{equation}\label{eq:firstreflectionsymbol}
+  s_-^{(1)}(\xi)=-\int_\xi^X
+  g_-(\xi,s)\#\rho(s)\#g_+(s,0)\,ds,
+  \qquad u_-^{(1)}(\xi)=\Op(s_-^{(1)}(\xi))u_+(0).
+\end{equation}
+Higher Bremmer orders are nested range integrals of alternating $g_+$ and
+$g_-$ symbols, with a factor $\rho$ at every change of direction and with
+all products interpreted as $\#$. For a single isolated ray, the leading
+star products reduce to scalar products and \eqref{eq:firstreflectionsymbol}
+reduces to the oscillatory reflection integral \eqref{eq:oscillatory}.
+
+\subsection{Frozen-range propagator}
+
+For a short step $d=\Delta\xi$, first freeze the coefficients at the
+midpoint $\xi_{j+1/2}$. The diagonal operator generators are
+$A_\pm=\pm i\Lambda+T$. A symmetric splitting separates the skew-adjoint
+commutator correction from the principal phase:
+\begin{equation}\label{eq:splitstep}
+  G_\pm(\xi_{j+1},\xi_j)\simeq
+  e^{dT_{j+1/2}/2}\,e^{\pm id\Lambda_{j+1/2}}
+  e^{dT_{j+1/2}/2}+O(d^3),
+\end{equation}
+for frozen smooth coefficients. A higher-order Magnus or symmetric
+composition can be used when the range variation over one step is not
+negligible. The middle factor is a function of the vertical operator. Choose
+a reference wavenumber $\beta>0$ and define
+\begin{equation}\label{eq:Lop}
+  L_\beta=\frac{B}{\beta^2}-I,
+  \qquad \ell_\beta(\xi,\eta,q)=\frac{b(\xi,\eta,q)}{\beta^2}-1.
+\end{equation}
+Then
+\begin{equation}\label{eq:phasefunction}
+  e^{\pm id\Lambda}=e^{\pm i\beta d}
+  \exp\!\left[\pm i\beta d\left(\sqrt{I+L_\beta}-I\right)\right].
+\end{equation}
+This is the same reduced square-root phase used in Lytaev's JCS22 one-way
+propagator \cite{lytaev_jcs}, with $L_\beta$ now the Liouville-transformed
+terrain-following vertical operator.
+
+\subsection{Rational approximation in Weyl form}
+
+Let $\mathscr R_\pm(\zeta)$ be a rational approximation on the propagating
+spectral interval $\mathcal I$ to
+\begin{equation}\label{eq:targetscalar}
+  F_\pm(\zeta)=
+  \exp\!\left[\pm i\beta d\left(\sqrt{1+\zeta}-1\right)\right],
+  \qquad \zeta\in\mathcal I.
+\end{equation}
+For example, in factored form,
+\begin{equation}\label{eq:rational}
+  \mathscr R_\pm(\zeta)=
+  \prod_{m=1}^{p}\frac{1+a_m^\pm\zeta}{1+b_m^\pm\zeta},
+  \qquad
+  \sup_{\zeta\in\mathcal I}|F_\pm(\zeta)-\mathscr R_\pm(\zeta)|\le\delta.
+\end{equation}
+The coefficients may come from a local Pad\'e fit about $\zeta=0$ or from
+an interval fit such as Chebyshev--Pad\'e or rational interpolation. The
+interval is selected from the desired angle and wavenumber aperture, as in
+JCS22. In terrain-following coordinates its endpoints must include the
+metric-scaled spectrum $b_0\simeq k^2h_\xi^2-q^2/r^2$ (and the intended
+subprincipal corrections if they are retained).
+
+At the operator level, set
+\begin{equation}\label{eq:rationaloperator}
+  \mathscr R_\pm(L_\beta)=
+  \prod_{m=1}^{p}(I+a_m^\pm L_\beta)
+  \left[\prod_{m=1}^{p}(I+b_m^\pm L_\beta)\right]^{-1}.
+\end{equation}
+Each factor requires one shifted solve. For example,
+$(I+b_m^\pm L_\beta)v_m=(I+a_m^\pm L_\beta)w_{m-1}$.
+With the flux-form finite-difference realization of $B$, these are the
+tridiagonal vertical solves already used by the high-order terrain-following
+propagator. The two directions use conjugate rational fits for real $B$,
+so the discrete frozen-range phase pair has the expected adjoint relation.
+
+The exact Weyl symbol of a rational function is most cleanly written using
+star products. For a polynomial $p(\zeta)=\sum_j p_j\zeta^j$, define
+$p^{\#}(\ell_\beta)=\sum_jp_j\ell_\beta^{\#j}$, with
+$\ell_\beta^{\#0}=1$ and $\ell_\beta^{\#(j+1)}=
+\ell_\beta^{\#j}\#\ell_\beta$. If $p_\pm(\zeta)$ and $q_\pm(\zeta)$ are the
+numerator and denominator polynomials in \eqref{eq:rational}, form their
+star-functional-calculus symbols $p_\pm^{\#}(\ell_\beta)$ and
+$q_\pm^{\#}(\ell_\beta)$.
+Then
+\begin{equation}\label{eq:rationalsymbol}
+  \sigma^w\!\left(\mathscr R_\pm(L_\beta)\right)=
+  p_\pm^{\#}(\ell_\beta)\#
+  \left(q_\pm^{\#}(\ell_\beta)\right)_{\#}^{-1},
+  \qquad
+  q_\pm^{\#}(\ell_\beta)\#
+  \left(q_\pm^{\#}(\ell_\beta)\right)_{\#}^{-1}=1.
+\end{equation}
+The star inverse exists on the chosen symbol region when the rational
+denominator has no zero there. Since the first Weyl correction to a scalar
+function of one real symbol vanishes, the principal symbol is simply
+\begin{equation}\label{eq:rationalprincipal}
+  \sigma^w\!\left(\mathscr R_\pm(L_\beta)\right)
+  =\mathscr R_\pm(\ell_\beta)+O(\eps^2).
+\end{equation}
+For the commutator half-step write
+$\tau_d=\sigma^w(e^{dT/2})$; at principal order
+$\tau_d=e^{dt/2}+O(\eps^2)$.
+Combining \eqref{eq:splitstep}--\eqref{eq:rationalprincipal} gives the
+frozen-range Weyl symbol of the rationalized directional propagator:
+\begin{equation}\label{eq:Gsymbolrational}
+  g_{\pm,j}^{\rm rat}=
+  \tau_d\#\left[e^{\pm i\beta d}
+  p_\pm^{\#}(\ell_\beta)\#
+  \left(q_\pm^{\#}(\ell_\beta)\right)_{\#}^{-1}\right]
+  \#\tau_d+O(d^3),
+\end{equation}
+where all symbols are evaluated at $\xi_{j+1/2}$. At principal order,
+\begin{equation}\label{eq:Gsymbolerror}
+  g_{\pm,j}^{\rm rat}\simeq
+  \exp\!\left[\pm id\sqrt{b(\xi_{j+1/2},\eta,q)}\right],
+  \qquad
+  |\text{phase error}|\le\delta+O(\eps^2)+O(d^3).
+\end{equation}
+The local Pad\'e fit concentrates accuracy near normal incidence
+($\ell_\beta=0$); an interval fit controls the error over the full symbol
+support. This symbol-level error is distinct from the vertical finite
+difference dispersion error and from the Bremmer-series truncation error.
+
+In flat Cartesian coordinates $h_\xi=h_\eta=r=1$, let the local wavenumber
+be $k_0n(\xi,\eta)$ and choose reference $\beta=k_0$. Then
+$b=k_0^2n^2-q^2$ and
+\begin{equation}\label{eq:jcsrecovery}
+  \ell_{k_0}=-\frac{q^2}{k_0^2}+(n^2-1).
+\end{equation}
+For $n=1$ this reduces to $-q^2/k_0^2$, exactly the homogeneous-medium case;
+for variable $n$ it is the scalar argument used in JCS22. Equation
+\eqref{eq:rationaloperator} is therefore its
+terrain-following operator generalization, while
+\eqref{eq:rationalsymbol}--\eqref{eq:Gsymbolerror} give the corresponding
+Weyl-symbol derivation.
+
+\section{Discrete realization in terrain-following coordinates}
+
+\subsection{Vertical operator and one-way building blocks}
+
+On a range grid $\xi_j=j\Delta\xi$ and vertical grid $\eta_n=n\Delta\eta$,
+construct a matrix $B_j$ from the flux-form operator \eqref{eq:Bdef}. The
+discrete vertical scheme should preserve the self-adjoint weighting and
+boundary conditions. In the existing terrain-following JAX propagator, the
+coefficient arrays include the metric weight $m=r^2$, the flux coefficient
+$r$ (or its density-weighted version), the local wavenumber contrast, and
+midpoint flux coefficients. Each rational substep is a tridiagonal solve;
+the range step also includes a flux-normalizing fourth-root pair
+\cite{lytaev_tf}.
+
+Those pieces can be reused to build actions of $B_j$, and rational resolvent
+solves can approximate $B_j^{1/2}$ and $B_j^{1/4}$ on a specified propagating
+spectrum. Alternatively, for small verification problems, a symmetric
+matrix eigendecomposition gives a reference implementation. Define
+\begin{equation}\label{eq:discretecoupling}
+  Q_j=B_j^{1/4},\qquad \Lambda_j=B_j^{1/2},\qquad
+  \Rop_{j+1/2}=\frac12\left(
+  \frac{Q_{j+1}-Q_j}{\Delta\xi}Q_{j+1/2}^{-1}
+  +Q_{j+1/2}^{-1}\frac{Q_{j+1}-Q_j}{\Delta\xi}\right),
+\end{equation}
+with a consistent midpoint or higher-order approximation for $Q_{j+1/2}$.
+The finite difference in \eqref{eq:discretecoupling} approximates $Q_\xi$;
+for high accuracy it should be replaced by a symmetric multi-column
+differentiation or a direct discrete derivative of the matrix-function
+action. A discontinuous staircase metric is unsuitable for this derivative
+because it creates artificial impulses in the coupling.
+
+\subsection{Two directional sweeps}
+
+Let $\mathcal{P}_+$ and $\mathcal{P}_-$ be discrete one-way propagators for
+$A_+$ and $A_-$, including the skew-adjoint term $T$ to the desired order.
+Given a current forward field, a backward sweep evaluates the discrete
+version of \eqref{eq:volterra-}; the next forward sweep evaluates
+\eqref{eq:volterra+}. Starting with $u_-^{(0)}=0$ gives the successive
+Bremmer reflection corrections. An equivalent approach solves the block
+tridiagonal discretization of \eqref{eq:coupled} directly, which avoids
+fixed-point convergence issues and provides a reference for truncated-series
+results.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Component & Existing terrain-following code & Required two-way extension\\
+\midrule
+Map and metric & Orthogonal map, $h_\xi,h_\eta,r$ & Reuse unchanged\\
+Vertical operator & High-order flux-form rational solves & Expose symmetric $B_j$ action\\
+Range step & Forward rational PE step & Separate $G_+$ and $G_-$\\
+Flux scaling & Approximate $B^{\pm1/4}$ column pair & Root actions in the split state\\
+Backscatter & Not represented & $\Rop$ and backward range sweep\\
+Range boundary & One-way source/outgoing top & Incident data at $0$, no incoming at $X$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Boundary conditions and absorbing regions}
+
+The terrain boundary condition is imposed on the coordinate line $\eta=0$.
+For a finite-impedance boundary, the physical normal derivative must be
+transformed with the local metric; the current solver's compact closure is a
+candidate discretization for this part. At the top, the orthogonal map is the
+identity, so a vertical outgoing condition can be imposed without map
+corrections. For the range boundary, one prescribes the incident $u_+(0)$ and
+sets the incoming-from-the-right component $u_-(X)$ to zero. This range
+condition is distinct from the vertical top boundary condition.
+
+An absorbing layer makes the discrete operator non-self-adjoint. Then the
+flux conservation and unitary bounds above no longer hold exactly. A robust
+implementation should first validate the two-way solver on a lossless finite
+domain with exact outgoing vertical conditions. Absorption can then be added
+with a monitored reflection coefficient and a biorthogonal or energy estimate
+appropriate to the damped operator.
+
+\section{Verification programme}
+
+A two-way implementation should be developed in stages.
+\begin{enumerate}
+\item \textbf{Constant flat medium.} Check that $\Rop=0$, the two components
+  propagate with the expected signs, and their superposition agrees with the
+  exact Helmholtz solution.
+\item \textbf{Range-dependent one-dimensional medium.} With no vertical
+  variation, compare the full two-way result and successive Bremmer orders
+  against an exact transfer-matrix or boundary-value solution. Measure both
+  the reflected amplitude and convergence with range step.
+\item \textbf{Smooth terrain map.} Use a smooth isolated hill and compare
+  zero-, first-, and higher-reflection results with a direct two-way
+  discretization. Refine the map and grid independently to separate terrain
+  regularity error from propagation error.
+\item \textbf{Impedance and evanescence.} Add finite ground impedance, then
+  evanescent modes and absorption, checking flux balance where applicable
+  and boundary reflection where flux conservation does not apply.
+\end{enumerate}
+No numerical accuracy or speed claim is made here; the existing one-way JAX
+solver is a source of reusable discretization components, not a two-way
+reference solution.
+
+\section{Conclusion}
+
+Orthogonal terrain-following coordinates put the terrain-boundary Helmholtz
+equation in a form suited to directional operator factorization. The
+Liouville-transformed equation has a symmetric vertical operator whose
+fractional powers define flux-normalized forward and backward components.
+Their exact coupled evolution yields a Bremmer series, while Weyl calculus
+identifies the leading interaction and its higher-order corrections.
+
+The existing high-order terrain-following PE contributes the coordinate map,
+metric and flux-form vertical solves. A genuine two-way higher-order
+propagator still requires discrete square-root actions, consistent coupling
+operators, and a two-point range boundary solution. Deriving and validating
+those components is the next step; reversing the existing one-way march alone
+does not produce a Bremmer solver.
+
+\begin{thebibliography}{10}
+\bibitem{bremmer}
+H. Bremmer, ``The W.K.B. approximation as the first term of a geometric-optical
+series,'' \emph{Communications on Pure and Applied Mathematics}, vol. 4,
+pp. 105--115, 1951.
+
+\bibitem{dehoop}
+M. V. de Hoop, ``Generalization of the Bremmer coupling series,''
+\emph{Journal of Mathematical Physics}, vol. 37, no. 7, pp. 3246--3282, 1996,
+doi: 10.1063/1.531566.
+
+\bibitem{gautesen}
+A. K. Gautesen and M. V. de Hoop, ``Uniform asymptotic expansion of the
+generalized Bremmer series,'' \emph{SIAM Journal on Applied Mathematics},
+vol. 60, no. 4, pp. 1302--1329, 2000, doi: 10.1137/S0036139997323619.
+
+\bibitem{fishman}
+L. Fishman and J. J. McCoy, ``Derivation and application of extended
+parabolic wave theories. I. The factorized Helmholtz equation,''
+\emph{Journal of Mathematical Physics}, vol. 25, no. 2, pp. 285--296, 1984.
+
+\bibitem{stolk}
+C. C. Stolk, ``A pseudodifferential equation with damping for one-way wave
+propagation in inhomogeneous acoustic media,'' \emph{Wave Motion}, vol. 40,
+no. 2, pp. 111--121, 2004, doi: 10.1016/j.wavemoti.2003.12.016.
+
+\bibitem{lytaev_jcs}
+M. S. Lytaev, ``Rational interpolation of the one-way Helmholtz propagator,''
+\emph{Journal of Computational Science}, vol. 58, article 101536, 2022,
+doi: 10.1016/j.jocs.2021.101536.
+
+\bibitem{zworski}
+M. Zworski, \emph{Semiclassical Analysis}. Providence, RI: American
+Mathematical Society, 2012.
+
+\bibitem{lytaev_tf}
+M. S. Lytaev, ``Orthogonal terrain-following coordinates for the higher-order
+parabolic equation: Wide-angle propagation over irregular terrain with
+discrete transparent boundaries,'' manuscript accompanying the
+terrain-following implementation, \texttt{pywaveprop/helmholtz\_tf\_jax.py}.
+\end{thebibliography}
+
+\end{document}
