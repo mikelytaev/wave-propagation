@@ -1,0 +1,119 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.7cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\Op}{\operatorname{Op}^{w}}
+\newcommand{\pd}{\partial}
+
+\title{A Gentle Introduction to Weyl Symbols}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{The main idea}
+
+A differential operator acts on a function. A \emph{symbol} is a way to
+describe that operator using an ordinary function of position and
+wavenumber. It is useful because many questions about an operator---what
+waves it supports, how it propagates them, and how two operators combine---
+become easier to see in this position--wavenumber picture.
+
+For a wave $u(x)=e^{i\xi x}$, the derivative measures its wavenumber:
+\begin{equation}
+  D u=\xi u,\qquad D=-i\pd_x.
+\end{equation}
+So $D$ is represented by the variable $\xi$. For example, the constant
+coefficient operator $D^2+k^2$ has symbol $\xi^2+k^2$. Its symbol immediately
+shows which wavenumbers make $(D^2+k^2)u=0$.
+
+When coefficients vary with position, position and wavenumber both matter.
+The operator $a(x)D$ has a symbol involving both $a(x)$ and $\xi$. There is a
+small complication: multiplication by $a(x)$ and differentiation do not
+commute. Different choices for their ordering give slightly different
+symbols. Weyl's choice treats position and wavenumber symmetrically.
+
+\section{Weyl quantization}
+
+Given a function $p(x,\xi)$, its Weyl operator is
+\begin{equation}\label{eq:weyl}
+  (\Op(p)u)(x)=\frac{1}{2\pi}\iint
+  e^{i(x-y)\xi}p\!\left(\frac{x+y}{2},\xi\right)u(y)\,dy\,d\xi.
+\end{equation}
+The key feature is the midpoint $(x+y)/2$: the coefficient is sampled
+halfway between where the input and output are evaluated. This makes Weyl
+quantization symmetric in position and wavenumber.
+
+Some basic examples are
+\begin{align}
+  \Op(a(x))u &=a(x)u,\\
+  \Op(\xi)u &=Du=-i u_x,\\
+  \Op(a(x)\xi)u &=\frac12\bigl(aD+Da\bigr)u
+    =-i\left(a u_x+\frac12a_xu\right).
+\end{align}
+Thus the symbol $a(x)\xi$ represents the \emph{symmetrically ordered}
+operator, not simply $aD$. In fact,
+\begin{equation}
+  aD=\Op\!\left(a(x)\xi+\frac{i}{2}a_x(x)\right).
+\end{equation}
+The extra term records the effect of the ordering. For real $p$, the Weyl
+operator is symmetric (subject to the usual domain and boundary conditions).
+
+\section{Combining symbols}
+
+Applying one operator after another corresponds to combining their symbols
+with a product called the \emph{Weyl product}, written $p\#q$. Its first terms
+are
+\begin{equation}\label{eq:moyal}
+  p\#q=pq+\frac{i}{2}
+  \left(p_xq_\xi-p_\xi q_x\right)
+  -\frac18\left(p_{xx}q_{\xi\xi}-2p_{x\xi}q_{\xi x}
+  +p_{\xi\xi}q_{xx}\right)+\cdots.
+\end{equation}
+The first term is ordinary multiplication. The remaining terms correct for
+the fact that position-dependent coefficients and derivatives do not
+commute. If the coefficients vary slowly compared with a wavelength, these
+corrections are often small, so ordinary multiplication gives a useful first
+approximation.
+
+For example, the symbol of a commutator is, to leading order,
+\begin{equation}
+  \sigma\bigl([\Op(p),\Op(q)]\bigr)
+  \simeq i\left(p_xq_\xi-p_\xi q_x\right).
+\end{equation}
+This expression is the phase-space Poisson bracket (with the convention
+shown here). It tells us that operator order matters most where the two
+symbols vary across phase space.
+
+\section{A variable-coefficient wave operator}
+
+Consider the one-dimensional vertical operator
+\begin{equation}
+  B=\pd_x\bigl(g(x)\pd_x\bigr)+V(x),\qquad g(x)>0.
+\end{equation}
+Since $D=-i\pd_x$, this is $B=-DgD+V$. Its exact Weyl symbol is
+\begin{equation}\label{eq:variable}
+  b(x,\xi)=-g(x)\xi^2+V(x)-\frac14g_{xx}(x).
+\end{equation}
+The leading part $-g\xi^2+V$ is the local dispersion relation. The smaller
+$-g_{xx}/4$ term is a correction caused by the variation of the coefficient
+and by symmetric operator ordering. In a slowly varying medium, the
+principal symbol often explains the main wave behavior, while the lower
+order terms describe corrections to phase and amplitude.
+
+In terrain-following Helmholtz analysis, the same idea applies with position
+$\eta$ and vertical wavenumber $q$. The symbol of the vertical operator gives
+the local dispersion relation at each range, while its range variation
+couples forward and backward waves. Weyl notation keeps the operator ordering
+visible and provides a systematic way to calculate those coupling and
+higher-order terms.
+
+\paragraph{Convention.} This note uses $D=-i\pd_x$, the kernel
+$e^{i(x-y)\xi}$, and the Poisson bracket
+$\{p,q\}=p_xq_\xi-p_\xi q_x$. Changing the Fourier or bracket convention
+changes some signs together; the underlying operator statements are
+unchanged.
+
+\end{document}
