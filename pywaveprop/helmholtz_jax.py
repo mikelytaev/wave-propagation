@@ -593,12 +593,14 @@ class RationalHelmholtzPropagator:
                   lower_layer=dynamic[6], **static)
         return unf
 
-    def _calc_nlbc(self, diff_eq_solution_ratio, inv_z_transform_rtol):
+    def _calc_nlbc(self, diff_eq_solution_ratio, inv_z_transform_rtol, use_jit=True):
         """Generic NLBC computation: convolve a 1D diff-eq solution ratio over the
         z-transform contour using FCC adaptive Fourier quadrature.
 
         diff_eq_solution_ratio: callable taking a complex spectral parameter ``s``
         and returning the corresponding boundary ratio (a JAX or python complex).
+        use_jit: compile the ratio with jax.jit; safe only for jnp-based
+        callables, a python-only callable must be evaluated eagerly.
         """
         num_roots, den_roots = self.coefs[:, 0], self.coefs[:, 1]
         m_size = self.coefs.shape[0]
@@ -618,14 +620,15 @@ class RationalHelmholtzPropagator:
             from scipy import linalg as sla
 
             # compiled once per boundary: the coefficients of the ratio are otherwise
-            # dispatched op by op for every eigenvalue
-            ratio_jit = jax.jit(diff_eq_solution_ratio)
+            # dispatched op by op for every eigenvalue (only possible when the
+            # ratio itself is jnp-based; a python-only one cannot be traced)
+            ratio_compiled = jax.jit(diff_eq_solution_ratio) if use_jit else diff_eq_solution_ratio
 
             def _scalar_diff_eq(s):
                 s = np.asarray(s, dtype=complex)
                 if s.ndim == 0:
-                    return complex(ratio_jit(jnp.asarray(s)))
-                return np.array([complex(ratio_jit(jnp.asarray(si))) for si in s])
+                    return complex(ratio_compiled(jnp.asarray(s)))
+                return np.array([complex(ratio_compiled(jnp.asarray(si))) for si in s])
 
             def nlbc_transformed(f):
                 t = tau * np.exp(1j * f)
@@ -733,6 +736,8 @@ class RationalHelmholtzPropagator:
         ``beta_het`` is the exterior heterogeneity value at the lower boundary,
         i.e. ``het[0] = k[0]**2 / beta**2 - 1``.
         """
+        # The ratio below is python-only (cmath plus an arbitrary reflection
+        # coefficient function) and cannot be traced through jax.jit.
         inv_z_transform_rtol = self.lower_nlbc_rtol
         # Physical wavenumber at the boundary: k[0] = beta_ref * sqrt(1 + het[0]).
         # The Fresnel reflection coefficient requires the physical grazing angle,
@@ -749,7 +754,7 @@ class RationalHelmholtzPropagator:
             refl_coef_inv = 1 / refl_coef
             return (refl_coef_inv / mu_c + mu_c) / (refl_coef_inv + 1)
 
-        return self._calc_nlbc(diff_eq_solution_ratio, inv_z_transform_rtol)
+        return self._calc_nlbc(diff_eq_solution_ratio, inv_z_transform_rtol, use_jit=False)
 
     @jax.jit
     def _Crank_Nikolson_propagate_no_rho_4th_order(self, a, b, initial, het, lower_bound=(1, 0, 0), upper_bound=(0, 1, 0)):
