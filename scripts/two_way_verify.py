@@ -63,7 +63,7 @@ def flat_tests(angle_deg=30.0, x_size=200.0, z_size=100.0, deta=0.25, dxi=2.5):
 
 
 def slope_test(x_min=-60.0, x_max=150.0, layer=100.0, z_size=400.0, deta=0.25, dxi=5.0,
-               n_bremmer=3, theta_s=30.0):
+               n_bremmer=3, theta_s=30.0, flux_order=2):
     """The exact slope test with the reflection inside the domain: the two-way
     coupling must produce the reflected beam that the one-way march misses."""
     from scipy.special import hankel1
@@ -104,7 +104,7 @@ def slope_test(x_min=-60.0, x_max=150.0, layer=100.0, z_size=400.0, deta=0.25, d
     kz_max = min(1.15 * K0 * np.sin(np.radians(2 * theta_s + 10.0)), 0.97 * K0)
     prop = TwoWayTerrainFollowingPropagator.create(FREQ, tmap, med, kz_max, (K0, K0), 1e-2, mp,
                                                    rational_approx_order=(7, 8), upper_bc='dirichlet',
-                                                   flux_order=2)
+                                                   flux_order=flux_order)
     x0, z0 = prop.initial_points()
     psi_inc = exact(x0, z0)                # incident beam only (pre-reflection)
     psi_out, tp, tm, psi_full = prop.compute(psi_inc, n_bremmer=n_bremmer)
