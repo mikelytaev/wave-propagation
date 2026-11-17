@@ -68,14 +68,22 @@ def run_case(slope_deg, precision, order=(7, 8), x_max=600.0):
     kz_max = K0 * np.sin(np.radians(min(theta, 85.0)))
     out = dict(slope_deg=slope_deg, precision=precision, theta_max_deg=theta)
 
-    # terrain-following
+    # terrain-following; the domain starts left of the illuminated patch so that
+    # the reflection happens inside it and is produced by the solver itself:
+    # descending through the transition layer, the trajectories drift along the
+    # slope by about sin(theta_s) * L / 2, so the xi labeling starts at -x_min
     t = time.time()
     xb = np.linspace(-2500.0, x_max + 2500.0, 6001)
     relief = s * x_max
-    tm = OrthogonalTerrainMap(xb, s * xb, x_max_m=x_max, transition_m=2.2 * relief, z_ref_m=relief,
-                              smoothing_m=0.0, mirror_start=False, dx_fine_m=0.5, pad_m=2000.0)
+    layer = 2.2 * relief
+    x_min = -(np.sin(np.radians(slope_deg)) * layer * 0.6 + 60.0)
+    tm = OrthogonalTerrainMap(xb, s * xb, x_max_m=x_max, transition_m=layer, z_ref_m=relief,
+                              smoothing_m=0.0, mirror_start=False, dx_fine_m=0.5, pad_m=2000.0,
+                              x_min_m=x_min)
     med = TFMedium(k2_above=lambda x, z: np.full(np.shape(z), K0 ** 2, dtype=complex))
-    mp = HelmholtzMeshParams2D(x_size_m=x_max, z_size_m=z_top - relief, dx_output_m=5.0, dz_output_m=1.0)
+    mp = HelmholtzMeshParams2D(x_size_m=x_max - x_min, z_size_m=z_top - relief, dx_output_m=5.0, dz_output_m=0.25)
+    med = TFMedium(k2_above=lambda x, z: np.full(np.shape(z), K0 ** 2, dtype=complex))
+    mp = HelmholtzMeshParams2D(x_size_m=x_max, z_size_m=z_top - relief, dx_output_m=5.0, dz_output_m=0.25)
     tf = TerrainFollowingHelmholtzPropagator.create(FREQ, tm, med, kz_max, (K0, K0), precision, mp,
                                                     rational_approx_order=order)
     x0, z0 = tf.initial_points()
@@ -107,16 +115,61 @@ def run_case(slope_deg, precision, order=(7, 8), x_max=600.0):
     return out, tf_maps, (XX, ZZ, us, ues, inside_s)
 
 
+def tf_to_cartesian(xo, zo, u, XC, ZC):
+    """Interpolate the field from the logically rectangular curvilinear grid
+    (columns = trajectories, non-crossing, each monotone in ``z``) onto the
+    Cartesian grid: linearly along the columns in ``z``, then linearly across
+    the columns.  Targets outside the covered range of trajectories are NaN."""
+    xt, zt = XC.ravel(), ZC.ravel()
+    n_i = xo.shape[0]
+    out = np.full(xt.size, np.nan + 0j)
+    for lo in range(0, xt.size, 4096):
+        hi = min(lo + 4096, xt.size)
+        zt_b = zt[lo:hi]
+        # per-column values and abscissas at the target heights
+        Xi = np.empty((n_i, hi - lo))
+        Ui = np.empty((n_i, hi - lo), dtype=complex)
+        for i in range(n_i):
+            Xi[i] = np.interp(zt_b, zo[i], xo[i])
+            Ui[i] = np.interp(zt_b, zo[i], u[i])
+        valid = (xt[lo:hi] >= Xi[0]) & (xt[lo:hi] <= Xi[-1])
+        idx = np.clip((Xi <= xt[lo:hi]).sum(axis=0), 1, n_i - 1)
+        cols = np.arange(hi - lo)
+        xlo, xhi = Xi[idx - 1, cols], Xi[idx, cols]
+        ulo, uhi = Ui[idx - 1, cols], Ui[idx, cols]
+        g = np.where(xhi > xlo, (xt[lo:hi] - xlo) / np.maximum(xhi - xlo, 1e-300), 0.0)
+        out[lo:hi] = np.where(valid, ulo + g * (uhi - ulo), np.nan + 0j)
+    return out.reshape(XC.shape)
+
+
 def plot_maps(slope_deg, tf_maps, st_maps):
     xo, zo, u, ue = tf_maps
     XX, ZZ, us, ues, inside = st_maps
+    exact = exact_field(slope_deg)
+    s = np.tan(np.radians(slope_deg))
+    x_max, z_top = float(XX.max()), float(ZZ.max())
+
+    # common Cartesian grid over the full rectangle, at the native spacing of
+    # the data; the terrain-following field is interpolated onto it
+    x_c = np.arange(0.0, x_max + 1e-6, 1.0)
+    z_c = np.arange(0.0, z_top + 1e-6, 0.25)
+    XC, ZC = np.meshgrid(x_c, z_c, indexing='ij')
+    above = ZC > s * XC
+    ue_c = exact(XC, ZC)
+    u_c = tf_to_cartesian(xo, zo, u, XC, ZC)
+    us_c = np.where(ZZ > s * XX + 1.0, us, np.nan)
+
     vmax = 20 * np.log10(np.abs(ue).max())
-    fig, axes = plt.subplots(1, 3, figsize=(12, 3.8), sharey=True)
-    for ax, (X, Z, f, title) in zip(axes, [(xo, zo, ue, 'exact'), (xo, zo, u, 'terrain-following'),
-                                         (XX, ZZ, np.where(inside, us, np.nan), 'staircase')]):
+    panels = [(XC, ZC, np.where(above, ue_c, np.nan), 'exact'),
+              (XC, ZC, np.where(above, u_c, np.nan), 'terrain-following'),
+              (XX, ZZ, us_c, 'staircase')]
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.2), sharey=True)
+    for ax, (X, Z, f, title) in zip(axes, panels):
         pc = ax.pcolormesh(X, Z, 20 * np.log10(np.abs(f) + 1e-12), vmin=vmax - 40, vmax=vmax, cmap='jet',
-                           shading='auto')
-        ax.plot([0, X.max()], [0, X.max() * np.tan(np.radians(slope_deg))], 'k', lw=1.5)
+                           shading='auto', rasterized=True)
+        ax.fill_between([0, x_max], [-0.02 * z_top, -0.02 * z_top], [0, x_max * s], color='0.35')
+        ax.set_xlim(0, x_max)
+        ax.set_ylim(-0.02 * z_top, z_top)
         ax.set_title(title)
         ax.set_xlabel('x, m')
     axes[0].set_ylabel('z, m')
@@ -140,8 +193,33 @@ def plot_maps(slope_deg, tf_maps, st_maps):
     plt.close(fig)
 
 
+def fields_path(slope):
+    return os.path.join(FIG_DIR, f'slope_exact_{int(slope)}deg_fields.npz')
+
+
+def cache_fields(slope, tf_maps, st_maps):
+    xo, zo, u, ue = tf_maps
+    XX, ZZ, us, ues, inside = st_maps
+    np.savez_compressed(fields_path(slope), xo=xo, zo=zo, u=u.astype('complex64'),
+                        ue=ue.astype('complex64'), XX=XX, ZZ=ZZ,
+                        us=us.astype('complex64'), ues=ues.astype('complex64'),
+                        inside=inside)
+
+
+def load_fields(slope):
+    d = np.load(fields_path(slope))
+    tf_maps = (d['xo'], d['zo'], d['u'].astype(complex), d['ue'].astype(complex))
+    st_maps = (d['XX'], d['ZZ'], d['us'].astype(complex), d['ues'].astype(complex), d['inside'])
+    return tf_maps, st_maps
+
+
 def main():
     os.makedirs(FIG_DIR, exist_ok=True)
+    if '--plot-only' in sys.argv:
+        for slope in (10.0, 20.0, 30.0):
+            plot_maps(slope, *load_fields(slope))
+            print('plotted', slope, flush=True)
+        return
     table = []
     for slope in (10.0, 20.0, 30.0):
         for prec in (1e-1, 1e-2):
@@ -150,6 +228,7 @@ def main():
             print(json.dumps(res), flush=True)
             table.append(res)
             if prec == 1e-2:
+                cache_fields(slope, tf_maps, st_maps)
                 plot_maps(slope, tf_maps, st_maps)
     with open(os.path.join(FIG_DIR, 'slope_exact.json'), 'w') as f:
         json.dump(table, f, indent=1)

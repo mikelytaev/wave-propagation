@@ -1025,7 +1025,14 @@ $z=x\tan\theta_s$ gives the exact field above the Dirichlet slope; the reflected
 beam leaves at $2\theta_s+10^\circ$. Both solvers start from the exact field,
 use Pad\'e $(7,8)$ and the aperture $\theta_{\max}=10^\circ+2\theta_s+5^\circ$,
 and their grids are chosen by the respective optimizers with precision
-$10^{-2}$. Table~\ref{tab:slope} gives the maximum error relative to the
+$10^{-2}$. The reflection itself lies outside the terrain-following domain:
+its starting trajectory meets the slope at $x\approx\SI{160}{m}$, to the right
+of the reflection spot, and the reflected beam crosses this trajectory at
+$z\approx\SI{210}{m}$, so the exact field prescribed on it already contains
+the reflected wave and the test measures the accuracy of its transport at
+$70^\circ$; the staircase, whose initial line the reflected beam never
+crosses, has to produce the reflection itself. Table~\ref{tab:slope} gives
+the maximum error relative to the
 maximum of the exact field, and Fig.~\ref{fig:slope} shows the fields and the
 errors.
 
@@ -1047,8 +1054,10 @@ $30^\circ$ & $70^\circ$ & 1.0 & 0.009 & $2.9\cdot10^{-3}$ & 1.0 & 0.016 & 0.81\\
 \includegraphics[width=0.42\textwidth]{slope_exact_20deg_error.png}\hspace{4mm}
 \includegraphics[width=0.42\textwidth]{slope_exact_30deg_error.png}
 \caption{Beam reflected by a perfectly conducting slope. Top: $|u|$ for
-$\theta_s=30^\circ$ (reflected beam at $70^\circ$); the terrain-following domain
-is bounded by the curved trajectories $\xi=0$ and $\xi=x_{\max}$. Bottom: maximum
+$\theta_s=30^\circ$ (reflected beam at $70^\circ$) on the common Cartesian
+grid; the terrain-following field is interpolated onto it from its curvilinear
+grid, and the region outside its domain, bounded by the curved trajectories
+(grey lines), is left blank. Bottom: maximum
 error over height versus range for $\theta_s=20^\circ$ and $30^\circ$.}
 \label{fig:slope}
 \end{figure*}
