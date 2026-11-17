@@ -1,0 +1,1155 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\het}{\nu}
+\newcommand{\pd}{\partial}
+\newcommand{\Op}{\operatorname{Op}^w}
+\newcommand{\etal}{\eta_{\ell}}
+
+\title{One-Way Helmholtz Propagation over Irregular Terrain\\ as a Weyl-Symbol Problem}
+\author{Mikhail S. Lytaev\thanks{E-mail: mikelytaev@gmail.com. Code: \url{https://github.com/mikelytaev/wave-propagation}.}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A parabolic-equation solver for propagation over irregular terrain is built
+from four ingredients: a one-way factorization of the Helmholtz operator, a
+range step conjugated by the weights $B^{\pm1/4}$, a rational (Pad\'e)
+propagator, and transparent boundaries. We develop all four in the calculus
+of Weyl symbols for a propagation problem written in orthogonal
+terrain-following coordinates. The
+vertical operator $B$ of the Liouville-transformed equation
+$\varphi_{\xi\xi}+B\varphi=0$ has an exact Weyl symbol whose principal part is
+the local dispersion relation and which has no first-order part; the only
+corrections are two zeroth-order terms of relative size $(\lambda/\ell)^2$.
+The one-way factorization is the order-by-order solution of the operator
+Riccati equation in the small parameter $\varepsilon=1/(k\ell)$; the
+exponential propagator and its conjugation by the Weyl factors
+$B^{\pm1/4}$ are statements of the
+semiclassical functional calculus; the rational approximation is a pointwise function on phase
+space whose error is budgeted on the transported support of the field; the
+discrete scheme has a discrete symbol that coincides locally with that of the
+flat scheme. The same calculus explains two obstructions that no grid
+refinement removes: the shift map has a grid-independent error floor because
+its one-way symbol has an odd part in the vertical wavenumber, and no local
+top boundary can absorb grazing waves because every local condition is a
+rational approximation of a square root up to its branch point at zero
+vertical wavenumber.
+\end{abstract}
+
+%=====================================================================
+\section{The Helmholtz equation}\label{sec:helm}
+
+Consider the two-dimensional Helmholtz equation for a time-harmonic field
+$\psi(x,z)$ ($e^{-i\omega t}$ dependence),
+\begin{equation}\label{eq:helmholtz}
+\nabla^2\psi+k^2(x,z)\psi=0 ,
+\end{equation}
+in the domain $\Omega=\{z>T(x)\}$ above the terrain profile $T(x)$, where $k=k_0n$
+is the wavenumber and $n$ the modified refractive index including the Earth
+flattening \cite{levy2000book}. The ground is either perfectly conducting,
+with $\psi=0$ on $z=T(x)$ for horizontal (H) polarization and $\pd_n\psi=0$
+for vertical (V) polarization, or it satisfies the Leontovich impedance
+condition
+\begin{equation}\label{eq:leontovich}
+\pd_n\psi+\alpha\psi=0,\qquad \alpha=ik_0\Delta_g,\quad
+\Delta_g=\begin{cases}\sqrt{\varepsilon_g-1}, & \text{H},\\
+\sqrt{\varepsilon_g-1}/\varepsilon_g, & \text{V},\end{cases}
+\end{equation}
+with $\varepsilon_g$ the complex relative permittivity of the ground and the
+normal directed into $\Omega$. A plane wave incident at the grazing angle
+$\phi$ is reflected with $R(\phi)=(\sin\phi-\Delta_g)/(\sin\phi+\Delta_g)$.
+Above some height the medium no longer depends on $x$, and the domain is
+truncated there by a transparent boundary condition.
+
+The numerical task is to march a one-way field along the terrain with a
+wide-angle propagator of adjustable accuracy, imposing the ground condition
+exactly and the top condition transparently. Two families of terrain
+treatments dominate the practice \cite{beilis1979coupled,barrios1994tpem,donohue2000gtpe,holm2007wasm}.
+The \emph{staircase} replaces the boundary by a sequence of steps; it imposes
+the reflection coefficient of the wrong grazing angle and diffracts at every
+corner. The \emph{shift map} $\zeta=z-T(x)$ straightens the boundary but moves
+the whole column with the terrain, so the transformed medium depends on range
+at every height, and the upper boundary condition can no longer be exact; its
+wide-angle versions carry a slope error that survives grid refinement
+\cite{wang2020smpe,zhou2017lfhighangle,gilbert2022wabt}. Conformal maps are
+nowhere the identity and share the same defect.
+
+The alternative developed in \cite{lytaev2020awpl,lytaev2018awpl} and here is
+a map that is the identity above a transition layer, so that the exterior
+stays range-independent and the discrete nonlocal boundary condition (NLBC)
+of \cite{lytaev2018awpl} remains exact; below the layer, the map keeps the
+structure of the flat problem on which the rational propagator relies. This
+paper derives the whole scheme in one language: the calculus of Weyl symbols.
+Every ingredient of the method---the terrain-following coordinates, the
+one-way factorization, the weighted range step, the rational propagator and
+its error budget, the discrete scheme, the dispersion analysis, and the two
+fundamental obstructions (shift-map floor, grazing-wave absorption)---becomes
+a statement about a function on phase space. The calculus also ranks the
+terms the method neglects and states precisely when the neglect is justified.
+
+%=====================================================================
+\section{Orthogonal terrain-following coordinates}\label{sec:map}
+
+\subsection{Level curves}
+Let $(x,z)=(X(\xi,\eta),Z(\xi,\eta))$ map the computational rectangle onto
+$\Omega$, with the ground at $\eta=0$. The coordinate lines $\eta=\text{const}$
+are the level curves
+\begin{equation}\label{eq:family}
+z=F(x,\eta)=\eta+z_{\rm ref}+u(x,\eta),\qquad
+\hat u(\kappa,\eta)=\hat b(\kappa)\,w(\eta/L)\,e^{-|\kappa|\eta},
+\end{equation}
+where $b=T-z_{\rm ref}$, hats denote the Fourier transform in $x$,
+$w(t)=1-t^3(10-15t+6t^2)$ on $0\le t\le1$ and $w=0$ above, and $L$ is the
+height of the transition layer. The construction has four properties:
+$F(x,0)=T(x)$ exactly; $F=\eta+z_{\rm ref}$ for $\eta\ge\etal=L$, so the
+coordinates are Cartesian above the layer; $u$ is harmonic near the ground, so
+relief of horizontal scale $\ell$ decays over a height of about $\ell$; and
+the map is regular whenever $F_\eta>0$, which bounds the smoothed slopes. The
+terrain samples are pre-filtered with a Gaussian of width $\sigma$, so the
+metric entering the analysis below is smooth.
+
+\subsection{Trajectories and metrics}
+The lines $\xi=\text{const}$ are the orthogonal trajectories of the level
+curves. Writing the tangents as $\mathbf a_\xi=P(1,F_x)$ and
+$\mathbf a_\eta=(X_\eta,F_xX_\eta+F_\eta)$ with $P=X_\xi$, orthogonality
+$\mathbf a_\xi\cdot\mathbf a_\eta=0$ gives an initial-value problem for each
+trajectory,
+\begin{equation}\label{eq:traj}
+X_\eta=G(X,\eta)\equiv-\frac{F_xF_\eta}{1+F_x^2},\qquad
+X(\xi,\etal)=\xi ,
+\end{equation}
+integrated downward from the top of the layer, where the lines are vertical
+and are labeled by their abscissa. The scale factors are the lengths of the
+tangents,
+\begin{equation}\label{eq:metric}
+h_\eta=\frac{F_\eta}{\sqrt{1+F_x^2}},\qquad
+h_\xi=P\sqrt{1+F_x^2},\qquad
+P_\eta=G_x(X,\eta)\,P ,
+\end{equation}
+with $P(\xi,\etal)=1$: $h_\eta$ is the vertical spacing $F_\eta\,d\eta$
+projected on the normal tilted by $\arctan F_x$, and $h_\xi$ converts the
+trajectory spacing $P\,d\xi$ to arc length along the level curve. Their ratio
+$r=h_\eta/h_\xi$ is the anisotropy of the computational cell; $r=1$ for a
+conformal map. The arc length is $ds^2=h_\xi^2d\xi^2+h_\eta^2d\eta^2$.
+
+\subsection{The equation in the coordinates}
+The divergence theorem turns \eqref{eq:helmholtz} into
+\begin{equation}\label{eq:helm_orth}
+\pd_\xi\bigl(r\,\pd_\xi\psi\bigr)+\pd_\eta\!\left(\frac1r\,\pd_\eta\psi\right)
++h_\xi h_\eta k^2\psi=0 .
+\end{equation}
+On $\eta=0$ the normal derivative is $\pd_n=h_\eta^{-1}\pd_\eta$, so the
+impedance condition \eqref{eq:leontovich} becomes the Robin condition
+$\pd_\eta\psi+\gamma\psi=0$ with $\gamma(\xi)=\alpha\,h_\eta(\xi,0)$; Dirichlet
+and Neumann conditions are invariant. Above $\etal$ both scale factors are $1$
+and the equation is the flat one, which is what makes the exterior
+range-independent and the NLBC exact. Between the ground and $\etal$, the
+coefficients $r$, $h_\xi$, $h_\eta$ vary on the smoothing length $\ell$ and on
+the transition height $L$; the rest of the paper treats that variation.
+
+%=====================================================================
+\section{The Weyl symbol of $B$}\label{sec:symbol}
+
+\subsection{Liouville transformation}
+The range dependence of $r$ enters \eqref{eq:helm_orth} through
+$\pd_\xi(r\pd_\xi)$. Setting $\psi=r^{-1/2}\varphi$ removes it:
+\begin{equation}\label{eq:liou}
+\varphi_{\xi\xi}+B\varphi=0,\qquad
+B\varphi=r^{-1/2}\pd_\eta\!\left(r^{-1}\pd_\eta(r^{-1/2}\varphi)\right)
++(k^2h_\xi^2-V)\varphi ,
+\end{equation}
+with $V=(r^{1/2})_{\xi\xi}/r^{1/2}$, a term of relative size
+$(\lambda/\ell)^2$. The operator $B$ acts in $\eta$ with $\xi$ as a parameter
+and is symmetric in $L^2(d\eta)$.
+
+\subsection{Quantization}
+Let $D=-i\pd_\eta$ and let $q$ be the variable dual to $\eta$; $q$ is the
+computational vertical wavenumber. The Weyl quantization of a symbol
+$a(\eta,q)$ is
+\[
+\Op(a)u(\eta)=\frac1{2\pi}\iint e^{i(\eta-\eta')q}\,
+a\!\left(\tfrac{\eta+\eta'}2,q\right)u(\eta')\,d\eta'\,dq .
+\]
+Real symbols give symmetric operators. Composition is the Moyal product
+\begin{equation}\label{eq:moyal}
+a\#b=ab+\frac i2\{a,b\}
+-\frac18\bigl(a_{qq}b_{\eta\eta}-2a_{q\eta}b_{q\eta}+a_{\eta\eta}b_{qq}\bigr)+\dots,
+\qquad \{a,b\}=a_\eta b_q-a_qb_\eta ,
+\end{equation}
+whose odd-order terms are antisymmetric in $(a,b)$. Hence $a\#a=a^2+O(\pd^4)$
+and the symbol of a commutator is $i\{a,b\}$ to leading order.
+
+\paragraph{The small parameter.} Let $\ell$ be the shortest length on which
+the metric varies: the smoothing length of the terrain, or the transition
+height $L$. The expansion parameter is
+\begin{equation}\label{eq:eps}
+\varepsilon=\frac1{k\ell} .
+\end{equation}
+In rescaled variables $\eta/\ell$, $q/k$ every derivative of a coefficient
+brings one factor $\varepsilon$; this is the semiclassical calculus with
+$\hbar=\varepsilon$ \cite{zworski,dimassi}. Symbols are graded
+$a=a_0+\varepsilon a_1+\varepsilon^2a_2+\dots$, with the physical variables
+kept in the formulas.
+
+\subsection{The exact symbol}
+For any smooth $g$, the identities
+$\Op(g\,q^2)=\tfrac14(D^2g+2DgD+gD^2)$ and
+$D^2g+gD^2=2DgD-g''$ give
+\begin{equation}\label{eq:DgD}
+DgD=\Op\!\left(g\,q^2+\tfrac14 g''\right).
+\end{equation}
+With $f=r^{-1/2}$ and $g=r^{-1}$, moving $f$ through $D$ gives
+$fDgDf=D(f^2g)D-(ff'g)'+gf'^2$. The derivative part of $B$ \eqref{eq:liou} is
+$-fDgDf$; applying \eqref{eq:DgD} to $f^2g=r^{-2}$, the second derivatives of
+$r$ cancel and only a square of $r_\eta$ survives:
+\begin{equation}\label{eq:symbol}
+\boxed{\;b(\xi,\eta,q)=k^2h_\xi^2-\frac{q^2}{r^2}-V-\frac{r_\eta^2}{4r^4}\;},
+\qquad B=\Op(b)\ \text{exactly}.
+\end{equation}
+The identity behind \eqref{eq:symbol},
+$r^{-1/2}(r^{-1}(r^{-1/2}u)')'=(r^{-2}u')'+\tfrac14(r^{-2})''u
+-\tfrac14r'^2r^{-4}u$, is elementary but was checked numerically to working
+precision.
+
+\paragraph{Principal symbol.} The principal part
+\begin{equation}\label{eq:b0}
+b_0=k^2h_\xi^2-\frac{q^2}{r^2}
+\end{equation}
+is the local dispersion relation: with $\kappa$ dual to $\xi$, the
+characteristic set of \eqref{eq:liou} is $\kappa^2=b_0$, i.e.\
+$(\kappa/h_\xi)^2+(q/h_\eta)^2=k^2$, the local plane-wave dispersion. With
+$q=kh_\eta\sin\theta$, $\theta$ the angle to the level curve,
+\begin{equation}\label{eq:angle}
+b_0=k^2h_\xi^2\cos^2\theta,\qquad \sqrt{b_0}=kh_\xi\cos\theta .
+\end{equation}
+
+\paragraph{No first-order part.} The symbol \eqref{eq:symbol} is real and has
+nothing of order $\varepsilon^1$: the symbol form of ``$B$ is symmetric''. It
+matters because a subprincipal (imaginary, order-$\varepsilon q$) term would
+transport amplitude across $\eta$ and make $B$ non-normal. The original
+equation \eqref{eq:helm_orth} divided by $r$ does have first-order terms in
+both variables, $(r_\xi/r)\pd_\xi$ and $\pd_\eta(r^{-1})\,\pd_\eta/r^{-1}$;
+the Liouville substitution is the gauge that removes them. The price is two
+zeroth-order terms of order $\varepsilon^2$:
+\begin{itemize}
+\item $V=(r^{1/2})_{\xi\xi}/r^{1/2}$, from the $\xi$ direction. Since $\xi$ is
+  the evolution variable and is not quantized, it is written explicitly and
+  computed by a second difference along the columns.
+\item $W=r_\eta^2/(4r^4)$, from the $\eta$ direction. It is never assembled
+  separately: the scheme discretizes the operator form
+  $r\pd_\eta r^{-1}\pd_\eta$, which contains $W$ exactly.
+\end{itemize}
+Both are $O((\lambda/\ell)^2)$ relative to $k^2h_\xi^2$.
+
+\paragraph{Stretching is a metric.} A vertical stretching $\eta=Z(\eta')$
+with $s=dZ/d\eta'$ multiplies $h_\eta$ by $s$, i.e.\ replaces $r\to rs$ in
+\eqref{eq:symbol}; then $q'/(h_\eta s)$ is the physical vertical wavenumber.
+Absorbing layers and graded grids are therefore metric operations and stay
+inside the calculus.
+
+%=====================================================================
+\section{One-way factorization and the $\varepsilon$-factorization}\label{sec:factor}
+
+\subsection{The Riccati equation}
+Seek a one-way equation $\varphi_\xi=i\Lambda\varphi$ with
+$\Lambda=\Op(\lambda)$. Substituting into \eqref{eq:liou} gives the operator
+Riccati equation
+\begin{equation}\label{eq:riccati}
+\Lambda^2-i\,\pd_\xi\Lambda=B
+\quad\Longleftrightarrow\quad
+\lambda\#\lambda-i\,\pd_\xi\lambda=b .
+\end{equation}
+If $B$ does not depend on $\xi$, the exact solution is the spectral square
+root $\Lambda=B^{1/2}$. If it does, no exact solution representable as a
+function of $B$ exists; the best one can do is solve \eqref{eq:riccati}
+asymptotically.
+
+\paragraph{The $\varepsilon$-factorization.}
+The \emph{$\varepsilon$-factorization} is the asymptotic solution of
+\eqref{eq:riccati}; in a range-dependent medium it is the working definition
+of ``the'' one-way operator. It rests on one assumption about the medium and
+three explicit rules; everything else is computation.
+
+\emph{Assumption (slow variation).} The coefficients entering
+\eqref{eq:symbol}---$h_\xi$, the anisotropy $r=h_\eta/h_\xi$, and $k$---vary
+in \emph{both} $\xi$ and $\eta$ on scales no shorter than $\ell$; $\ell$ is
+the shortest of these scales, the smoothing length of the terrain or the
+transition height $L$. In the rescaled variables $x=\eta/\ell$, $p=q/k$
+every symbol below is then a smooth function of $(\xi/\ell,x,p)$ with
+bounded derivatives, the small parameter is
+$\varepsilon=1/(k\ell)=\lambda/\ell$, and on the band of interest the
+principal symbol stays away from its turning set $b_0=0$.
+
+\emph{Rules.}
+(i)~The unknown is expanded as
+\begin{equation}\label{eq:expansion}
+\lambda=\lambda_0+\lambda_1+\lambda_2+\dots,
+\end{equation}
+where $\lambda_j$ is of order $\varepsilon^j$: relative to $\lambda_0$,
+each $\eta$-derivative or $\xi$-derivative multiplies its size by another
+$\varepsilon$, and a $q$-derivative leaves it unchanged.
+(ii)~The Moyal product is graded by the same count: in the rescaled
+variables,
+$a\#b=ab+\tfrac{i\varepsilon}2\{a,b\}+O(\varepsilon^2)$, the term with $m$
+transverse derivatives being of order $\varepsilon^m$ relative to $ab$ (in
+the physical variables of \eqref{eq:moyal} the powers of $\varepsilon$ are
+implicit in the derivatives).
+(iii)~Each $\pd_\xi$ of an order-$\varepsilon^j$ symbol is placed in order
+$\varepsilon^{j+1}$: by the assumption a range derivative of a coefficient
+is of size $1/\ell=\varepsilon k$, so
+$\pd_\xi\lambda_j\sim\varepsilon\,k\,\lambda_j$.
+
+\emph{Procedure.} Substitute \eqref{eq:expansion} into
+\eqref{eq:riccati}, expand each product by rule~(ii) and each derivative by
+rule~(iii), and equate the coefficients of equal powers of $\varepsilon$.
+At order $\varepsilon^0$ the only unknown is $\lambda_0$. At each order
+$\varepsilon^j$, $j\ge1$, the only term of top order containing the new
+unknown is $2\lambda_0\lambda_j$; every other term is built from products,
+brackets and $\xi$-derivatives of the known $\lambda_0,\dots,\lambda_{j-1}$
+and of $b$. Since $\lambda_0\neq0$ on the band, each equation determines
+$\lambda_j$ uniquely, and the recursion closes: the truncated sum
+$\lambda^{(J)}=\lambda_0+\dots+\lambda_J$ satisfies \eqref{eq:riccati} up
+to $O(\varepsilon^{J+1})$---this is what ``the field is factorized into
+forward and backward waves'' means, to that order. The accuracy is set by
+$\varepsilon=\lambda/\ell$, the smoothness of the medium on the wavelength
+scale, \emph{not} by any grid. The next three paragraphs carry this out to
+$j=2$.
+
+\paragraph{Order 0: the principal symbol.} First grade the symbol
+\eqref{eq:symbol} itself:
+\[
+b=b_0+b_2,\qquad
+b_0=k^2h_\xi^2-\frac{q^2}{r^2},\qquad
+b_2=-V-\frac{r_\eta^2}{4r^4},
+\]
+with $b_0$ of order $0$ and $b_2$ of order $\varepsilon^2$. The count is the
+one of Section~\ref{sec:symbol}: each $\eta$-derivative of a metric
+coefficient carries one factor $\varepsilon$; $V$ and $W=r_\eta^2/(4r^4)$
+contain one and two of them and are of order $\varepsilon^2$, and
+\eqref{eq:symbol} has no order-$\varepsilon$ term at all. At order
+$\varepsilon^0$ the Riccati equation \eqref{eq:riccati} reads
+$\lambda_0\#\lambda_0=b_0$, and
+\[
+\lambda_0\#\lambda_0=\lambda_0^2+O(\varepsilon^2):
+\]
+the first Moyal bracket vanishes identically,
+$\{\lambda_0,\lambda_0\}=0$, and every summand of the second Moyal term
+$\lambda_0\#\lambda_0\bigr|_{2}
+=-\tfrac18\bigl[(\lambda_0)_{qq}(\lambda_0)_{\eta\eta}
+-2(\lambda_0)_{q\eta}^2+(\lambda_0)_{\eta\eta}(\lambda_0)_{qq}\bigr]$
+contains exactly two $\eta$-derivatives, hence is of order $\varepsilon^2$
+(it enters the next order). The order-$\varepsilon^0$ equation is therefore
+the algebraic equation
+\[
+\lambda_0^2=b_0 ,
+\]
+with exactly two roots, $\pm\sqrt{b_0}$; separating them is what the
+factorization means, and the separation is the radiation condition. Fix the
+\emph{outgoing} root
+\[
+\lambda_0=\sqrt{b_0},\qquad \operatorname{Im}\lambda_0\ge0 ,
+\]
+i.e.\ $\lambda_0=+|b_0|^{1/2}$ where $b_0\ge0$ and
+$\lambda_0=i\,|b_0|^{1/2}$ where $b_0<0$. On the propagating part of the
+band, $b_0\ge k^2h_\xi^2\cos^2\theta_{\max}>0$ for angles
+$\theta\le\theta_{\max}$ within the aperture, $\lambda_0$ is real, positive
+and a smooth function of $(\eta,q)$, as $b_0$ is bounded away from zero
+there; on the evanescent part, $b_0<0$, one has
+$\operatorname{Im}\lambda_0=|b_0|^{1/2}>0$, so the component
+$e^{i\xi\lambda_0}$ carries the factor $e^{-\xi\operatorname{Im}\lambda_0}$
+and decays as $\xi$ grows. The single statement
+$\operatorname{Im}\lambda_0\ge0$ covers both: forward evolution damps
+evanescent components and leaves propagating ones oscillatory. The root is
+smooth on the whole band as long as the turning set $b_0=0$ stays outside
+it; at $b_0=0$ the two roots coalesce, $\sqrt{b_0}$ loses smoothness, and no
+branch with $\operatorname{Im}\lambda_0\ge0$ continues through---the
+turning-point limit discussed at the end of this section. Note also that
+$\lambda_0\neq0$ everywhere on the band, which makes every division by
+$\lambda_0$ below legitimate.
+
+\paragraph{Order 1: the transport term.} Insert
+$\lambda=\lambda_0+\lambda_1+O(\varepsilon^2)$ into the Moyal product and
+keep the terms through order $\varepsilon$. Three counts are needed.
+First, $\lambda_0\#\lambda_0=\lambda_0^2+O(\varepsilon^2)$, by the
+previous paragraph. Second,
+$\lambda_0\#\lambda_1+\lambda_1\#\lambda_0
+=2\lambda_0\lambda_1+O(\varepsilon^2)$: the first Moyal brackets of the two
+products enter with opposite signs and cancel identically,
+$\tfrac i2\{\lambda_0,\lambda_1\}+\tfrac i2\{\lambda_1,\lambda_0\}=0$, and
+the second Moyal terms of both products are $O(\varepsilon^3)$---each of
+their three summands distributes exactly two $\eta$-derivatives between the
+factors, and $\lambda_1$ is itself of order $\varepsilon$, e.g.\
+$(\lambda_0)_{qq}(\lambda_1)_{\eta\eta}=O(1)\cdot O(\varepsilon^3)$,
+$(\lambda_0)_{q\eta}(\lambda_1)_{q\eta}
+=O(\varepsilon)\cdot O(\varepsilon^2)$,
+$(\lambda_0)_{\eta\eta}(\lambda_1)_{qq}
+=O(\varepsilon^2)\cdot O(\varepsilon)$, a $q$-derivative carrying no
+$\varepsilon$. Third, $\pd_\xi\lambda=\pd_\xi\lambda_0+O(\varepsilon^2)$,
+because
+$\lambda_0$ depends on $\xi$ only through the metric coefficients, which
+vary on the scale $\ell$, so that $\pd_\xi\lambda_0
+=\pd_\xi b_0/(2\lambda_0)$ is of order $\varepsilon$. The
+order-$\varepsilon^1$ part of \eqref{eq:riccati} is consequently
+\[
+2\lambda_0\lambda_1-i\,\pd_\xi\lambda_0=0 ,
+\]
+and since $\lambda_0\neq0$ on the band, it has exactly one solution:
+\begin{equation}\label{eq:lambda1}
+\lambda_1=\frac i2\,\frac{\pd_\xi\lambda_0}{\lambda_0}
+=\frac i4\,\frac{\pd_\xi b_0}{b_0}
+=\frac i4\,\frac{\pd_\xi b}{b} ,
+\end{equation}
+where the last equality holds at the accuracy of the expansion: the
+difference is $(i/4)\,\pd_\xi b_2/b_0$, of order $\varepsilon^3$, below the
+resolution of an order-$\varepsilon$ symbol. Three consequences.
+(i)~\emph{Uniqueness.} Once the branch of $\lambda_0$ is fixed, every
+$\lambda_j$ for $j\ge1$ is determined recursively by a linear equation
+$2\lambda_0\lambda_j=(\text{known symbols of order}\le j)$ with
+$\lambda_0\neq0$: the $\varepsilon$-factorization contains no freedom
+beyond the radiation condition. (ii)~\emph{Ordering independence.}
+$\lambda_1$ is the order-$\varepsilon$ symbol of the classical factor
+$\tfrac i4B^{-1}B_\xi$, in the precise sense that
+\[
+\operatorname{symbol}\Bigl(\tfrac i4B^{-1}B_\xi\Bigr)
+=\tfrac i4\,b^{-1}\# b_\xi
+=\tfrac i4\Bigl[\frac{b_\xi}{b}
++\frac i2\,\{b^{-1},b_\xi\}\Bigr]+O(\varepsilon^2)
+=\lambda_1+O(\varepsilon^2),
+\]
+because the bracket $\{b^{-1},b_\xi\}$ contains one $\eta$-derivative of
+the order-$\varepsilon$ symbol $b_\xi$ and is itself of order
+$\varepsilon^2$, while the second Moyal term is of order $\varepsilon^3$.
+So ``$B$ and $B_\xi$ treated as commuting'' is exact at this order: every
+operator ordering of the product $B^{-1}B_\xi$ has the same
+order-$\varepsilon$ symbol, and ordering enters only the
+order-$\varepsilon^2$ terms of \eqref{eq:lambda2} and the commutator
+$i\{b,b_\xi\}$. (iii)~\emph{Phase structure.} $\lambda_1$ is purely
+imaginary---$i$ times the real symbol $\pd_\xi b/(4b)$---so it rescales the
+amplitude of $e^{i\xi\,\Op(\lambda)}$ and does not contribute to its phase;
+it is precisely the term eliminated by the change of variables of
+Section~\ref{sec:propagator}.
+
+\paragraph{Order 2.} Collecting the $\varepsilon^2$ terms of
+\eqref{eq:riccati}, including the second Moyal term of $\lambda_0\#\lambda_0$,
+\begin{equation}\label{eq:lambda2}
+\lambda_2=\frac1{2\sqrt b}\left[
+\frac{5\,b_\xi^2}{16\,b^2}-\frac{b_{\xi\xi}}{4b}
++\frac14\Bigl(\pd_q^2\lambda_0\,\pd_\eta^2\lambda_0
+-(\pd_q\pd_\eta\lambda_0)^2\Bigr)\right].
+\end{equation}
+Three remarks. First, if $b$ does not depend on $\eta$ the bracket vanishes
+and what remains is the classical second-order WKB correction
+$\tfrac5{32}Q'^2Q^{-5/2}-\tfrac18Q''Q^{-3/2}$ for $y''+Qy=0$: a check of the
+expansion. Second, the bracket is the phase-space curvature of the one-way
+symbol; together with the ordering ambiguity of $\tfrac i4B^{-1}B_\xi$
+(a term $\propto\{b^{-1},b_\xi\}$) it is precisely the ``second-order terms
+and commutators $[B,B_\xi]$'' of the usual formal expansions, whose symbol is
+$i\{b,b_\xi\}$. Third, all of it is $O(\varepsilon^2)$; over a transition
+region of length $\ell_\xi$ these terms accumulate a phase of order
+$k\ell_\xi\varepsilon^2$, which for smooth terrain is tiny.
+
+\paragraph{Limits.} The expansion needs $\varepsilon\ll1$---terrain smoothing
+and the transition layer are what keep the metric smooth on the wavelength
+scale---and it fails where $b_0=0$, i.e.\ $\theta\to90^\circ$ to the marching
+direction, because $\sqrt{b_0}$ is not smooth there. Within an aperture
+$\theta\le\theta_{\max}$ one has
+$b_0\ge k^2h_\xi^2\cos^2\theta_{\max}>0$, keeping the field away from the
+turning set. What the factorization drops quantitatively---a backward wave of
+size $O(\varepsilon)$ locally but $O(\varepsilon^\infty)$ genuinely
+scattered---is measured in Section~\ref{sec:backscatter}.
+
+%=====================================================================
+\section{The exponential propagator in Weyl symbols}\label{sec:propagator}
+
+\subsection{Functional calculus}
+For $B=\Op(b)$ symmetric and a smooth function $F$, the semiclassical
+functional calculus gives
+\begin{equation}\label{eq:funcalc}
+F(B)=\Op\!\left(F\circ b\right)+O(\varepsilon^2)
+\end{equation}
+\cite{helffer,dimassi}; in the Weyl calculus the $O(\varepsilon)$ correction
+vanishes. Applied to the one-step propagator with $L=B/\beta^2-1$ and a
+reference wavenumber $\beta$,
+\begin{equation}\label{eq:expsymbol}
+\operatorname{symbol}\bigl(e^{i\beta\Delta\xi(\sqrt{1+L}-1)}\bigr)
+=e^{i\Delta\xi(\sqrt b-\beta)}+O(\varepsilon^2):
+\end{equation}
+\emph{the exponential propagator is, to leading order, multiplication by the
+ordinary function $e^{i\Delta\xi(\sqrt b-\beta)}$ on phase space.} All errors
+introduced by treating a variable-coefficient step as a frozen one live in
+this remainder.
+
+\subsection{The transport equation and the change of variables}
+Everything in this subsection is a computation on symbols, via the Moyal
+product \eqref{eq:moyal}; no operator algebra is used beyond the calculus
+\eqref{eq:funcalc} itself.
+
+\paragraph{The transport equation.} Take the factorization of Section
+\ref{sec:factor} up to $\varepsilon^2$,
+$\lambda^{(2)}=\lambda_0+\lambda_1+\lambda_2$, with
+$\lambda_0=\sqrt b$, $\lambda_1=i\rho$ by \eqref{eq:lambda1},
+$\rho=\pd_\xi b/(4b)$, and $\lambda_2$ as in \eqref{eq:lambda2}. Then
+\eqref{eq:liou} is equivalent to the first-order transport equation
+\begin{equation}\label{eq:transport}
+\varphi_\xi=\Op\bigl(i\lambda^{(2)}\bigr)\varphi+O(\varepsilon^3)
+=i\,\Op(\sqrt b)\,\varphi-\Op(\rho)\,\varphi+i\,\Op(\lambda_2)\,\varphi
++O(\varepsilon^3):
+\end{equation}
+a frozen-medium oscillation, a real amplitude term of order $\varepsilon$,
+and an oscillatory remainder of order $\varepsilon^2$. (In operator notation
+this is the equation
+$\varphi_\xi=i\sqrt B\varphi-\tfrac14B^{-1}B_\xi\varphi+\dots$, the symbol
+of $\tfrac14B^{-1}B_\xi$ being $\rho+O(\varepsilon^2)$.) The term
+$-\Op(\rho)$ is what a step must reproduce; the term $i\Op(\lambda_2)$ is
+the remainder quantified in Section~\ref{sec:backscatter}.
+
+\paragraph{Change of variables.} Seek $\chi=\Op(w)\varphi$, with an
+order-$0$ symbol $w$ to be determined, such that $\chi$ satisfies the
+frozen-medium transport
+$\chi_\xi=i\Op(\lambda_0)\chi+O(\varepsilon^2)$. Differentiating and using
+\eqref{eq:transport} at order $\varepsilon^1$,
+\[
+\chi_\xi=\Op\bigl(w_\xi+w\#(i\lambda_0-\rho)\bigr)\varphi
++O(\varepsilon^2),\qquad
+i\Op(\lambda_0)\chi=\Op(i\lambda_0\#w)\varphi,
+\]
+so the requirement reduces to the vanishing of the mismatch
+\[
+w_\xi+w\#(i\lambda_0-\rho)-i\lambda_0\#w
+=w_\xi-\rho\,w-\{w,\lambda_0\}+O(\varepsilon^2).
+\]
+The change of variables is therefore governed by a linear differential
+equation on phase space,
+\begin{equation}\label{eq:weq}
+\pd_\xi w=\rho\,w+\{w,\lambda_0\}+O(\varepsilon^2):
+\end{equation}
+a scalar growth $\rho$ and a transport along the Hamiltonian flow of
+$\lambda_0$, the bicharacteristic field \eqref{eq:rays}. Its general
+solution is $w=F(b)\,e^{\int\rho\,d\xi}+O(\varepsilon^2)$: any $F(b)$
+annihilates the bracket exactly, $\{F(b),\lambda_0\}=F'\{\,b,\sqrt b\,\}
+=F'\lambda_0'\{b,b\}=0$, two functions of one symbol commuting in the first
+Moyal order, and the remaining factor obeys the scalar equation
+$w_\xi=\rho w$. The free $F(b)$ is itself a change of variables commuting
+with $i\Op(\lambda_0)$; fixing it by its value at the initial column
+($F\equiv1$) gives the canonical choice
+\[
+w=b^{1/4},\qquad\text{i.e.}\qquad \chi=\Op\bigl(b^{1/4}\bigr)\varphi ,
+\]
+and this $w$ solves \eqref{eq:weq} identically:
+$\{b^{1/4},\sqrt b\}=0$ and
+$\pd_\xi b^{1/4}=\tfrac14b^{-3/4}\pd_\xi b=\rho\,b^{1/4}$. The change of
+variables therefore introduces no error of its own at this order.
+
+\paragraph{Transformed equation.} In $\chi$,
+\[
+\chi_\xi=i\Op(\lambda_0)\,\chi+O(\varepsilon^2):
+\]
+the same equation as in a frozen medium. The order-$\varepsilon$ term
+\eqref{eq:lambda1} is removed, not approximated. Since $\lambda_0$ is real,
+$\Op(\lambda_0)$ is symmetric and the generator $i\Op(\lambda_0)$ is
+skew-adjoint, so $\tfrac d{d\xi}\|\chi\|^2=0$ up to $O(\varepsilon^2)$; for
+$\varphi$ itself the trace identity
+$\langle u,\Op(a)u\rangle=\iint a\,n_u\,d\eta\,dq$, with $n_u$ the Wigner
+transform of $u$, gives
+$\tfrac d{d\xi}\|\varphi\|^2=-2\iint\rho\,n_\varphi+O(\varepsilon^2)$:
+the weight carries the amplitude. The order-$\varepsilon^2$ remainder
+$i\Op(\lambda_2)$ is not removed at this order; what it contains is the
+subject of Section~\ref{sec:backscatter}.
+
+\paragraph{The one-step propagator.} Advance $\chi$ over
+$[\xi_n,\xi_{n+1}]$ by \eqref{eq:expsymbol} with the symbol frozen at the
+midpoint column---the symmetric choice, whose freezing error is
+$O(\Delta\xi^2)$---and invert the change of variables at the new column
+(the constant envelope $e^{-i\beta\Delta\xi}$ of \eqref{eq:expsymbol}
+multiplies every step identically and is carried by the reduced field):
+\[
+\varphi_{n+1}=\Op\bigl(b_{n+1}^{-1/4}\bigr)\,
+e^{i\Delta\xi(\sqrt{B_{n+1/2}}-\beta)}\,
+\Op\bigl(b_n^{1/4}\bigr)\,\varphi_n+O(\varepsilon^2\Delta\xi).
+\]
+Composed by the Moyal product,
+\[
+b_{n+1}^{-1/4}\,\#\,e^{i\Delta\xi(\sqrt{b_{n+1/2}}-\beta)}\,\#\,b_n^{1/4}
+=e^{i\Delta\xi(\sqrt{b_{n+1/2}}-\beta)}
+\left(\frac{b_n}{b_{n+1}}\right)^{1/4}+O(\varepsilon\,\Delta\xi),
+\]
+where the corrections are Poisson brackets between neighbouring
+columns---the neglected commutators of Section~\ref{sec:factor}, now per
+step,
+\[
+\{b_n,b_{n+1/2}\}=\frac{\Delta\xi}2\,\{b,\pd_\xi b\}+\dots,\qquad
+\text{of order } \varepsilon\,\Delta\xi .
+\]
+The pointwise part is exactly the one-step WKB map
+\[
+e^{i\Delta\xi(\sqrt{b_{n+1/2}}-\beta)}
+\,\exp\Bigl(-\int_{\xi_n}^{\xi_{n+1}}\rho\;d\xi\Bigr)+O(\Delta\xi^2),
+\qquad \rho=\frac{\pd_\xi b}{4b}:
+\]
+the phase from the midpoint column, the amplitude from the change of
+variables \eqref{eq:weq}. In operator form the same composition reads
+\begin{equation}\label{eq:step}
+\varphi_{n+1}=\underbrace{\bigl[B_{n+1}^{-1/4}B_{n+1/2}^{1/4}\bigr]}_{\text{symbol }(b_{n+1/2}/b_{n+1})^{1/4}}
+\,e^{i\Delta\xi\sqrt{B_{n+1/2}}}\,
+\underbrace{\bigl[B_{n+1/2}^{-1/4}B_n^{1/4}\bigr]}_{\text{symbol }(b_n/b_{n+1/2})^{1/4}}\varphi_n
++O(\varepsilon^2\Delta\xi),
+\end{equation}
+equal to $B_{n+1}^{-1/4}e^{i\Delta\xi\sqrt{B_{n+1/2}}}B_n^{1/4}\varphi_n$ up
+to the same remainder: inserting the middle pair is legitimate at the symbol
+level because $b_{n+1/2}^{1/4}\#b_{n+1/2}^{-1/4}=1+O(\varepsilon^2)$, the
+first bracket vanishing exactly. Each bracket is the identity wherever its
+columns coincide, in particular in the whole exterior, and has the symbol
+$1-\tfrac{\Delta\xi}8\,\pd_\xi b/b+O(\Delta\xi^2)$.
+
+\paragraph{Staircase form.} The column-by-column step replaces the symbol
+$b(\xi,\cdot)$ by a staircase of column symbols. At an interface between
+$\lambda_a=\sqrt{b_a}$ and $\lambda_b=\sqrt{b_a}(1+\delta)$, matching
+$\varphi$ and $\varphi_\xi$ gives the amplitude transmission
+$t=(b_a/b_b)^{1/4}\tau$ with
+$\tau=2\sqrt{\lambda_a\lambda_b}/(\lambda_a+\lambda_b)=1-\delta^2/8+\dots$,
+and a reflected amplitude of relative size
+$\delta/(2+\delta)\approx\rho\,\Delta\xi$. The step takes
+$\tau=1$---exactly what \eqref{eq:step} does---and so suppresses these
+spurious interface reflections, which would otherwise accumulate to
+$O(\rho^2\ell_\xi\Delta\xi)$ over a transition of length $\ell_\xi$; the
+reflections of the continuous symbol cancel by phase
+(Section~\ref{sec:backscatter}). The brackets of \eqref{eq:step} are
+thus the discrete counterpart of the leading term of the Bremmer series.
+
+\paragraph{Rotated factors.} The factors $(1+L)^{\pm1/4}$ are approximated by
+rational functions; their Pad\'e poles lie on the branch cut $L<-1$, inside
+the evanescent spectrum, where a pair of factors at slightly different
+columns can amplify a spurious mode (a localized $14\%$ error was observed
+after $600$\,m). Following \cite{milinazzo1997}, the approximant is
+taken of $(1+Y)^{1/4}$ with $Y=(1+L)e^{-i\gamma}-1$, $\gamma=45^\circ$;
+rotated off the real axis, the almost-cancelling poles of almost-cancelling
+factors can no longer collide.
+
+\subsection{What the factorization drops}\label{sec:backscatter}
+The Bremmer series \cite{bremmer,atkinson,dehoop} ranks the dropped terms.
+With $Q=B^{1/4}$ and the normalized amplitudes
+$u_\pm=\tfrac12(Q\varphi\mp iQ^{-1}\varphi_\xi)$, the exact split is
+\[
+\pd_\xi\begin{pmatrix}u_+\\u_-\end{pmatrix}
+=\begin{pmatrix}i\Lambda+T & \mathcal R\\ \mathcal R & -i\Lambda+T\end{pmatrix}
+\begin{pmatrix}u_+\\u_-\end{pmatrix},\quad
+T=\tfrac12[Q_\xi,Q^{-1}],\ \ \mathcal R=\tfrac12(Q_\xi Q^{-1}+Q^{-1}Q_\xi),
+\]
+whose symbols follow from \eqref{eq:moyal}:
+\[
+\rho=\operatorname{symbol}(\mathcal R)=\frac{\pd_\xi b}{4b}
+\bigl(1+O(\varepsilon^2)\bigr),\qquad
+\operatorname{symbol}(T)=\frac i{32}\,\frac{\{b,\pd_\xi b\}}{b^2}
++O(\varepsilon^3).
+\]
+The coupling $\rho$ is $O(\varepsilon)$ and $T$ is a pure phase, $O(\varepsilon^2)$.
+The one-way step is the zeroth Bremmer term. Of the first reflection
+\[
+u_-(\xi)=-\int_\xi^X\rho\,e^{2i\Phi}\,d\xi',\qquad \Phi_\xi=\lambda_0 ,
+\]
+integration by parts separates a \emph{slaved, local part}
+$\rho\,e^{i\Phi}/(2i\lambda_0)$---a forward-travelling dressing whose
+back-action produces exactly the $\lambda_2$ of \eqref{eq:lambda2}, hence
+$O(\varepsilon^2)$ and includable in a one-way step---from the
+\emph{genuine backscatter}, an oscillatory integral with phase $2\Phi$ and no
+stationary point: $O(\varepsilon^\infty)$ for a smooth metric, and
+$\approx e^{-2kh_\xi\cos\theta\,\delta}$ for a metric analytic in a strip of
+width $\delta$. (Numerical check: for $y''+k^2(1+0.3\tanh(x/\ell))y=0$ the
+exact reflection and the first Bremmer term agree to $0.6\%$ over
+$k\ell=0.5\dots3$, decaying like $e^{-\pi k\ell}$.) Terrain smoothing is
+therefore not cosmetic: a kink in the profile makes the metric non-analytic
+and the backscatter only algebraic---edge diffraction, which no one-way method
+represents.
+
+%=====================================================================
+\section{How the rational approximation enters}\label{sec:rational}
+
+\paragraph{The step and its symbol.} On one column the propagator is a
+function of the single operator $L=B/\beta^2-1$. The exponential
+\eqref{eq:expsymbol} is replaced by a rational function of degree $(p,p+1)$,
+\begin{equation}\label{eq:rational}
+e^{i\beta\Delta\xi(\sqrt{1+L}-1)}\ \approx\ R(L)
+=\prod_{l=1}^{p}\frac{1+a_lL}{1+b_lL},
+\end{equation}
+each factor being one tridiagonal solve. By \eqref{eq:funcalc} the
+approximation error is, to leading order, a \emph{pointwise function on phase
+space}:
+\begin{equation}\label{eq:E}
+E(\xi,\eta,q)=\Bigl|\,R\!\left(\tfrac b{\beta^2}-1\right)
+-e^{i\Delta\xi(\sqrt b-\beta)}\Bigr| .
+\end{equation}
+There is no operator between the approximation and its target: both are
+functions of one operator, and the calculus collapses their comparison to
+arithmetic on symbols.
+
+\paragraph{The error budget.} What must be small is $E$ on the support of the
+field in phase space---its wavefront set, in practice the support of its
+Wigner function. By \eqref{eq:angle}, for angles up to the aperture
+$\theta_{\max}$ and wavenumbers in $[k_{\min},k_{\max}]$, the symbol $b$ ranges
+over
+\[
+\bigl[k_{\min}^2h_-^2\cos^2\theta_{\max},\ k_{\max}^2h_+^2\bigr],
+\qquad h_\pm=\max/\min h_\xi ,
+\]
+and these are exactly the rescaled bounds with which the grid optimizer is
+called \cite{lytaev2020iccsa,lytaev2026nmp}. That $E$ depends on the metric
+only through this range is the precise form of ``local equivalence''.
+
+\paragraph{Per-class reference wavenumber.} On one column $b$ takes values
+only in that column's $h_\xi$ range; choosing $\beta_k$ per class makes the
+Pad\'e approximant cover a narrower interval of $b/\beta_k^2-1$. The envelope
+factor $e^{i(\beta_k-\beta)\Delta\xi}$ is a constant phase and does not change
+the symbol.
+
+\paragraph{Where the field lives: bicharacteristics.} The support of the field
+is not a property of one column; it is transported by the Hamiltonian flow of
+the one-way symbol,
+\begin{equation}\label{eq:rays}
+\frac{d\eta}{d\xi}=-\pd_q\sqrt{b_0},\qquad
+\frac{dq}{d\xi}=\pd_\eta\sqrt{b_0},
+\end{equation}
+and reflected at the ground by the boundary symbol (the discrete Robin
+condition of Section~\ref{sec:scheme}). A ray reflected by a slope
+$\theta_s$ leaves with up to $\theta_{\max}+2\theta_s$ to the horizontal, and
+once the terrain flattens, the local symbol range is that of a flat column
+while the field still carries the large $q$ produced upstream. Error budgets
+must therefore be evaluated on the \emph{transported} support---the
+slope-widened aperture. This is not academic: per-class range steps sized for
+their own columns' symbol ranges failed until the aperture was widened, and
+the wide-angle floors of the shift map (Section~\ref{sec:obstructions}) are
+the same statement in reverse.
+
+\paragraph{Contrast with the classical schemes.} The Crank--Nicolson
+discretization of shift-map PEs first approximates the square root,
+$u_x=ik_0(f(X)-1)u$ with $f\approx\sqrt{1+X}$, $X=k_0^{-2}\pd_\zeta^2+\dots$,
+and then the exponential by the Cayley transform. Its error thus contains
+both a square-root error and a $\Delta x$ error, growing with angle
+independently of the order of $f$. The rational step \eqref{eq:rational}
+approximates the propagator itself, to order $2p$ in $L$ on the band that
+matters, and its error vanishes uniformly as $p$ grows for range steps of
+many wavelengths.
+
+%=====================================================================
+\section{The numerical scheme}\label{sec:scheme}
+
+\paragraph{Vertical discretization.} On the uniform grid $\eta_j=j\Delta\eta$
+each factor of \eqref{eq:step}, with $\varphi=r^{1/2}\psi$,
+$m=r^2$, $\het=(k^2h_\xi^2-V)/\beta^2-1$ and the operator form of
+Section~\ref{sec:symbol}, is the weighted scheme
+\begin{multline}\label{eq:scheme}
+c\,\delta^2_rv+(1+\alpha\delta^2_r)\bigl[\tau^2m(1+c\het)v\bigr]\\
+=a\,\delta^2_ru+(1+\alpha\delta^2_r)\bigl[\tau^2m(1+a\het)u\bigr]
+\end{multline}
+with $\tau=\beta\Delta\eta$ and the conservatively discretized weighted
+Laplacian
+\[
+\delta^2_r u_j=r_j\left[\frac{u_{j+1}-u_j}{r_{j+1/2}}-\frac{u_j-u_{j-1}}{r_{j-1/2}}\right] .
+\]
+For $g=\ln r$ and $D=r\pd r^{-1}\pd$, Taylor expansion gives
+$\delta^2_r/\Delta\eta^2=D+\tfrac{\Delta\eta^2}{12}D^2+\Delta\eta^2E+O(\Delta\eta^4)$.
+The Numerov weight $\alpha=\tfrac1{12}$ cancels the $D^2$ term, so the scheme
+is fourth-order in the wave part, with a second-order remainder of relative
+size $(\Delta\eta/\ell_\eta)^2/24$, negligible since $\ell_\eta\gtrsim L$.
+This stencil is the discrete form of the operator in \eqref{eq:liou}: it
+carries the zeroth-order symbol correction $W=r_\eta^2/(4r^4)$ of
+\eqref{eq:symbol} implicitly, exactly as its continuous counterpart does.
+
+\paragraph{Ground closure.} The Dirichlet unknown is eliminated from the
+system rather than imposed by a unit row (a unit row next to entries of order
+$\alpha\tau^2$ is satisfied by a pivoting solver only up to amplified
+round-off); Neumann uses a mirror node. For the Robin condition a ghost node
+$u_{-1}$ is closed by the compact (fourth-order) relation
+\begin{equation}\label{eq:closure}
+(u_1-u_{-1})+\frac g3(u_{-1}+4u_0+u_1)=0,\qquad g=\gamma\Delta\eta ,
+\end{equation}
+which combines the compact approximations of $\psi'$ and $\psi''$
+\cite{lele1992compact}; frozen coefficients annihilate
+$\pd_\eta^2(\psi'+\gamma\psi)$, making the closure fourth-order accurate. It
+expresses $u_{-1}$ through $u_0,u_1$, so the system stays tridiagonal, and
+the same closure serves all $p+4q$ factors of a step.
+
+\paragraph{Top boundary.} Every factor is closed at the top by the discrete
+NLBC \cite{lytaev2018awpl},
+\begin{equation}\label{eq:nlbc}
+u^n_{N-1,l}-\sum_{l'\le l}Q^{(0)}_{ll'}u^n_{N,l'}
+=\sum_{m=1}^{n}\sum_{l'}Q^{(m)}_{ll'}u^{n-m}_{N,l'} ,
+\end{equation}
+whose kernels are the inverse $z$-transform of a matrix function of the
+rational coefficients and of the discrete exterior equation; they depend only
+on the exterior scheme and on the chain of factors. Its Weyl-symbol reading
+is the subject of Section~\ref{sec:top}.
+
+\paragraph{One range step.} The coefficients $\het$, $m$, $r$ are tabulated on
+coarse columns below the Cartesian region and interpolated linearly in range;
+the main chain is evaluated at the midpoint.
+\begin{center}
+\begin{minipage}{0.92\linewidth}
+\hrule\vspace{2pt}
+\textbf{Algorithm 1:} one range step of \eqref{eq:step}--\eqref{eq:scheme}
+\vspace{1pt}\hrule\vspace{2pt}
+\textbf{Input:} $\varphi_n$ (equivalently $\psi_n$), columns $\het,m,r$ at
+$\xi_n,\xi_{n+1/2},\xi_{n+1}$
+\begin{enumerate}
+\item apply the first conjugating bracket $C_1=B_{n+1/2}^{-1/4}B_n^{1/4}$
+  \emph{(rows below $\etal$ plus a margin only)};
+\item for $l=1,\dots,p$: solve \eqref{eq:scheme} with $(a_l,b_l)$ at
+  $\xi_{n+1/2}$ and the NLBC row \eqref{eq:nlbc};
+\item apply the second conjugating bracket $C_2=B_{n+1}^{-1/4}B_{n+1/2}^{1/4}$.
+\end{enumerate}
+\vspace{-4pt}\hrule
+\end{minipage}
+\end{center}
+One step costs $p+4q$ tridiagonal solves, the $4q$ weight solves restricted
+to the transition layer; both brackets are the identity in the exterior,
+where the step degenerates to the flat scheme \cite{lytaev2020awpl}.
+
+%=====================================================================
+\section{Dispersion relations as Weyl symbols}\label{sec:dispersion}
+
+The scheme has two dispersion relations, and both are symbols.
+
+\paragraph{Continuous.} The principal symbol \eqref{eq:b0} of $B$ is the
+continuous dispersion relation, $\kappa^2=k^2h_\xi^2-q^2/r^2$; in angle form,
+$\kappa=\pm kh_\xi\cos\theta$. It tells the propagator what $\sqrt b$ to
+approximate and the budget what band $\bigl[k_{\min}^2h_-^2\cos^2\theta_{\max},
+k_{\max}^2h_+^2\bigr]$ to cover.
+
+\paragraph{Discrete.} Freezing the coefficients and substituting
+$\psi^n_j=\lambda^ne^{iqj\Delta\eta}$ into \eqref{eq:scheme} gives the
+\emph{discrete Weyl symbol} on the Brillouin band
+$q\in(-\pi/\Delta\eta,\pi/\Delta\eta]$,
+\begin{equation}\label{eq:Lh}
+L_h(q)=\het-\frac4{\tau^2r^2}\,\frac{s}{1-4\alpha s},\qquad
+s=\sin^2\frac{q\Delta\eta}2,\qquad
+\lambda=R\bigl(L_h(q)\bigr),
+\end{equation}
+a periodic function agreeing with $b/\beta^2-1=\het-q^2/(\beta r)^2$ to
+$O((q\Delta\eta)^6)$ for $\alpha=1/12$. The step's symbol is $R(L_h(q))$, and
+the dispersion error per unit physical length is
+\begin{equation}\label{eq:disp}
+\varepsilon(\theta)=\frac{\bigl|\log\bigl(\lambda\,e^{-i\Delta\xi(p-\beta)}\bigr)\bigr|}
+{h_\xi\Delta\xi},\qquad p=h_\xi k\cos\theta ,
+\end{equation}
+the distance between the discrete symbol and the exact one \eqref{eq:expsymbol}.
+
+\paragraph{Local equivalence.} In physical variables
+$\beta_e=\beta/h_\xi$, $\Delta x_e=h_\xi\Delta\xi$, $\Delta z_e=h_\eta\Delta\eta$
+one has $\het=k^2/\beta_e^2-1$, $\tau r=\beta_e\Delta z_e$,
+$q\Delta\eta=k_z\Delta z_e$, $\beta\Delta\xi=\beta_e\Delta x_e$, hence
+\begin{equation}\label{eq:equiv}
+\varepsilon(\theta;\beta,\Delta\xi,\Delta\eta,h_\xi,h_\eta)
+=\varepsilon_0(\theta;\beta_e,\Delta x_e,\Delta z_e),
+\end{equation}
+the dispersion error of the \emph{flat} scheme on the effective grid: the
+discrete symbol of a distorted cell is the flat discrete symbol. (Verified
+numerically to $4\cdot10^{-13}$ of the maximum error.) Three consequences.
+
+\begin{itemize}
+\item \emph{No angle restriction from the transformation.} A wave is resolved
+  iff its angle to the \emph{local} marching direction lies in the aperture
+  of $R$ on the local grid. Waves reflected by slopes up to $\theta_s$ reach
+  $\theta_{\max}+2\theta_s$ (Section~\ref{sec:rational}), so the aperture is
+  set to that value---a physical requirement that a staircase faces equally.
+\item \emph{Grid selection on flat terrain.} The flat-terrain optimizer
+  \cite{lytaev2020iccsa,lytaev2026nmp} is called with the wavenumber interval
+  $[k_{\min}h_-,k_{\max}h_+]$, the vertical-wavenumber bound $k_z^{\max}h_-$
+  and the error budget per unit computational length; the vertical step it
+  returns is divided by $\max r\cdot h_+/h_-$. Equivalently, the stretching
+  rule $\max_\xi h_\eta s\,\Delta\eta\le\Delta z_{\rm phys}$: the error of
+  $L_h$ is a function of $q\Delta\eta=k\sin\theta\cdot h_\eta s\,\Delta\eta$,
+  so it is the \emph{physical} step that must stay bounded at every level.
+\item \emph{Per-class steps.} Since the symbol depends on the metric only
+  through the products $h_\xi\Delta\xi$, $h_\eta\Delta\eta$, $\beta/h_\xi$,
+  per-class $\beta_k$, Pad\'e chains and range steps are admissible---but the
+  error budget must be evaluated on the transported support of
+  \eqref{eq:rays}, not on each class's own symbol range.
+\end{itemize}
+
+%=====================================================================
+\section{Two obstructions}\label{sec:obstructions}
+
+The same calculus explains two failures that no amount of grid refinement
+cures: the error floor of the shift map, and the inability of any local top
+boundary to absorb grazing waves. Both are mismatches of \emph{symbols}, hence
+independent of the discretization.
+
+\subsection{Why the shift map has a grid-independent floor}\label{sec:shift}
+
+Write the shift-map equation on a constant slope $s=T'$ as
+\begin{equation}\label{eq:shiftmap}
+\psi_{xx}-2s\,\psi_{x\zeta}+(1+s^2)\,\psi_{\zeta\zeta}+k^2\psi=0,
+\qquad \zeta=z-T(x),
+\end{equation}
+whose symbol in the duals $(\kappa,q)$ of $(x,\zeta)$ is
+$-\kappa^2+2s\kappa q-(1+s^2)q^2+k^2$. The outgoing root is
+\begin{equation}\label{eq:shiftroot}
+\kappa=sq+\sqrt{k^2-q^2} .
+\end{equation}
+
+\paragraph{The obstruction.} The one-way symbol has a part $sq$ \emph{odd in
+$q$}. But the exact one-way symbol in orthogonal coordinates is
+$\sqrt{b_0}$---a function of the symbol of the single symmetric second-order
+vertical operator $B$, which has no first-order part---and no function of a
+single symmetric vertical operator has a symbol with an odd part. The shift
+map therefore cannot be represented by a propagator of the form
+$F(\text{vertical operator})$ at any order: the deficiency is structural, not
+a matter of approximation order.
+
+\paragraph{The gauge.} The Beilis--Tappert gauge
+\cite{beilis1979coupled} $u=v\,e^{ik_0T'\zeta+ik_0\int T'^2dx'/2}$ translates
+the dual variable, $q=q'+k_0s$, and removes the range phase; the transformed
+root becomes
+\[
+\kappa'=sq'+\frac{k_0s^2}2+\sqrt{k^2-(q'+k_0s)^2}-k_0 .
+\]
+If the square root is truncated at second order (the narrow-angle symbol), the
+terms linear in $q'$ and the constants cancel and
+$\kappa'=-q'^2/(2k_0)$ \emph{exactly}: the gauge is exact for the narrow-angle
+PE. The higher terms involve $(q'+k_0s)^4,\dots$ and do not cancel.
+
+\paragraph{The floor.} A wide-angle PE propagates with the symbol
+$k_0[f(-q'^2/k_0^2)-1]$, an \emph{even} function of $q'$, while the exact
+$\kappa'$ is not even beyond second order. The difference is a mismatch of
+symbols of order $O(1)$ in $\varepsilon$---independent of $\Delta x$,
+$\Delta\zeta$, of the stencil order and of the accuracy of $f$. In terms of
+the angle $\alpha$ to the horizontal on the slope, after removing the
+angle-independent part $f(0)-1$,
+\begin{equation}\label{eq:floor}
+\varepsilon_\infty(\alpha;\theta_s)
+=k_0\Bigl|f\bigl(-(\sin\alpha-s)^2\bigr)+\tfrac{s^2}2-s\sin\alpha-\cos\alpha\Bigr| .
+\end{equation}
+For $f=1+X/2$ this reduces to the flat-ground NA floor,
+$k_0|1-\tfrac12\sin^2\alpha-\cos\alpha|$: the BT transformation is exact for
+the NA PE, and NA on a slope is NA on flat ground. For every other $f$,
+\emph{including the exact square root}, the floor depends on the slope and
+vanishes only on a narrow set of angles. At a budget of $10^{-4}$\,rad$/\lambda$
+the exact square root admits only waves between $3.9^\circ$ and $6.3^\circ$
+above the horizontal on a $10^\circ$ slope, a single angle on $20^\circ$, and
+none on $30^\circ$; raising the order of $f$ cannot help, because the floor
+is set by the gauge. This quantifies the published observations that WA
+shift-map PEs are limited to slopes of $10$--$20^\circ$ and can be worse than
+the NA PE on lee-side slopes \cite{wang2020smpe,zhou2017lfhighangle}, and that
+their sheared vertical wavenumber is unphysical \cite{gilbert2022wabt}. In the
+orthogonal coordinates of this paper the frozen-coefficient error is, by
+\eqref{eq:equiv}, that of the flat scheme on the local effective grid, and it
+vanishes under refinement for every slope---because the exact one-way symbol
+$\sqrt{b_0}$ is a function of the symbol of one operator, the very property
+whose absence created the floor.
+
+\subsection{Why no local top boundary absorbs grazing waves}\label{sec:top}
+
+\paragraph{Continuous exterior.} Above the transition layer the medium is
+invariant in $x$, and the field there is a superposition of
+$e^{i\kappa x}e^{i\sqrt{k^2-\kappa^2}\,z}$; the transparent condition is
+\begin{equation}\label{eq:tnlbc}
+\pd_z\psi=i\,\Op_x\!\left(\sqrt{k^2-\kappa^2}\right)\psi .
+\end{equation}
+This is a pseudodifferential operator in the \emph{evolution} variable, hence
+a convolution in range: the exact condition carries the whole history of the
+boundary values. That is the definition of the NLBC \eqref{eq:nlbc}. Its
+symbol has branch points at $\kappa=\pm k$, i.e.\ at vertical wavenumber
+$k_z=0$: waves that graze the top.
+
+\paragraph{Discrete exterior.} In the scheme, the $z$-transform variable $t$
+plays the role of $e^{i\kappa\Delta x}$, and the scalar exterior ratio
+$R(\lambda)=u_{N-1}/u_N$, with $\lambda=\beta^2(1+\sigma)$, is the discrete
+symbol of the condition. It has a discrete branch point where the two roots
+$\mu=e^{\pm ik_z\Delta z}$ meet---again at $k_z=0$.
+
+\paragraph{Local conditions are rational approximations.} A boundary condition
+that is local in range---an absorbing layer, a complex-index or complex-step
+layer of $M$ rows, a series of local ABCs---has an exterior ratio that is a
+\emph{rational function} of $\lambda$ with finitely many poles. A rational
+function cannot approximate a square root uniformly up to its branch point
+\cite{newman,idk}:
+\begin{itemize}
+\item on the band $k_z\Delta z\in[\theta_{\min},\theta_{\max}]$ the best
+  error decays geometrically in $M$, at a rate set by
+  $\log(\theta_{\max}/\theta_{\min})$;
+\item as $\theta_{\min}\to0$ the rate degenerates to zero.
+\end{itemize}
+The continuous picture says the same: a layer of complex thickness $\Lambda$
+reflects about $e^{-2k_z\operatorname{Im}\Lambda}$, which tends to $1$ as
+$k_z\to0$ for any finite layer. Grazing waves feel no layer that ends. The
+complex layer implemented in the code is the optimal-grid construction of
+\cite{idk,adgk} applied to the Numerov exterior, and its row counts
+($8$, $12$, $16$ and $34$ rows for $5\cdot10^{-3}$, $2\cdot10^{-4}$,
+$10^{-5}$, $10^{-6}$ over $0.5$--$30^\circ$) show exactly this geometric rate.
+Numerically, with everything else fixed, the NLBC leaves errors of
+$4\cdot10^{-7}$--$4.6\cdot10^{-3}$ for beams at $1$--$30^\circ$ (the last
+being the grid's propagation error, shared by every boundary), while the best
+absorbing-layer settings give $1.6\cdot10^{-3}$ at $1^\circ$---four thousand
+times worse---and no setting serves all angles, because each angle band needs
+its own rational approximation.
+
+\paragraph{Why one condition serves every class.} For per-class $\beta_k$,
+Pad\'e chains and range steps, the exterior equation of every substep is
+$(A-\lambda)w=0$ with the \emph{same} $A$. A condition expressed as a function
+of $\lambda$---the symbol of $A$ alone---is therefore valid for all of them.
+The convolution NLBC is instead a function of $t$, and the relation between
+$t$ and $\lambda$ changes with the class; it must then be computed per class
+or replaced by the $\lambda$-form. This is the boundary-condition counterpart
+of the per-class budget of Section~\ref{sec:rational}.
+
+\paragraph{Summary.} Absorbing a grazing wave transparently requires either a
+condition with an infinite memory (the NLBC) or an infinite stretch. No
+finite, local, range-independent condition can do it, and the obstruction is
+visible in the symbol: a branch point that every rational approximation must
+keep at a finite distance.
+
+%=====================================================================
+\section{Summary of orders}\label{sec:orders}
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}lll@{}}
+\toprule
+term & symbol & order \\
+\midrule
+dispersion relation & $b_0=k^2h_\xi^2-q^2/r^2$ & $1$ \\
+first-order (transport) part of $B$ & $0$ (Liouville gauge) & --- \\
+$V$, $W$ & $(r^{1/2})_{\xi\xi}/r^{1/2}$,\ \ $r_\eta^2/(4r^4)$ & $\varepsilon^2$ \\
+transport term of the one-way eq. & $\tfrac i4 b_\xi/b$ & $\varepsilon$ (removed by $B^{1/4}$) \\
+second-order WKB, commutators & \eqref{eq:lambda2}, $i\{b,b_\xi\}$ & $\varepsilon^2$ \\
+conjugating brackets at neighbouring columns & $\{b_n,b_{n+1/2}\}$ & $\varepsilon\,\Delta\xi$ \\
+Bremmer coupling $\mathcal R$ & $b_\xi/(4b)$ & $\varepsilon$ \\
+\quad slaved part (local) & $-\rho^2/(2\lambda_0)$, part of $\lambda_2$ & $\varepsilon^2$ \\
+\quad genuine backscatter & $\int\rho\,e^{2i\Phi}d\xi$ & $\varepsilon^\infty$ ($e^{-2kh\cos\theta\,\delta}$) \\
+staircase reflection (avoided) & $\rho^2\Delta\xi^2$ per step & $\varepsilon^2\Delta\xi$ total \\
+rational step vs exponential & $R(b/\beta^2-1)-e^{i\Delta\xi(\sqrt b-\beta)}$ & set by the optimizer \\
+Numerov symbol error & $L_h(q)-(b/\beta^2-1)$ & $(q\Delta\eta)^6$ \\
+shift map, wide angle & odd part of $sq+\sqrt{k^2-q^2}$ & $O(1)$, grid independent \\
+local top condition & rational approx.\ of $\sqrt{\cdot}$ near $k_z=0$ & geometric in $M$, not uniform \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Every line is a statement about one function on phase space. The method is
+exact where its symbols agree with the exact ones, and its two irreducible
+limitations---the turning set $b_0=0$ that bounds the aperture, and the
+branch point $k_z=0$ that forces a nonlocal top boundary---are visible in the
+same language as the scheme itself.
+
+\begin{thebibliography}{24}
+
+\bibitem{levy2000book}
+M.~Levy, \emph{Parabolic Equation Methods for Electromagnetic Wave
+  Propagation}, ser. IEE Electromagnetic Waves Series 45. London: IEE, 2000.
+
+\bibitem{lytaev2020awpl}
+M.~S. Lytaev, ``{Numerov--Pad\'e} scheme for the one-way {Helmholtz} equation
+  in tropospheric radio-wave propagation,'' \emph{IEEE Antennas and Wireless
+  Propagation Letters}, vol.~19, no.~12, pp. 2167--2171, 2020.
+
+\bibitem{lytaev2018awpl}
+------, ``Nonlocal boundary conditions for split-step {Pad\'e} approximations
+  of the {Helmholtz} equation with modified refractive index,'' \emph{IEEE
+  Antennas and Wireless Propagation Letters}, vol.~17, no.~8, pp. 1561--1565,
+  2018.
+
+\bibitem{lytaev2020iccsa}
+------, ``Automated selection of the computational parameters for the
+  higher-order parabolic equation numerical methods,'' in \emph{Computational
+  Science and Its Applications -- ICCSA 2020}, ser. LNCS, vol. 12249.
+  Springer, 2020, pp. 296--311.
+
+\bibitem{lytaev2026nmp}
+------, ``Mesh optimization for rational approximations of the one-way
+  {Helmholtz} equation in inhomogeneous media,'' \emph{Numerical Methods and
+  Programming (Vychislitel'nye Metody i Programmirovanie)}, vol.~27, no.~2,
+  pp. 302--316, 2026.
+
+\bibitem{beilis1979coupled}
+A.~Beilis and F.~D. Tappert, ``Coupled mode analysis of multiple rough surface
+  scattering,'' \emph{J. Acoust. Soc. Am.}, vol.~66, no.~3, pp. 811--826, 1979.
+
+\bibitem{barrios1994tpem}
+A.~E. Barrios, ``A terrain parabolic equation model for propagation in the
+  troposphere,'' \emph{IEEE Trans. Antennas Propag.}, vol.~42, no.~1,
+  pp. 90--98, 1994.
+
+\bibitem{donohue2000gtpe}
+D.~J. Donohue and J.~R. Kuttler, ``Propagation modeling over terrain using the
+  parabolic wave equation,'' \emph{IEEE Trans. Antennas Propag.}, vol.~48,
+  no.~2, pp. 260--277, 2000.
+
+\bibitem{holm2007wasm}
+P.~D. Holm, ``Wide-angle shift-map {PE} for a piecewise linear terrain---a
+  finite-difference approach,'' \emph{IEEE Trans. Antennas Propag.}, vol.~55,
+  no.~10, pp. 2773--2789, 2007.
+
+\bibitem{wang2020smpe}
+D.-D. Wang, Y.-R. Pu, X.-L. Xi, and L.-L. Zhou, ``An analysis of narrow-angle
+  and wide-angle shift-map parabolic equations,'' \emph{IEEE Trans. Antennas
+  Propag.}, vol.~68, no.~5, pp. 3911--3918, 2020.
+
+\bibitem{zhou2017lfhighangle}
+L.~Zhou, D.~Wang, Z.~Mu, X.~Xi, and L.~He, ``{LF} radio wave prediction at
+  short ranges with high propagation angles over irregular terrain,''
+  \emph{IEEE Antennas and Wireless Propagation Letters}, vol.~16,
+  pp. 732--735, 2017.
+
+\bibitem{gilbert2022wabt}
+K.~E. Gilbert, ``Wide-angle formulation of the {Beilis--Tappert} method,''
+  \emph{J. Acoust. Soc. Am.}, vol. 152, no.~2, pp. 1170--1179, 2022.
+
+\bibitem{milinazzo1997}
+F.~A. Milinazzo, C.~A. Zala, and G.~H. Brooke, ``Rational square-root
+  approximations for parabolic equation algorithms,'' \emph{J. Acoust. Soc.
+  Am.}, vol. 101, no.~2, pp. 760--766, 1997.
+
+\bibitem{lele1992compact}
+S.~K. Lele, ``Compact finite difference schemes with spectral-like
+  resolution,'' \emph{J. Comput. Phys.}, vol. 103, no.~1, pp. 16--42, 1992.
+
+\bibitem{zworski}
+M.~Zworski, \emph{Semiclassical Analysis}. Providence, RI: AMS, 2012.
+
+\bibitem{dimassi}
+M.~Dimassi and J.~Sj\"ostrand, \emph{Spectral Asymptotics in the
+  Semi-Classical Limit}. Cambridge Univ. Press, 1999.
+
+\bibitem{helffer}
+B.~Helffer and D.~Robert, ``Calcul fonctionnel par la transformation de
+  Mellin et op\'erateurs admissibles,'' \emph{J. Funct. Anal.}, vol.~53,
+  pp. 246--268, 1983.
+
+\bibitem{fishman}
+L.~Fishman and J.~J. McCoy, ``Derivation and application of extended parabolic
+  wave theories,'' \emph{J. Math. Phys.}, vol.~25, pp. 285--308, 1984.
+
+\bibitem{dehoop}
+M.~V. de~Hoop, ``Generalization of the Bremmer coupling series,'' \emph{J.
+  Math. Phys.}, vol.~37, pp. 3246--3282, 1996.
+
+\bibitem{bremmer}
+H.~Bremmer, ``The W.K.B. approximation as the first term of a geometric-optical
+  series,'' \emph{Comm. Pure Appl. Math.}, vol.~4, pp. 105--115, 1951.
+
+\bibitem{atkinson}
+F.~V. Atkinson, ``Wave propagation and the Bremmer series,'' \emph{J. Math.
+  Anal. Appl.}, vol.~1, pp. 255--276, 1960.
+
+\bibitem{newman}
+D.~J. Newman, ``Rational approximation to $|x|$,'' \emph{Michigan Math. J.},
+  vol.~11, pp. 11--14, 1964.
+
+\bibitem{idk}
+D.~Ingerman, V.~Druskin and L.~Knizhnerman, ``Optimal finite difference grids
+  and rational approximations of the square root. I. Elliptic problems,''
+  \emph{Comm. Pure Appl. Math.}, vol.~53, pp. 1039--1066, 2000.
+
+\bibitem{adgk}
+S.~Asvadurov, V.~Druskin, M.~N. Guddati and L.~Knizhnerman, ``On optimal
+  finite-difference approximation of {PML},'' \emph{SIAM J. Numer. Anal.},
+  vol.~41, pp. 287--305, 2003.
+
+\end{thebibliography}
+
+\end{document}
