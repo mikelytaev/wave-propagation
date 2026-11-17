@@ -67,7 +67,12 @@ class OrthogonalTerrainMap:
     x_m, boundary_m :
         Samples of the irregular boundary ``z = B(x)`` (piecewise-linear).
     x_max_m :
-        Range extent of the computational domain ``xi in [0, x_max_m]``.
+        Range extent of the computational domain ``xi in [x_min_m, x_min_m + x_max_m]``.
+    x_min_m :
+        Starting abscissa of the computational domain (default 0).  Negative
+        values shift the identity-region labeling left, which is needed when the
+        descent drift through the transition layer would otherwise leave part of
+        the physical boundary outside the domain.
     kind :
         ``'half_space'`` -- the domain is ``z > B(x)``, ``eta = 0`` is the boundary
         (terrain in tropospheric propagation, ``z`` up);
@@ -105,7 +110,7 @@ class OrthogonalTerrainMap:
     def __init__(self, x_m, boundary_m, *, x_max_m: float, kind: str = 'half_space',
                  transition_m: float, z_ref_m: float = None, eta_b_m: float = None,
                  smoothing_m: float = 0.0, dx_fine_m: float = None, pad_m: float = None,
-                 mirror_start: bool = True, strip_profile: str = 'linear'):
+                 mirror_start: bool = True, strip_profile: str = 'linear', x_min_m: float = 0.0):
         if kind not in ('half_space', 'strip'):
             raise ValueError("kind must be 'half_space' or 'strip'")
         if strip_profile not in ('linear', 'harmonic'):
@@ -116,9 +121,10 @@ class OrthogonalTerrainMap:
         self._args = dict(x_m=x_m, boundary_m=boundary_m, x_max_m=x_max_m, kind=kind,
                           transition_m=transition_m, z_ref_m=z_ref_m, eta_b_m=eta_b_m,
                           smoothing_m=smoothing_m, dx_fine_m=dx_fine_m, pad_m=pad_m,
-                          mirror_start=mirror_start, strip_profile=strip_profile)
+                          mirror_start=mirror_start, strip_profile=strip_profile, x_min_m=x_min_m)
         self.kind = kind
         self.x_max_m = float(x_max_m)
+        self.x_min_m = float(x_min_m)
         self.L = float(transition_m)
         self.smoothing_m = float(smoothing_m)
         if self.L <= 0:
@@ -132,13 +138,14 @@ class OrthogonalTerrainMap:
             self.z_off = 0.0
         self.eta_lab = self.eta_b + self.L
 
-        # Uniform FFT grid on [0, x_hi]; the boundary is extended evenly at x = 0
-        # (``mirror_start``: the trajectory xi = 0 is then the vertical line x = 0) and at x_hi.
+        # Uniform FFT grid on [x_min_m, x_hi]; the boundary is extended evenly at
+        # x = x_min_m (``mirror_start``: the trajectory xi = x_min_m is then the
+        # vertical line x = x_min_m) and at x_hi.
         if dx_fine_m is None:
             dx_fine_m = max(min(self.L, self.smoothing_m or self.L) / 8.0, self.x_max_m / 2 ** 16)
         if pad_m is None:
             pad_m = 2.0 * self.L + 4.0 * self.smoothing_m
-        x_lo = 0.0 if mirror_start else -pad_m
+        x_lo = self.x_min_m if mirror_start else self.x_min_m - pad_m
         n = int(np.ceil((self.x_max_m + pad_m - x_lo) / dx_fine_m)) + 1
         self.dx_fine = dx_fine_m
         self.x_fine = x_lo + np.arange(n) * dx_fine_m
@@ -155,8 +162,8 @@ class OrthogonalTerrainMap:
         return OrthogonalTerrainMap(**{**self._args, 'eta_b_m': eta_b_m})
 
     def max_slope_deg(self) -> float:
-        """Maximum slope of the (smoothed) boundary inside ``[0, x_max_m]``."""
-        inside = (self.x_fine >= 0) & (self.x_fine <= self.x_max_m)
+        """Maximum slope of the (smoothed) boundary inside the ``xi`` domain."""
+        inside = (self.x_fine >= self.x_min_m) & (self.x_fine <= self.x_max_m)
         slope = np.gradient(self.boundary_fine, self.dx_fine)[inside]
         return float(np.degrees(np.arctan(np.max(np.abs(slope)))))
 

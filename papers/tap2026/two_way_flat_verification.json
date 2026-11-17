@@ -1,0 +1,10 @@
+{
+ "invariance (standing wave input)": {
+  "err_rel": 0.15922515089178535,
+  "uminus_over_max": 0.0
+ },
+ "reflection generation (incident input)": {
+  "err_rel": 1.330561338163013,
+  "uminus_over_max": 0.0
+ }
+}

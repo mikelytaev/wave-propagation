@@ -242,7 +242,9 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         lev = np.arange(0.0, min(terrain_map.eta_lab + 4 * deta_p, mesh_params.z_size_m) + deta_p / 4, deta_p / 2)
         # the metric extremes sit on the ground, at the scale of the terrain smoothing
         dxi_p = max(min(terrain_map.L, terrain_map.smoothing_m or terrain_map.L) / 8, 1.0)
-        xi_p = np.linspace(0.0, mesh_params.x_size_m, min(max(int(mesh_params.x_size_m / dxi_p) + 1, 16), 4000))
+        x_min = float(getattr(terrain_map, 'x_min_m', 0.0))
+        xi_p = np.linspace(x_min, x_min + mesh_params.x_size_m,
+                           min(max(int(mesh_params.x_size_m / dxi_p) + 1, 16), 4000))
         mp = terrain_map.metrics(xi_p, lev)
         r_all = np.concatenate([(mp.h_eta / mp.h_xi).ravel(), (mp.h_eta_below / mp.h_xi).ravel()])
         hxi_min, hxi_max = float(mp.h_xi.min()), float(mp.h_xi.max())
@@ -407,7 +409,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
                    approx_method=approx_method, xi_bounds=xi_bounds,
                    tables=tables, lower_bc=lower_bc, upper_bc=upper_bc,
                    terrain_map=terrain_map, flux_order=flux_order, lower_impedance_alpha=lower_impedance_alpha,
-                   impedance_closure=impedance_closure)
+                   impedance_closure=impedance_closure, x_min_m=x_min)
 
     # ------------------------------------------------------------------ tables
     @staticmethod
@@ -419,14 +421,15 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         if n_lab > z_n - 4:
             raise ValueError(f"the computational domain ({(z_n - 1) * deta:.1f} m) has to extend at least a few "
                              f"grid nodes above the transition height ({terrain_map.eta_lab:.1f} m)")
-        xi_max = (x_n - 1) * dxi
+        x_min = float(getattr(terrain_map, 'x_min_m', 0.0))
+        xi_max = x_min + (x_n - 1) * dxi
         if coarse_dxi_m is None:
             coarse_dxi_m = max(dxi, min(terrain_map.L, max(terrain_map.smoothing_m, 4 * deta)) / 4)
-        n_c = fm.ceil(xi_max / coarse_dxi_m) + 3
+        n_c = fm.ceil((xi_max - x_min) / coarse_dxi_m) + 3
         if n_c * n_lab > max_table_size:
             n_c = max(max_table_size // n_lab, 8)
-        coarse_dxi_m = xi_max / (n_c - 3)
-        xi_c = np.arange(n_c) * coarse_dxi_m
+        coarse_dxi_m = (xi_max - x_min) / (n_c - 3)
+        xi_c = x_min + np.arange(n_c) * coarse_dxi_m
 
         levels = np.arange(2 * n_lab + 1) * (deta / 2)
         mt = terrain_map.metrics(xi_c, levels)
@@ -510,7 +513,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
     def __init__(self, order, beta, dx_m, dz_m, x_n, z_n, x_grid_scale, z_grid_scale, freq_hz,
                  tables=None, lower_bc='dirichlet', upper_bc='nlbc', coefs=None, upper_nlbc_coefs=None,
                  approx_method='pade', xi_bounds=None, terrain_map=None, flux_order=2, alpha=1 / 12,
-                 lower_impedance_alpha=None, impedance_closure='compact', **_ignored):
+                 lower_impedance_alpha=None, impedance_closure='compact', x_min_m=0.0, **_ignored):
         """``flux_order`` is the order of the diagonal Padé approximants of
         ``(1 + L)**(+-1/4)`` used by the flux-conserving step (Section 5 of the
         note); ``0`` keeps the Liouville rescaling only.  ``alpha`` is the weight
@@ -536,6 +539,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         self.lower_bc = lower_bc
         self.upper_bc = upper_bc
         self.terrain_map = terrain_map
+        self.x_min_m = float(x_min_m)
         self.flux_order = int(flux_order)
         self.flux_coefs = jnp.array(fourth_root_factors(self.flux_order) if self.flux_order > 0
                                     else np.zeros((0, 2)), dtype=complex)
@@ -662,7 +666,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
             'x_n': self.x_n, 'z_n': self.z_n, 'coefs': self.coefs_t, 'x_grid_scale': self.x_grid_scale,
             'z_grid_scale': self.z_grid_scale, 'freq_hz': self.freq_hz, 'approx_method': self.approx_method,
             'xi_bounds': self.xi_bounds, 'lower_bc': self.lower_bc, 'upper_bc': self.upper_bc,
-            'flux_order': self.flux_order, 'alpha': self.alpha,
+            'flux_order': self.flux_order, 'alpha': self.alpha, 'x_min_m': self.x_min_m,
             'lower_impedance_alpha': self.lower_impedance_alpha, 'impedance_closure': self.impedance_closure,
             'tables_static': (t['rho_top'], t['n_lab'], t['coarse_dxi'], t['n_c'], t['dxi_p'], t['stretch']),
         }
@@ -683,7 +687,7 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         """Interpolated (het, m, rt, rt_half) over the whole column at range ``xi``
         and ``h_eta`` on the ground."""
         t = self.tables
-        c = xi / t['coarse_dxi']
+        c = (xi - self.x_min_m) / t['coarse_dxi']
         i0 = jnp.clip(jnp.floor(c).astype(jnp.int64), 0, t['n_c'] - 2)
         w = c - i0
 
@@ -820,8 +824,8 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
 
     @jax.jit
     def compute(self, initial):
-        """March ``initial`` (the field on the trajectory ``xi = 0``) through the
-        domain; returns the field on the computational output grid."""
+        """March ``initial`` (the field on the trajectory ``xi = x_min_m``) through
+        the domain; returns the field on the computational output grid."""
         # one row per point of x_output_grid(), i.e. per i = 0, s, 2s, ... <= x_n - 1
         results = jnp.zeros(shape=((self.x_n - 1) // self.x_grid_scale + 1, (self.z_n - 1) // self.z_grid_scale + 1),
                             dtype=complex)
@@ -831,11 +835,13 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
 
         def body_fun(i, val):
             y0, res, upper_field = val
-            cols_prev = self._columns_at((i - 1) * self.dx_m)
-            cols_mid = self._columns_at((i - 0.5) * self.dx_m)
-            cols_next = self._columns_at(i * self.dx_m)
+            cols_prev = self._columns_at(self.x_min_m + (i - 1) * self.dx_m)
+            cols_mid = self._columns_at(self.x_min_m + (i - 0.5) * self.dx_m)
+            cols_next = self._columns_at(self.x_min_m + i * self.dx_m)
             upper_convolution = self._convolution(self.upper_nlbc_coefs, upper_field, i)
             cls_p = self.tables['cls_p']
+            # cls_p is tabulated on xi_p, which starts at x_min_m: the march
+            # index alone gives the position within the table
             k = cls_p[jnp.clip(jnp.round((i - 0.5) * self.dx_m / self.tables['dxi_p']).astype(jnp.int64),
                                0, cls_p.shape[0] - 1)]
             y1, upper_field_i = self._tf_step(y0, upper_convolution, cols_prev, cols_mid, cols_next, k)
@@ -874,14 +880,18 @@ class TerrainFollowingHelmholtzPropagator(RationalHelmholtzPropagator):
         Z[:, :idx.size] = mt.z[:, 2 * idx]
         return X, Z
 
+    def x_computational_grid(self):
+        return self.x_min_m + jnp.arange(0, self.x_n) * self.dx_m
+
     def initial_points(self):
-        """Physical ``(x, z)`` of the computational nodes of the starting trajectory ``xi = 0``."""
+        """Physical ``(x, z)`` of the computational nodes of the starting
+        trajectory ``xi = x_min_m``."""
         tm = self.terrain_map
         n_lab = min(fm.ceil(tm.eta_lab / self.dz_m) + 2, self.z_n)
         lev = np.arange(2 * n_lab + 1) * (self.dz_m / 2)
-        mt = tm.metrics(np.zeros(1), lev)
+        mt = tm.metrics(np.full(1, self.x_min_m), lev)
         eta = self.eta_computational_grid()
-        X = np.zeros(self.z_n)
+        X = np.full(self.z_n, self.x_min_m)
         Z = self._z_identity(eta)
         X[:n_lab] = mt.x[0, 0:2 * n_lab:2]
         Z[:n_lab] = mt.z[0, 0:2 * n_lab:2]
