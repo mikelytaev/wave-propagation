@@ -84,10 +84,9 @@ def run_case(slope_deg, precision, order=(7, 8), x_max=600.0):
     tm = OrthogonalTerrainMap(xb, s * xb, x_max_m=x_max, transition_m=layer, z_ref_m=relief,
                               smoothing_m=0.0, mirror_start=False, dx_fine_m=0.5, pad_m=2000.0,
                               x_min_m=x_min)
+    x_max_m = x_max + 250.0
     med = TFMedium(k2_above=lambda x, z: np.full(np.shape(z), K0 ** 2, dtype=complex))
-    mp = HelmholtzMeshParams2D(x_size_m=x_max - x_min, z_size_m=z_top - relief, dx_output_m=5.0, dz_output_m=0.25)
-    med = TFMedium(k2_above=lambda x, z: np.full(np.shape(z), K0 ** 2, dtype=complex))
-    mp = HelmholtzMeshParams2D(x_size_m=x_max, z_size_m=z_top - relief, dx_output_m=5.0, dz_output_m=0.25)
+    mp = HelmholtzMeshParams2D(x_size_m=x_max_m - x_min, z_size_m=z_top - relief, dx_output_m=5.0, dz_output_m=0.25)
     tf = TerrainFollowingHelmholtzPropagator.create(FREQ, tm, med, kz_max, (K0, K0), precision, mp,
                                                     rational_approx_order=order)
     x0, z0 = tf.initial_points()
