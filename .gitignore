@@ -8,3 +8,8 @@ build/
 test_reports/
 test_plots/
 papers/tap2026/two_way_case_results.pkl
+papers/tap2026/main.aux
+papers/tap2026/main.blg
+papers/tap2026/main.log
+papers/tap2026/main.out
+papers/tap2026/two_way_case_results.pkl
