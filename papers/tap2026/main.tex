@@ -1019,19 +1019,19 @@ $4\cdot10^{-14}$.
 \subsection{Exact Solution: Beam Reflected by a Conducting Slope}\label{sec:slope}
 
 The incident field is a \SI{300}{MHz} complex-source-point beam, an exact
-solution of the Helmholtz equation. Its waist is at $(-50,30)$\,m, its Rayleigh
-parameter is \SI{100}{m}, and it is directed at $-10^\circ$. Its image in the line
+solution of the Helmholtz equation. Its waist is at $(-345,82)$\,m, 300~m
+upstream of the computational domain, its Rayleigh parameter is \SI{100}{m},
+and it is directed at $-10^\circ$. Its image in the line
 $z=x\tan\theta_s$ gives the exact field above the Dirichlet slope; the reflected
 beam leaves at $2\theta_s+10^\circ$. Both solvers start from the exact field,
 use Pad\'e $(7,8)$ and the aperture $\theta_{\max}=10^\circ+2\theta_s+5^\circ$,
 and their grids are chosen by the respective optimizers with precision
-$10^{-2}$. The reflection itself lies outside the terrain-following domain:
-its starting trajectory meets the slope at $x\approx\SI{160}{m}$, to the right
-of the reflection spot, and the reflected beam crosses this trajectory at
-$z\approx\SI{210}{m}$, so the exact field prescribed on it already contains
-the reflected wave and the test measures the accuracy of its transport at
-$70^\circ$; the staircase, whose initial line the reflected beam never
-crosses, has to produce the reflection itself. Table~\ref{tab:slope} gives
+$10^{-2}$. The terrain-following domain is extended left of $x=0$ (its
+starting trajectory meets the slope at $x\approx-44$~m) so that the
+reflection spot lies inside it: the reflected wave is produced by the solver
+itself, through the boundary enforcement on the slope, and the measured error
+includes its generation. The staircase covers the same rectangle from $x=0$
+with its step-corner discretization. Table~\ref{tab:slope} gives
 the maximum error relative to the
 maximum of the exact field, and Fig.~\ref{fig:slope} shows the fields and the
 errors.
@@ -1043,9 +1043,9 @@ errors.
 & & \multicolumn{3}{c}{terrain-following} & \multicolumn{3}{c}{staircase}\\
 \cmidrule(lr){3-5}\cmidrule(lr){6-8}
 $\theta_s$ & beam & $\Delta x$, m & $\Delta z$, m & error & $\Delta x$, m & $\Delta z$, m & error\\\midrule
-$10^\circ$ & $30^\circ$ & 2.5 & 0.035 & $1.4\cdot10^{-4}$ & 2.5 & 0.063 & 0.54\\
-$20^\circ$ & $50^\circ$ & 2.5 & 0.019 & $1.2\cdot10^{-3}$ & 2.5 & 0.035 & 0.69\\
-$30^\circ$ & $70^\circ$ & 1.0 & 0.009 & $2.9\cdot10^{-3}$ & 1.0 & 0.016 & 0.81\\
+$10^\circ$ & $30^\circ$ & 2.5 & 0.023 & $3.3\cdot10^{-4}$ & 2.5 & 0.05 & 0.50\\
+$20^\circ$ & $50^\circ$ & 2.5 & 0.0096 & $6.4\cdot10^{-4}$ & 2.5 & 0.05 & 0.55\\
+$30^\circ$ & $70^\circ$ & 1.0 & 0.0074 & $1.7\cdot10^{-3}$ & 1.0 & 0.05 & 0.54\\
 \bottomrule\end{tabular}
 \end{table}
 
@@ -1056,21 +1056,20 @@ $30^\circ$ & $70^\circ$ & 1.0 & 0.009 & $2.9\cdot10^{-3}$ & 1.0 & 0.016 & 0.81\\
 \caption{Beam reflected by a perfectly conducting slope. Top: $|u|$ for
 $\theta_s=30^\circ$ (reflected beam at $70^\circ$) on the common Cartesian
 grid; the terrain-following field is interpolated onto it from its curvilinear
-grid, and the region outside its domain, bounded by the curved trajectories
-(grey lines), is left blank. Bottom: maximum
+grid. Bottom: maximum
 error over height versus range for $\theta_s=20^\circ$ and $30^\circ$.}
 \label{fig:slope}
 \end{figure*}
 
-The terrain-following error is $10^{-4}$--$3\cdot10^{-3}$ up to a reflected beam
-at $70^\circ$. The staircase loses most of the reflected beam (Fig.~\ref{fig:slope}),
+The terrain-following error is $3\cdot10^{-4}$--$1.7\cdot10^{-3}$ up to a
+reflected beam at $70^\circ$. The staircase loses most of the reflected beam (Fig.~\ref{fig:slope}),
 and its error decreases only slowly under refinement. For $\theta_s=20^\circ$
 it is 0.69, 0.55 and 0.54 at $\Delta z=0.035$, $0.013$ and \SI{0.005}{m}
 ($\lambda/200$), and still 0.45 when in addition $\Delta x$ is reduced to
-\SI{0.625}{m}. The terrain-following grids have 1.2--1.4 times more vertical
+\SI{0.625}{m}. The terrain-following grids have about 1.5--1.6 times more vertical
 nodes, because of the expansion $\max r$ in the transition layer. Each step
-also costs $p+4q$ instead of $p$ solves, so the run time was 7--11 times that
-of the staircase, at errors two to three orders of magnitude smaller.
+also costs $p+4q$ instead of $p$ solves, so the run time was 8--36 times that
+of the staircase, at errors about three orders of magnitude smaller.
 
 \subsection{Role of the Flux-Conserving Step}
 

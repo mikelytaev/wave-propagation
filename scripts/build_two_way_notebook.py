@@ -264,7 +264,9 @@ if _os.path.exists(CACHE) and _os.environ.get('TWO_WAY_RERUN') != '1':
         x_min = float(r['x_min'])
         for tag in ('one_way', 'two_way'):
             g = r[tag]['grid']; beta = r[tag]['beta']
-            xi = x_min + np.arange(g['x_n']) * g['dx']
+            n_out = r[tag]['x'].shape[0]
+            dxi_out = (float(r['x_max']) - x_min) / (n_out - 1)   # the output xi spacing
+            xi = x_min + np.arange(n_out) * dxi_out
             ue = exact(r[tag]['x'], r[tag]['z']) * np.exp(-1j * beta * (xi - x_min)[:, None])
             m = (r[tag]['z'] >= s * r[tag]['x'] + 2.0)
             r[tag]['ue'] = ue; r[tag]['m'] = m

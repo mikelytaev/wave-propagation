@@ -48,15 +48,19 @@ def csp(x, z, xs, zs, ang):
 
 
 def exact_field(slope_deg):
+    # the waist sits 300 m upstream of the extended domain: the solvers start
+    # from a formed beam and the source near-field is not transported
+    xs = XS - 300.0 * np.cos(np.radians(ALPHA_DEG))
+    zs = ZS - 300.0 * np.sin(np.radians(ALPHA_DEG))
     s = np.tan(np.radians(slope_deg))
     n = np.array([-s, 1.0]) / np.hypot(s, 1.0)
     refl = np.eye(2) - 2 * np.outer(n, n)
-    ri = refl @ np.array([XS, ZS])
+    ri = refl @ np.array([xs, zs])
     ei = refl @ np.array([np.cos(np.radians(ALPHA_DEG)), np.sin(np.radians(ALPHA_DEG))])
 
     def f(x, z):
-        return csp(x, z, XS, ZS, np.radians(ALPHA_DEG)) - csp(x, z, ri[0], ri[1], np.arctan2(ei[1], ei[0]))
-    norm = np.abs(f(np.array([0.0]), np.array([ZS])))[0]
+        return csp(x, z, xs, zs, np.radians(ALPHA_DEG)) - csp(x, z, ri[0], ri[1], np.arctan2(ei[1], ei[0]))
+    norm = np.abs(f(np.array([0.0]), np.array([zs])))[0]
     return lambda x, z: f(x, z) / norm
 
 
