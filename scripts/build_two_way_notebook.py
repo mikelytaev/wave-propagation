@@ -169,7 +169,7 @@ cells.append(CODE("""def run_case(cfg):
     # ---- one-way terrain-following
     p1 = TerrainFollowingHelmholtzPropagator.create(FREQ, tmap, med, kz_max, (K0, K0), 1e-2, mp,
                                                     rational_approx_order=(7, 8),
-                                                    upper_bc='dirichlet', **lower)
+                                                    upper_bc='nlbc', **lower)
     x0, z0 = p1.initial_points()
     t = time.time()
     u1 = np.asarray(p1.compute(jnp.asarray(exact(x0, z0))))
@@ -185,7 +185,7 @@ cells.append(CODE("""def run_case(cfg):
     # ---- two-way terrain-following (Bremmer)
     p2 = TwoWayTerrainFollowingPropagator.create(FREQ, tmap, med, kz_max, (K0, K0), 1e-2, mp,
                                                  rational_approx_order=(7, 8),
-                                                 upper_bc='dirichlet', flux_order=2, **lower)
+                                                 upper_bc='nlbc', flux_order=2, **lower)
     t = time.time()
     psi2, tp2, tm2, _ = p2.compute(jnp.asarray(exact(x0, z0)),
                                    n_bremmer=int(cfg.get('n_bremmer', 3)))

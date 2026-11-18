@@ -91,7 +91,7 @@ class TwoWayTerrainFollowingPropagator(TerrainFollowingHelmholtzPropagator):
         return jnp.zeros_like(y).at[:self.n_flux].set(0.5 * (a[:self.n_flux] + b[:self.n_flux]))
 
     # ------------------------------------------------------------ transport
-    def _transport(self, y, cols_mid, k, forward=True):
+    def _transport(self, y, cols_mid, k, forward=True, upper_bound=(0.0, 1.0, 0.0)):
         """One marching step of a split component with the mid-column metrics:
         the rational Padé chain of class ``k`` (the split state is gauge-free,
         so the flux brackets are the identity).  ``forward=False`` uses the
@@ -103,7 +103,6 @@ class TwoWayTerrainFollowingPropagator(TerrainFollowingHelmholtzPropagator):
         beta_k = self.tables['beta_cls'][k]
         coefs_k = self.tables['coefs_cls'][k]
         het_k = (het + 1) * (self.beta / beta_k) ** 2 - 1
-        upper_bound = (0.0, 1.0, 0.0)
         p = len(self.coefs)
         if forward:
             def body(i, y):
@@ -128,22 +127,36 @@ class TwoWayTerrainFollowingPropagator(TerrainFollowingHelmholtzPropagator):
     def _march_forward(self, y0, tm):
         """March the split state forward through all columns, storing every
         column's state.  ``tm`` is the total backward field whose coupling
-        feeds the forward wave (zeros for the first pass)."""
+        feeds the forward wave (zeros for the first pass).  The top row uses
+        the discrete transparent (NLBC) condition -- the same kernels as the
+        one-way march, applied to this sweep's state."""
         n = self.x_n
+        use_nlbc = self.upper_bc == 'nlbc'
+        # the full top-row history: row j holds the top-row field of step j
+        upper_field = jnp.zeros((n, len(self.coefs)), dtype=jnp.complex128)
 
         def body(j, val):
-            y, res = val
+            y, res, upper_field = val
             cols_j = self._columns_at(self.x_min_m + j * self.dx_m)
             cols_j1 = self._columns_at(self.x_min_m + (j + 1) * self.dx_m)
             cols_mid = self._columns_at(self.x_min_m + (j + 0.5) * self.dx_m)
             # the coupling of the total backward wave feeds the forward wave
             y = y + self._coupling(tm[j], cols_j, cols_j1, cols_mid)
-            y = self._transport(y + 0j, cols_mid, self._class_at(j), forward=True)
+            k = self._class_at(j)
+            if use_nlbc:
+                upper_convolution = self._convolution(self.upper_nlbc_coefs, upper_field, j + 1)
+                upper_bound = (1, -self.upper_nlbc_coefs[0, j + 1, j + 1],
+                               upper_convolution[j + 1]
+                               + self.upper_nlbc_coefs[0, j + 1] @ upper_field[j + 1])
+            else:
+                upper_bound = (0.0, 1.0, 0.0)
+            y = self._transport(y + 0j, cols_mid, k, forward=True, upper_bound=upper_bound)
+            upper_field = upper_field.at[j + 1].set(y[-1])
             res = res.at[j + 1].set(y)
-            return y, res
+            return y, res, upper_field
 
         res = jnp.zeros((n, self.z_n), dtype=jnp.complex128).at[0].set(y0)
-        y, res = jax.lax.fori_loop(0, n - 1, body, (y0, res))
+        y, res, upper_field = jax.lax.fori_loop(0, n - 1, body, (y0, res, upper_field))
         return res
 
     @jax.jit
