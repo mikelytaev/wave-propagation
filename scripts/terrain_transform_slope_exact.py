@@ -89,7 +89,7 @@ def run_case(slope_deg, precision, order=(7, 8), x_max=600.0):
     x0, z0 = tf.initial_points()
     u = np.asarray(tf.compute(jnp.asarray(exact(x0, z0))))
     xo, zo = tf.output_metrics()
-    ue = exact(xo, zo) * np.exp(-1j * tf.beta * np.asarray(tf.x_output_grid())[:, None])
+    ue = exact(xo, zo) * np.exp(-1j * tf.beta * (np.asarray(tf.x_output_grid()) - tf.x_min_m)[:, None])
     inside = zo < z_top - 50.0
     out['tf'] = dict(err=float(np.abs(u - ue)[inside].max() / np.abs(ue[inside]).max()), time_s=time.time() - t,
                      x_n=tf.x_n, z_n=tf.z_n, dx=tf.dx_m, dz=tf.dz_m, order=list(tf.order))

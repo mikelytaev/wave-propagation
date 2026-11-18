@@ -175,9 +175,10 @@ cells.append(CODE("""def run_case(cfg):
     u1 = np.asarray(p1.compute(jnp.asarray(exact(x0, z0))))
     res['time_one_way'] = time.time() - t
     xo1, zo1 = p1.output_metrics()                     # already (n_x, n_z) grids
-    ue1 = exact(xo1, zo1) * np.exp(-1j * p1.beta * np.asarray(p1.x_output_grid())[:, None])
+    # the solver's reduced field is referenced to the march arc xi - x_min
+    ue1 = exact(xo1, zo1) * np.exp(-1j * p1.beta * (np.asarray(p1.x_output_grid()) - p1.x_min_m)[:, None])
     m1 = (zo1 >= s * xo1 + 2.0)
-    res['one_way'] = dict(x=xo1, z=zo1, u=u1, ue=ue1, m=m1,
+    res['one_way'] = dict(x=xo1, z=zo1, u=u1, ue=ue1, m=m1, beta=float(p1.beta),
                           err=float(np.abs(u1 - ue1)[m1].max() / np.abs(ue1)[m1].max()),
                           grid=dict(dx=float(p1.dx_m), dz=float(p1.dz_m),
                                     x_n=int(p1.x_n), z_n=int(p1.z_n)))
@@ -192,9 +193,9 @@ cells.append(CODE("""def run_case(cfg):
     res['time_two_way'] = time.time() - t
     psi2 = np.asarray(psi2)
     xo2, zo2 = p2.output_metrics()
-    ue2 = exact(xo2, zo2) * np.exp(-1j * p2.beta * np.asarray(p2.x_output_grid())[:, None])
+    ue2 = exact(xo2, zo2) * np.exp(-1j * p2.beta * (np.asarray(p2.x_output_grid()) - p2.x_min_m)[:, None])
     m2 = (zo2 >= s * xo2 + 2.0)
-    res['two_way'] = dict(x=xo2, z=zo2, u=psi2, ue=ue2, m=m2,
+    res['two_way'] = dict(x=xo2, z=zo2, u=psi2, ue=ue2, m=m2, beta=float(p2.beta),
                           err=float(np.abs(psi2 - ue2)[m2].max() / np.abs(ue2)[m2].max()),
                           grid=dict(dx=float(p2.dx_m), dz=float(p2.dz_m),
                                     x_n=int(p2.x_n), z_n=int(p2.z_n)))
@@ -251,6 +252,23 @@ if _os.path.exists(CACHE) and _os.environ.get('TWO_WAY_RERUN') != '1':
         RESULTS = pickle.load(f)
     for r, cfg in zip(RESULTS, CASES):
         r['cfg'] = cfg                     # refresh names/metadata from the notebook
+        # rebuild the reference with the arc-referenced envelope and re-measure
+        th = float(cfg['slope']); inc = float(cfg['inc'])
+        s = np.tan(np.radians(th))
+        pec = (cfg['ground'] == 'PEC')
+        xs0 = -50.0 - 300.0 * np.cos(np.radians(inc))
+        zs0 = 30.0 - 300.0 * np.sin(np.radians(inc))
+        exact = (make_pec_exact(xs0, zs0, inc, th) if pec
+                 else impedance_exact_shifted(th, GROUNDS[cfg['ground']],
+                                              cfg.get('pol', 'V'), xs0, zs0))
+        x_min = float(r['x_min'])
+        for tag in ('one_way', 'two_way'):
+            g = r[tag]['grid']; beta = r[tag]['beta']
+            xi = x_min + np.arange(g['x_n']) * g['dx']
+            ue = exact(r[tag]['x'], r[tag]['z']) * np.exp(-1j * beta * (xi - x_min)[:, None])
+            m = (r[tag]['z'] >= s * r[tag]['x'] + 2.0)
+            r[tag]['ue'] = ue; r[tag]['m'] = m
+            r[tag]['err'] = float(np.abs(r[tag]['u'] - ue)[m].max() / np.abs(ue)[m].max())
     print('loaded cached results for', len(RESULTS), 'cases; '
           'set TWO_WAY_RERUN=1 to recompute')
     # the staircase is cheap: re-march it so its panel matches the current
