@@ -1112,10 +1112,14 @@ error over height versus range for $\theta_s=20^\circ$ and $30^\circ$.}
 
 The terrain-following error is $3\cdot10^{-4}$--$1.7\cdot10^{-3}$ up to a
 reflected beam at $70^\circ$. The staircase loses most of the reflected beam (Fig.~\ref{fig:slope}),
-and its error decreases only slowly under refinement. For $\theta_s=20^\circ$
-it is 0.69, 0.55 and 0.54 at $\Delta z=0.035$, $0.013$ and \SI{0.005}{m}
-($\lambda/200$), and still 0.45 when in addition $\Delta x$ is reduced to
-\SI{0.625}{m}. The terrain-following grids have about 1.5--1.6 times more vertical
+and its error decreases only slowly under refinement: for $\theta_s=20^\circ$
+it is 1.27 and 0.55 at $\Delta z=0.017$ and \SI{0.013}{m}, and 0.45 when
+$\Delta x$ is reduced to \SI{0.625}{m}.  On the grid matched to the
+terrain-following run ($\Delta x=2.5/2.5/1$~m and
+$\Delta z=0.031/0.017/0.0074$~m for the three slopes), the staircase error
+is 0.82, 1.27 and 1.75, against $3.3\cdot10^{-4}$, $6.4\cdot10^{-4}$ and
+$1.7\cdot10^{-3}$ for the terrain-following solver on the identical grid:
+the error is not grid-related. The terrain-following grids have about 1.5--1.6 times more vertical
 nodes, because of the expansion $\max r$ in the transition layer. Each step
 also costs $p+4q$ instead of $p$ solves, so the run time was 8--36 times that
 of the staircase, at errors about three orders of magnitude smaller.
