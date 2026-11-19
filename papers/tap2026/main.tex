@@ -1016,12 +1016,61 @@ It reuses the Pad\'e coefficients, the grid optimizer and the NLBC. Over flat
 ground it reproduces the existing propagator, including the NLBC, to
 $4\cdot10^{-14}$.
 
+\subsection{Exact Reference Fields for Oblique Incidence on Slopes}\label{sec:exactref}
+
+The verification of this and the next subsection uses closed-form reference
+fields for a Gaussian beam obliquely incident on the infinite slope plane
+$z=x\tan\theta_s$; both are exact solutions of the Helmholtz equation with
+the respective ground condition, with no approximation in the treatment of
+the reflection.
+
+\emph{Perfectly conducting slope.} The incident field is a
+complex-source-point (CSP) beam,
+\begin{equation}
+u_{\mathrm{inc}}(\mathbf{r})=\frac{i}{4}H_0^{(1)}(kR),\quad
+R=\left|\mathbf{r}-\mathbf{r}_s-i\,b\,\hat{\mathbf{e}}_{\alpha}\right|,
+\label{eq:csp}
+\end{equation}
+an exact solution of the Helmholtz equation: $\mathbf{r}_s$ is the source
+point, $b$ the Rayleigh distance, and the unit vector
+$\hat{\mathbf{e}}_{\alpha}=(\cos\alpha,\sin\alpha)$ points along the beam,
+directed at the negative elevation $\alpha$.  Mirroring the source and the
+direction in the slope plane gives the image beam; their sum
+$u=u_{\mathrm{inc}}+u_{\mathrm{im}}$ is an exact solution of the boundary
+value problem with $u=0$ on the slope, because the image is the
+antisymmetric continuation of the incident beam across the plane.  The
+reflected beam leaves at $2\theta_s+|\alpha|$.
+
+\emph{Impedance slope.} In the coordinates $(x',z')$ aligned with the slope
+plane ($z'=0$, $z'>0$ above), the reference is the plane-wave superposition
+\begin{equation}
+u(x',z')=\int A(\phi)\left(e^{-ik_z z'}+R(\phi)\,e^{+ik_z z'}\right)
+e^{ik_x x'}\,\mathrm{d}\phi ,
+\label{eq:spectrum}
+\end{equation}
+with $k_x=k\cos\phi$, $k_z=k\sin\phi$, and
+\begin{equation}
+R(\phi)=\frac{\sin\phi-\Delta_g}{\sin\phi+\Delta_g},
+\label{eq:reflR}
+\end{equation}
+the Leontovich reflection coefficient \eqref{eq:leontovich} of a plane wave
+at the grazing angle $\phi$.  Every plane-wave pair in \eqref{eq:spectrum}
+satisfies the impedance condition on the plane exactly for its own
+$\phi$, so the superposition is an exact solution of the boundary-value
+problem on the slope, with no approximation in the reflection---including
+the pseudo-Brewster incidence, where $|R|$ is small and changes rapidly.
+The amplitude $A(\phi)$ is a Gaussian angular spectrum centered at the
+specular grazing angle $\theta_s+|\alpha|$ with a half-width of
+$2^{\circ}$, truncated at $\pm12^{\circ}$; the discarded tails are below
+$e^{-50}$.  The reflected beam leaves at $2\theta_s+|\alpha|$, and the
+integral is evaluated by the trapezoid rule.
+
 \subsection{Exact Solution: Beam Reflected by a Conducting Slope}\label{sec:slope}
 
-The incident field is a \SI{300}{MHz} complex-source-point beam, an exact
-solution of the Helmholtz equation. Its waist is at $(-345,82)$\,m, 300~m
-upstream of the computational domain, its Rayleigh parameter is \SI{100}{m},
-and it is directed at $-10^\circ$. Its image in the line
+The incident field is the CSP beam of Sec.~\ref{sec:exactref}
+(\SI{300}{MHz}, Rayleigh parameter \SI{100}{m}), with the waist at
+$(-345,82)$\,m, 300 m upstream of the computational domain, and directed at
+$-10^\circ$. Its image in the line
 $z=x\tan\theta_s$ gives the exact field above the Dirichlet slope; the reflected
 beam leaves at $2\theta_s+10^\circ$. Both solvers start from the exact field,
 use Pad\'e $(7,8)$ and the aperture $\theta_{\max}=10^\circ+2\theta_s+5^\circ$,
